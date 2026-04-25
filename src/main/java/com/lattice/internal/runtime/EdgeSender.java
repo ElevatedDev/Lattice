@@ -1,0 +1,292 @@
+package com.lattice.internal.runtime;
+
+import com.lattice.edge.BackpressureException;
+import com.lattice.edge.EdgeSpec;
+import com.lattice.edge.OverflowPolicy;
+import com.lattice.graph.GraphRuntimeException;
+import com.lattice.internal.jfr.JfrEvents;
+import com.lattice.internal.edge.MessageEdge;
+import com.lattice.internal.wait.WaitStrategies;
+import com.lattice.internal.wait.WaitStrategy;
+import com.lattice.metrics.EdgeMetrics;
+import com.lattice.metrics.GraphMetrics;
+import com.lattice.metrics.StageMetrics;
+import com.lattice.metrics.WaitMetrics;
+import com.lattice.routing.Stamped;
+import com.lattice.slab.SlabHandle;
+
+final class EdgeSender {
+
+    private final String ownerName;
+    private final Class<?> messageType;
+    private final String messageTypeName;
+    private final String nullItemMessage;
+    private final boolean acceptsAnyType;
+    private final MessageEdge edge;
+    private final EdgeMetrics edgeMetrics;
+    private final GraphMetrics graphMetrics;
+    private final StageMetrics ownerMetrics;
+    private final RuntimeCoordinator coordinator;
+    private final WaitStrategy waitStrategy;
+    private final WaitMetrics waitMetrics;
+    private final OverflowPolicy overflowPolicy;
+    private final OverflowPolicy.OverflowKind overflowKind;
+    private final long policyTimeoutNanos;
+    private EdgeSender redirectSender;
+    private final String graphName;
+    private final String edgeFrom;
+    private final String edgeTo;
+    private final String edgeName;
+    private final boolean jfrEnabled;
+
+    EdgeSender(
+        final String ownerName,
+        final Class<?> messageType,
+        final MessageEdge edge,
+        final EdgeSpec spec,
+        final StageMetrics ownerMetrics,
+        final RuntimeCoordinator coordinator
+    ) {
+        this.ownerName = ownerName;
+        this.messageType = messageType;
+        this.messageTypeName = messageType.getName();
+        this.nullItemMessage = ownerName + " cannot emit null";
+        this.acceptsAnyType = messageType == Object.class;
+        this.edge = edge;
+        this.edgeMetrics = edge.metrics();
+        this.graphMetrics = coordinator.metrics();
+        this.ownerMetrics = ownerMetrics;
+        this.coordinator = coordinator;
+        this.waitStrategy = WaitStrategies.from(spec.waitSpec());
+        this.waitMetrics = new CombinedWaitMetrics(ownerMetrics, edgeMetrics);
+        this.overflowPolicy = spec.overflowPolicy();
+        this.overflowKind = overflowPolicy.kind();
+        this.policyTimeoutNanos = overflowKind == OverflowPolicy.OverflowKind.BLOCK_FOR
+            ? spec.overflowPolicy().timeout().toNanos()
+            : 0L;
+
+        this.graphName = coordinator.graphName();
+        this.edgeFrom = edge.from();
+        this.edgeTo = edge.to();
+        this.edgeName = edgeFrom + "->" + edgeTo;
+        this.jfrEnabled = JfrEvents.enabled();
+    }
+
+    void redirectSender(final EdgeSender redirectSender) {
+        this.redirectSender = redirectSender;
+    }
+
+    void emit(final Object item) {
+        validateItem(item);
+        if (overflowKind == OverflowPolicy.OverflowKind.FAIL_FAST) {
+            if (!tryEmitValidated(item)) {
+                throw new BackpressureException("edge is full: " + edgeName);
+            }
+            return;
+        }
+        if (emitLossy(item)) {
+            return;
+        }
+        if (!emitValidated(item, policyTimeoutNanos, policyTimeoutNanos > 0L)) {
+            throw new BackpressureException("timed out offering to edge: " + edgeName);
+        }
+    }
+
+    boolean emit(final Object item, final long timeoutNanos) {
+        validateItem(item);
+
+        if (overflowKind == OverflowPolicy.OverflowKind.FAIL_FAST) {
+            if (!tryEmitValidated(item)) {
+                throw new BackpressureException("edge is full: " + edgeName);
+            }
+            return true;
+        }
+        if (emitLossy(item)) {
+            return true;
+        }
+        return emitValidated(item, Math.max(0L, timeoutNanos), true);
+    }
+
+    private boolean emitValidated(final Object item, final long timeoutNanos, final boolean timed) {
+        int idle = 0;
+        boolean blockedRecorded = false;
+        long blockedStart = 0L;
+        final long deadline = timed ? System.nanoTime() + timeoutNanos : Long.MAX_VALUE;
+
+        while (true) {
+            if (coordinator.isAbortRequested()) {
+                throw new GraphRuntimeException("graph is stopping or failed: " + graphName);
+            }
+            if (edge.offer(item)) {
+                if (blockedRecorded) {
+                    recordBackpressureDuration(System.nanoTime() - blockedStart);
+                }
+                graphMetrics.clearOverload();
+                ownerMetrics.recordEmit();
+                return true;
+            }
+            if (edge.isClosed()) {
+                throw new GraphRuntimeException("edge is closed: " + edgeName);
+            }
+            edgeMetrics.recordFailedOffer();
+            graphMetrics.recordFailedOffer();
+            ownerMetrics.recordFailedOutput();
+            if (!blockedRecorded) {
+                blockedStart = System.nanoTime();
+                edgeMetrics.recordBlockedOffer();
+                graphMetrics.recordBlockedOffer();
+                graphMetrics.activateOverload();
+                ownerMetrics.recordBlockedOutput();
+
+                if (jfrEnabled) {
+                    JfrEvents.edgeBackpressure(graphName, edgeFrom, edgeTo);
+                }
+
+                blockedRecorded = true;
+            }
+            if (timed) {
+                final long now = System.nanoTime();
+                if (now >= deadline) {
+                    recordBackpressureDuration(now - blockedStart);
+                    return false;
+                }
+            }
+            idle = waitStrategy.idle(idle, waitMetrics);
+        }
+    }
+
+    boolean tryEmit(final Object item) {
+        validateItem(item);
+        if (emitLossy(item)) {
+            return true;
+        }
+        return tryEmitValidated(item);
+    }
+
+    private boolean tryEmitValidated(final Object item) {
+        if (coordinator.isAbortRequested() || edge.isClosed()) {
+            return false;
+        }
+        final boolean offered = edge.offer(item);
+        if (offered) {
+            graphMetrics.clearOverload();
+            ownerMetrics.recordEmit();
+        } else if (!edge.isClosed()) {
+            edgeMetrics.recordFailedOffer();
+            graphMetrics.recordFailedOffer();
+            ownerMetrics.recordFailedOutput();
+        }
+        return offered;
+    }
+
+    void close() {
+        edge.close();
+        final EdgeSender redirect = redirectSender;
+        if (redirect != null) {
+            redirect.edge.close();
+        }
+    }
+
+    EdgeMetrics edgeMetrics() {
+        return edgeMetrics;
+    }
+
+    private boolean emitLossy(final Object item) {
+        return switch (overflowKind) {
+            case DROP_LATEST -> {
+                if (tryEmitValidated(item)) {
+                    yield true;
+                }
+                edgeMetrics.recordDroppedLatest();
+                graphMetrics.recordDroppedMessage();
+                releaseIfHandle(item);
+                yield true;
+            }
+            case DROP_OLDEST -> {
+                if (tryEmitValidated(item)) {
+                    yield true;
+                }
+                final Object dropped = edge.dropOldest();
+                if (dropped != null) {
+                    edgeMetrics.recordDroppedOldest();
+                    graphMetrics.recordDroppedMessage();
+                    releaseIfHandle(dropped);
+                }
+                yield tryEmitValidated(item);
+            }
+            case COALESCE -> {
+                if (tryEmitValidated(item)) {
+                    yield true;
+                }
+                if (edge.tryCoalesce(item, overflowPolicy.coalescingKey())) {
+                    edgeMetrics.recordCoalescedOffer();
+                    graphMetrics.recordCoalescedMessage();
+                    yield true;
+                }
+                yield false;
+            }
+            case REDIRECT -> {
+                if (tryEmitValidated(item)) {
+                    yield true;
+                }
+                final EdgeSender redirect = redirectSender;
+                if (redirect == null) {
+                    yield false;
+                }
+                edgeMetrics.recordRedirectedOffer();
+                graphMetrics.recordRedirectedMessage();
+                redirect.emit(item);
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    private static void releaseIfHandle(final Object item) {
+        if (item instanceof SlabHandle<?> handle) {
+            handle.release();
+        } else if (item instanceof Stamped<?> stamped) {
+            releaseIfHandle(stamped.value());
+        }
+    }
+
+    private void validateItem(final Object item) {
+        if (item == null) {
+            throw new NullPointerException(nullItemMessage);
+        }
+        if (!acceptsAnyType && !messageType.isInstance(item)) {
+            throw new ClassCastException(ownerName + " emitted " + item.getClass().getName()
+                + ", expected " + messageTypeName);
+        }
+    }
+
+    private void recordBackpressureDuration(final long nanos) {
+        edgeMetrics.recordBackpressureNanos(nanos);
+        graphMetrics.recordBackpressureNanos(nanos);
+        ownerMetrics.recordBlockedNanos(nanos);
+        if (jfrEnabled) {
+            JfrEvents.edgeStall(graphName, edgeFrom, edgeTo, nanos);
+        }
+    }
+
+    private record CombinedWaitMetrics(StageMetrics owner, EdgeMetrics edge) implements WaitMetrics {
+
+        @Override
+        public void recordSpin() {
+            owner.recordSpin();
+            edge.recordSpin();
+        }
+
+        @Override
+        public void recordYield() {
+            owner.recordYield();
+            edge.recordYield();
+        }
+
+        @Override
+        public void recordPark() {
+            owner.recordPark();
+            edge.recordPark();
+        }
+    }
+}

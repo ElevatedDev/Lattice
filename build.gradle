@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'me.champeau.jmh' version '0.7.3'
+}
+
+group = 'com.lattice'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    jcstress {
+        java.srcDir 'src/jcstress/java'
+        resources.srcDir 'src/jcstress/resources'
+    }
+}
+
+configurations {
+    jcstressCompileOnly.extendsFrom compileOnly
+    jcstressAnnotationProcessor.extendsFrom annotationProcessor
+}
+
+dependencies {
+    implementation 'org.hdrhistogram:HdrHistogram:2.2.2'
+
+    compileOnly 'org.projectlombok:lombok:1.18.44'
+    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    testCompileOnly 'org.projectlombok:lombok:1.18.44'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    jmh 'org.projectlombok:lombok:1.18.44'
+    jmhAnnotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    testImplementation platform('org.junit:junit-bom:5.14.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    jcstressImplementation sourceSets.main.output
+    jcstressImplementation 'org.hdrhistogram:HdrHistogram:2.2.2'
+    jcstressImplementation 'org.openjdk.jcstress:jcstress-core:0.16'
+    jcstressAnnotationProcessor 'org.openjdk.jcstress:jcstress-core:0.16'
+
+    jmh 'org.hdrhistogram:HdrHistogram:2.2.2'
+    jmh 'com.lmax:disruptor:4.0.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jmh {
+    fork = 1
+    warmupIterations = 3
+    iterations = 5
+}
+
+tasks.register('nativeBuildRelease', Exec) {
+    group = 'native'
+    description = 'Builds the Rust JNI backend in native/static-topology-native.'
+    workingDir = file('native/static-topology-native')
+    commandLine 'cargo', 'build', '--release'
+}
+
+tasks.register('jcstress', JavaExec) {
+    group = 'verification'
+    description = 'Runs JCStress concurrency tests.'
+    dependsOn tasks.named('jcstressClasses')
+    classpath = sourceSets.jcstress.runtimeClasspath
+    mainClass = 'org.openjdk.jcstress.Main'
+    args = ['-v']
+}
