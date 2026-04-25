@@ -76,7 +76,7 @@ public final class DefaultStaticGraph implements StaticGraph {
         buildEdges(edgeMetrics);
         buildEmitters(stageMetrics);
         buildWorkers(stageMetrics);
-        coordinator.attach(edgeArray, workerArray);
+        coordinator.attach(edgeArray, workerArray, sourceEmitterArray);
     }
 
     @Override
@@ -189,12 +189,12 @@ public final class DefaultStaticGraph implements StaticGraph {
 
         final long deadline = System.nanoTime() + timeout.toNanos();
         while (System.nanoTime() < deadline) {
-            if (allEdgesEmpty()) {
+            if (allWorkQuiesced()) {
                 return true;
             }
             Thread.onSpinWait();
         }
-        return allEdgesEmpty();
+        return allWorkQuiesced();
     }
 
     @Override
@@ -463,10 +463,14 @@ public final class DefaultStaticGraph implements StaticGraph {
     private boolean allEdgesEmpty() {
         final MessageEdge[] edges = edgeArray;
         for (int i = 0; i < edges.length; i++) {
-            if (!edges[i].isEmpty()) {
+            if (!edges[i].isEmpty() || edges[i].inFlight() > 0) {
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean allWorkQuiesced() {
+        return allEdgesEmpty() && !coordinator.hasInFlightWork();
     }
 }

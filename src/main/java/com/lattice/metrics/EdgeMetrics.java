@@ -128,7 +128,7 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public long depth() {
-        return emittedCount.get() - consumedCount.get();
+        return currentDepth();
     }
 
     public long highWaterMark() {
@@ -165,7 +165,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     public void recordEmit() {
         final long emitted = emittedCount.incrementAndGet();
-        final long depth = emitted - consumedCount.get();
+        final long depth = emitted - consumedCount.get() - droppedOldest.sum();
         recordDepth(depth);
     }
 
@@ -239,7 +239,7 @@ public final class EdgeMetrics implements WaitMetrics {
     public void recordResidenceNanos(final long nanos) {
         if (nanos > 0L) {
             residenceSamples.increment();
-            residenceTimeNanosHistogram.recordValue(nanos);
+            residenceTimeNanosHistogram.recordValue(clampToHistogram(residenceTimeNanosHistogram, nanos));
         }
     }
 
@@ -264,5 +264,13 @@ public final class EdgeMetrics implements WaitMetrics {
     private double ratePerSecond(final long count) {
         final long elapsedNanos = Math.max(1L, System.nanoTime() - createdNanos);
         return count * 1_000_000_000.0d / elapsedNanos;
+    }
+
+    private long currentDepth() {
+        return emittedCount.get() - consumedCount.get() - droppedOldest.sum();
+    }
+
+    private static long clampToHistogram(final Histogram histogram, final long value) {
+        return Math.min(histogram.getHighestTrackableValue(), Math.max(1L, value));
     }
 }

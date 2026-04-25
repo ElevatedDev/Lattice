@@ -23,6 +23,8 @@ public interface MessageEdge {
 
     boolean tryCoalesce(Object item, Function<Object, ?> keyExtractor);
 
+    int inFlight();
+
     void firstTouch(String ownerName);
 
     boolean isEmpty();

@@ -26,6 +26,11 @@ const CAP_FIRST_TOUCH: u64 = 1 << 5;
 
 const JNI_WORD_COUNT: usize = 16;
 
+enum CpuListSelector {
+    Stride(usize),
+    Group { used: usize, group: usize },
+}
+
 #[no_mangle]
 pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_nativeCapabilities0(
     _env: JNIEnv,
@@ -146,20 +151,34 @@ fn cpu_list_contains(spec: &str, wanted_cpu: usize) -> bool {
             continue;
         }
 
-        if let Some((start, end)) = segment.split_once('-') {
+        let (range, selector) = if let Some((range, selector)) = segment.split_once(':') {
+            let Some(selector) = parse_cpu_list_selector(selector.trim()) else {
+                continue;
+            };
+            (range.trim(), selector)
+        } else {
+            (segment, CpuListSelector::Stride(1))
+        };
+
+        if let Some((start, end)) = range.split_once('-') {
             let Ok(start) = start.trim().parse::<usize>() else {
                 continue;
             };
             let Ok(end) = end.trim().parse::<usize>() else {
                 continue;
             };
-            if start <= wanted_cpu && wanted_cpu <= end {
+            if start <= wanted_cpu
+                && wanted_cpu <= end
+                && cpu_list_selector_matches(&selector, wanted_cpu - start)
+            {
                 return true;
             }
             continue;
         }
 
-        if segment.parse::<usize>().is_ok_and(|cpu| cpu == wanted_cpu) {
+        if matches!(selector, CpuListSelector::Stride(1))
+            && range.parse::<usize>().is_ok_and(|cpu| cpu == wanted_cpu)
+        {
             return true;
         }
     }
@@ -167,11 +186,36 @@ fn cpu_list_contains(spec: &str, wanted_cpu: usize) -> bool {
     false
 }
 
+fn parse_cpu_list_selector(selector: &str) -> Option<CpuListSelector> {
+    if let Some((used, group)) = selector.split_once('/') {
+        let used = used.trim().parse::<usize>().ok()?;
+        let group = group.trim().parse::<usize>().ok()?;
+        if used == 0 || group == 0 || used > group {
+            return None;
+        }
+        return Some(CpuListSelector::Group { used, group });
+    }
+
+    let stride = selector.parse::<usize>().ok()?;
+    if stride == 0 {
+        None
+    } else {
+        Some(CpuListSelector::Stride(stride))
+    }
+}
+
+fn cpu_list_selector_matches(selector: &CpuListSelector, offset: usize) -> bool {
+    match selector {
+        CpuListSelector::Stride(stride) => offset % stride == 0,
+        CpuListSelector::Group { used, group } => offset % group < *used,
+    }
+}
+
 #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
 mod platform {
     use super::{
-        CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, CAP_LINUX, CAP_LOCAL_MEM_POLICY,
-        CAP_NUMA_QUERY, JNI_WORD_COUNT, JInt, JLong, cpu_list_contains,
+        cpu_list_contains, JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, CAP_LINUX,
+        CAP_LOCAL_MEM_POLICY, CAP_NUMA_QUERY, JNI_WORD_COUNT,
     };
     use core::ffi::{c_int, c_long, c_ulong};
     use core::ptr;
@@ -454,7 +498,7 @@ mod platform {
 
 #[cfg(not(all(target_os = "linux", target_pointer_width = "64")))]
 mod platform {
-    use super::{JNI_WORD_COUNT, JInt, JLong};
+    use super::{JInt, JLong, JNI_WORD_COUNT};
 
     const ENOSYS: JInt = 38;
 
@@ -518,6 +562,22 @@ mod tests {
         assert!(cpu_list_contains("0-3,8,10-12", 11));
         assert!(cpu_list_contains("0-3,8,10-12", 0));
         assert!(!cpu_list_contains("0-3,8,10-12", 9));
+    }
+
+    #[test]
+    fn cpulist_stride_ranges() {
+        assert!(cpu_list_contains("0-8:2,16", 6));
+        assert!(cpu_list_contains("0-8:2,16", 16));
+        assert!(!cpu_list_contains("0-8:2,16", 7));
+        assert!(!cpu_list_contains("0-8:0,16", 8));
+    }
+
+    #[test]
+    fn cpulist_grouped_ranges() {
+        assert!(cpu_list_contains("0-15:2/4", 4));
+        assert!(cpu_list_contains("0-15:2/4", 5));
+        assert!(!cpu_list_contains("0-15:2/4", 6));
+        assert!(!cpu_list_contains("0-15:5/4", 4));
     }
 
     #[test]

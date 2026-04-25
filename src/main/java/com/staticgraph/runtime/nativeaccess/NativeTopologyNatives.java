@@ -13,6 +13,14 @@ final class NativeTopologyNatives {
         return LOAD_ERROR == null;
     }
 
+    static String loadFailureMessage() {
+        if (LOAD_ERROR == null) {
+            return "";
+        }
+        final String message = LOAD_ERROR.getMessage();
+        return message == null || message.isBlank() ? LOAD_ERROR.getClass().getSimpleName() : message;
+    }
+
     static void ensureLoaded() {
         if (LOAD_ERROR != null) {
             throw new NativeTopologyUnavailableException(

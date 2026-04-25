@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.LongAdder;
 
 public final class StageMetrics implements WaitMetrics {
 
+    private static final boolean HISTOGRAMS_ENABLED = Boolean.getBoolean("lattice.metrics.stageHistograms");
+
     private final String name;
     private final LongAdder emittedCount = new LongAdder();
     private final LongAdder consumedCount = new LongAdder();
@@ -162,6 +164,10 @@ public final class StageMetrics implements WaitMetrics {
         return serviceTimeNanosHistogram.copy();
     }
 
+    public static boolean histogramsEnabled() {
+        return HISTOGRAMS_ENABLED;
+    }
+
     public WorkerState workerState() {
         return workerState;
     }
@@ -252,11 +258,11 @@ public final class StageMetrics implements WaitMetrics {
     public void recordBatch(final int size, final long serviceTimeNanos) {
         batchesProcessed.increment();
         processedMessages.add(size);
-        if (size > 0) {
-            batchSizeHistogram.recordValue(size);
+        if (HISTOGRAMS_ENABLED && size > 0) {
+            batchSizeHistogram.recordValue(clampToHistogram(batchSizeHistogram, size));
         }
-        if (serviceTimeNanos > 0L) {
-            serviceTimeNanosHistogram.recordValue(serviceTimeNanos);
+        if (HISTOGRAMS_ENABLED && serviceTimeNanos > 0L) {
+            serviceTimeNanosHistogram.recordValue(clampToHistogram(serviceTimeNanosHistogram, serviceTimeNanos));
         }
     }
 
@@ -336,5 +342,9 @@ public final class StageMetrics implements WaitMetrics {
         if (stopTime.compareAndSet(null, Instant.now())) {
             stopNanos.compareAndSet(0L, System.nanoTime());
         }
+    }
+
+    private static long clampToHistogram(final Histogram histogram, final long value) {
+        return Math.min(histogram.getHighestTrackableValue(), Math.max(1L, value));
     }
 }

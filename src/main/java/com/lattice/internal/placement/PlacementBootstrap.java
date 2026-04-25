@@ -36,17 +36,24 @@ public final class PlacementBootstrap {
                 capabilities = NativeTopology.capabilities();
             } catch (final NativeTopologyException ex) {
                 append(message, ex.getMessage());
+                if (placementRequested) {
+                    maybeStrict(stageName, ex);
+                }
             }
         } else if (placementRequested) {
             status = PlacementStatus.UNAVAILABLE;
             final NativeTopologyUnavailableException unavailable = new NativeTopologyUnavailableException(
-                "native topology library is not loaded"
+                nativeUnavailableMessage()
             );
             append(message, unavailable.getMessage());
             maybeStrict(stageName, unavailable);
         }
 
         if (nativeLoaded && capabilities != null) {
+            if (placementRequested && !capabilities.linux()) {
+                append(message, "native topology backend does not support this platform");
+            }
+
             final PinAttempt pinAttempt = applyPin(stageName, policy, capabilities);
             pinApplied = pinAttempt.applied();
             expectedCpu = pinAttempt.expectedCpu(expectedCpu);
@@ -80,10 +87,13 @@ public final class PlacementBootstrap {
             || capabilities == null
             || !capabilities.localMemoryPolicy()
             || localPolicyApplied;
+        final boolean inheritedCpuset = policy.kind() == PinPolicy.PinKind.INHERIT_CPUSET
+            && capabilities != null
+            && capabilities.linux();
 
         if (!placementRequested) {
             status = PlacementStatus.NOT_REQUESTED;
-        } else if ((pinApplied || policy.kind() == PinPolicy.PinKind.INHERIT_CPUSET)
+        } else if ((pinApplied || inheritedCpuset)
             && localPolicyOk
             && !affinityViolation
             && !numaViolation) {
@@ -237,6 +247,14 @@ public final class PlacementBootstrap {
             message.append("; ");
         }
         message.append(text);
+    }
+
+    private static String nativeUnavailableMessage() {
+        final String loadFailure = NativeTopology.loadFailureMessage();
+        if (loadFailure.isBlank()) {
+            return "native topology library is not loaded";
+        }
+        return "native topology library is not loaded: " + loadFailure;
     }
 
     private static void maybeStrict(final String stageName, final Throwable failure) {

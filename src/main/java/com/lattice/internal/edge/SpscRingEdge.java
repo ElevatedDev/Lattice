@@ -11,13 +11,18 @@ import java.util.function.Function;
 
 public final class SpscRingEdge implements MessageEdge {
 
-    private static final VarHandle HEAD;
-    private static final VarHandle TAIL;
+    private static final VarHandle CURSOR;
+    private static final VarHandle CLOSED;
+    private static final VarHandle ELEMENT;
+    private static final Object DROPPED = new Object();
+    private static final long CLOSED_TAIL_BIT = Long.MIN_VALUE;
+    private static final long TAIL_SEQUENCE_MASK = Long.MAX_VALUE;
 
     static {
         try {
-            HEAD = MethodHandles.lookup().findVarHandle(SpscRingEdge.class, "head", long.class);
-            TAIL = MethodHandles.lookup().findVarHandle(SpscRingEdge.class, "tail", long.class);
+            CURSOR = MethodHandles.lookup().findVarHandle(PaddedLong.class, "value", long.class);
+            CLOSED = MethodHandles.lookup().findVarHandle(PaddedBoolean.class, "value", boolean.class);
+            ELEMENT = MethodHandles.arrayElementVarHandle(Object[].class);
         } catch (final ReflectiveOperationException ex) {
             throw new ExceptionInInitializerError(ex);
         }
@@ -32,9 +37,9 @@ public final class SpscRingEdge implements MessageEdge {
     private final GraphMetrics graphMetrics;
     private Object[] buffer;
     private LongAccess publishTimes;
-    private volatile long head;
-    private volatile long tail;
-    private volatile boolean closed;
+    private final PaddedLong head = new PaddedLong();
+    private final PaddedLong tail = new PaddedLong();
+    private final PaddedBoolean closed = new PaddedBoolean();
 
     public SpscRingEdge(
         final String from,
@@ -76,23 +81,37 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean offer(final Object item) {
-        if (closed) {
+        if (closed()) {
             return false;
         }
-        final long currentTail = (long) TAIL.get(this);
+        final long currentTailRaw = (long) CURSOR.getAcquire(tail);
+        if (tailClosed(currentTailRaw)) {
+            return false;
+        }
+        final long currentTail = tailSequence(currentTailRaw);
         final long wrapPoint = currentTail - capacity;
-        final long currentHead = (long) HEAD.getAcquire(this);
+        final long currentHead = (long) CURSOR.getAcquire(head);
         if (currentHead <= wrapPoint) {
             return false;
         }
+        if (!CURSOR.compareAndSet(tail, currentTailRaw, currentTail + 1L)) {
+            return false;
+        }
+
         final int index = (int) currentTail & mask;
         final Object[] localBuffer = buffer;
-        localBuffer[index] = item;
         final LongAccess localPublishTimes = publishTimes;
+        if (closed()) {
+            if (localPublishTimes != null) {
+                localPublishTimes.setPlain(index, 0L);
+            }
+            ELEMENT.setRelease(localBuffer, index, DROPPED);
+            return false;
+        }
         if (localPublishTimes != null) {
             localPublishTimes.setPlain(index, System.nanoTime());
         }
-        TAIL.setRelease(this, currentTail + 1L);
+        ELEMENT.setRelease(localBuffer, index, item);
         metrics.recordEmit();
         graphMetrics.recordEmit();
         return true;
@@ -100,21 +119,30 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public Object poll() {
-        final long currentHead = (long) HEAD.get(this);
-        final long currentTail = (long) TAIL.getAcquire(this);
+        final long currentHead = (long) CURSOR.get(head);
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         if (currentHead >= currentTail) {
             return null;
         }
         final int index = (int) currentHead & mask;
         final Object[] localBuffer = buffer;
-        final Object item = localBuffer[index];
-        localBuffer[index] = null;
+        final Object item = claimReadyItem(localBuffer, index);
+        if (item == null) {
+            return null;
+        }
         final LongAccess localPublishTimes = publishTimes;
+        if (item == DROPPED) {
+            if (localPublishTimes != null) {
+                localPublishTimes.setPlain(index, 0L);
+            }
+            CURSOR.setRelease(head, currentHead + 1L);
+            return null;
+        }
         if (localPublishTimes != null) {
             metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
             localPublishTimes.setPlain(index, 0L);
         }
-        HEAD.setRelease(this, currentHead + 1L);
+        CURSOR.setRelease(head, currentHead + 1L);
         metrics.recordConsume();
         graphMetrics.recordConsume();
         return item;
@@ -127,10 +155,9 @@ public final class SpscRingEdge implements MessageEdge {
             return 0;
         }
 
-        final long currentHead = (long) HEAD.get(this);
-        final long currentTail = (long) TAIL.getAcquire(this);
-        final int drained = (int) Math.min((long) max, currentTail - currentHead);
-        if (drained <= 0) {
+        final long currentHead = (long) CURSOR.get(head);
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        if (currentHead >= currentTail) {
             return 0;
         }
 
@@ -140,26 +167,47 @@ public final class SpscRingEdge implements MessageEdge {
         final int localMask = mask;
         final LongAccess localPublishTimes = publishTimes;
         if (localPublishTimes == null) {
-            for (int i = 0; i < drained; i++) {
+            int claimed = 0;
+            while (claimed < max && nextHead < currentTail) {
                 final int index = (int) nextHead & localMask;
-                target[targetIndex++] = localBuffer[index];
-                localBuffer[index] = null;
+                final Object item = claimReadyItem(localBuffer, index);
+                if (item == null) {
+                    break;
+                }
+                if (item != DROPPED) {
+                    target[targetIndex++] = item;
+                    claimed++;
+                }
                 nextHead++;
             }
+            if (nextHead == currentHead) {
+                return 0;
+            }
         } else {
-            for (int i = 0; i < drained; i++) {
+            int claimed = 0;
+            while (claimed < max && nextHead < currentTail) {
                 final int index = (int) nextHead & localMask;
-                target[targetIndex++] = localBuffer[index];
-                localBuffer[index] = null;
-                metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
+                final Object item = claimReadyItem(localBuffer, index);
+                if (item == null) {
+                    break;
+                }
+                if (item != DROPPED) {
+                    target[targetIndex++] = item;
+                    metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
+                    claimed++;
+                }
                 localPublishTimes.setPlain(index, 0L);
                 nextHead++;
             }
+            if (nextHead == currentHead) {
+                return 0;
+            }
         }
 
-        HEAD.setRelease(this, currentHead + drained);
-        recordConsumed(drained);
-        return drained;
+        CURSOR.setRelease(head, nextHead);
+        final int consumed = targetIndex - offset;
+        recordConsumed(consumed);
+        return consumed;
     }
 
     private void recordConsumed(final int count) {
@@ -169,7 +217,19 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public Object dropOldest() {
-        return poll();
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final Object[] localBuffer = buffer;
+        final int localMask = mask;
+        for (long sequence = currentHead; sequence < currentTail; sequence++) {
+            final int index = (int) sequence & localMask;
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item != null && item != DROPPED && ELEMENT.compareAndSet(localBuffer, index, item, DROPPED)) {
+                reclaimDroppedPrefix();
+                return item;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -178,19 +238,18 @@ public final class SpscRingEdge implements MessageEdge {
             return false;
         }
         final Object key = keyExtractor.apply(item);
-        final long currentHead = (long) HEAD.getAcquire(this);
-        final long currentTail = (long) TAIL.getAcquire(this);
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         for (long sequence = currentHead; sequence < currentTail; sequence++) {
             final int index = (int) sequence & localMask;
-            final Object existing = localBuffer[index];
-            if (existing != null && keyEquals(key, keyExtractor.apply(existing))) {
+            final Object existing = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (existing != null && existing != DROPPED && keyEquals(key, keyExtractor.apply(existing))) {
                 if (containsHandle(existing) || containsHandle(item)) {
                     return false;
                 }
-                localBuffer[index] = item;
-                return true;
+                return ELEMENT.compareAndSet(localBuffer, index, existing, item);
             }
         }
         return false;
@@ -222,22 +281,31 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean isEmpty() {
-        return (long) HEAD.getAcquire(this) >= (long) TAIL.getAcquire(this);
+        return (long) CURSOR.getAcquire(head) >= tailSequence((long) CURSOR.getAcquire(tail));
+    }
+
+    @Override
+    public int inFlight() {
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final long depth = Math.max(0L, currentTail - currentHead);
+        return depth > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) depth;
     }
 
     @Override
     public boolean isClosed() {
-        return closed;
+        return closed();
     }
 
     @Override
     public void close() {
-        closed = true;
+        closeFlag();
     }
 
     @Override
     public void abort() {
-        closed = true;
+        closeFlag();
+        drainAndRelease();
     }
 
     @Override
@@ -248,5 +316,106 @@ public final class SpscRingEdge implements MessageEdge {
     @Override
     public EdgeMetrics metrics() {
         return metrics;
+    }
+
+    private Object claimReadyItem(final Object[] localBuffer, final int index) {
+        while (true) {
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item == null) {
+                return null;
+            }
+            if (ELEMENT.compareAndSet(localBuffer, index, item, null)) {
+                return item;
+            }
+        }
+    }
+
+    private void drainAndRelease() {
+        if (buffer == null) {
+            return;
+        }
+        final long targetTail = tailSequence((long) CURSOR.getAcquire(tail));
+        while (true) {
+            final long currentHead = (long) CURSOR.get(head);
+            if (currentHead >= targetTail) {
+                return;
+            }
+            final int index = (int) currentHead & mask;
+            final Object item = claimReadyItem(buffer, index);
+            if (item == null) {
+                Thread.onSpinWait();
+                continue;
+            }
+            final LongAccess localPublishTimes = publishTimes;
+            if (localPublishTimes != null) {
+                localPublishTimes.setPlain(index, 0L);
+            }
+            CURSOR.setRelease(head, currentHead + 1L);
+            if (item != DROPPED) {
+                releaseIfHandle(item);
+            }
+        }
+    }
+
+    private void reclaimDroppedPrefix() {
+        final Object[] localBuffer = buffer;
+        if (localBuffer == null) {
+            return;
+        }
+        final LongAccess localPublishTimes = publishTimes;
+        while (true) {
+            final long currentHead = (long) CURSOR.getAcquire(head);
+            if (currentHead >= tailSequence((long) CURSOR.getAcquire(tail))) {
+                return;
+            }
+            final int index = (int) currentHead & mask;
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item != DROPPED) {
+                return;
+            }
+            if (CURSOR.compareAndSet(head, currentHead, currentHead + 1L)) {
+                ELEMENT.compareAndSet(localBuffer, index, DROPPED, null);
+                if (localPublishTimes != null) {
+                    localPublishTimes.setPlain(index, 0L);
+                }
+            }
+        }
+    }
+
+    private boolean closed() {
+        return (boolean) CLOSED.getVolatile(closed);
+    }
+
+    private void closeFlag() {
+        CLOSED.setVolatile(closed, true);
+        closeTail();
+    }
+
+    private void closeTail() {
+        while (true) {
+            final long currentTail = (long) CURSOR.getVolatile(tail);
+            if (tailClosed(currentTail)) {
+                return;
+            }
+            if (CURSOR.compareAndSet(tail, currentTail, currentTail | CLOSED_TAIL_BIT)) {
+                return;
+            }
+        }
+    }
+
+    private static long tailSequence(final long tailValue) {
+        return tailValue & TAIL_SEQUENCE_MASK;
+    }
+
+    private static boolean tailClosed(final long tailValue) {
+        return (tailValue & CLOSED_TAIL_BIT) != 0L;
+    }
+
+    private static void releaseIfHandle(final Object item) {
+        if (item instanceof SlabHandle<?> handle) {
+            handle.release();
+        } else if (item instanceof Stamped<?> stamped) {
+            releaseIfHandle(stamped.value());
+        }
     }
 }

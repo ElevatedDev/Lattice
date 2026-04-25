@@ -15,6 +15,10 @@ public final class NativeTopology {
         return NativeTopologyNatives.loaded();
     }
 
+    public static String loadFailureMessage() {
+        return NativeTopologyNatives.loadFailureMessage();
+    }
+
     public static NativeCapabilities capabilities() {
         NativeTopologyNatives.ensureLoaded();
         return NativeCapabilities.fromBits(NativeTopologyNatives.nativeCapabilities0());

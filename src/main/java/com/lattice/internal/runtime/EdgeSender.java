@@ -77,7 +77,20 @@ final class EdgeSender {
     }
 
     void emit(final Object item) {
-        validateItem(item);
+        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        validateItem(outbound);
+        boolean handled = false;
+        try {
+            emitPrepared(outbound);
+            handled = true;
+        } finally {
+            if (!handled && outbound != item) {
+                releaseIfHandle(outbound);
+            }
+        }
+    }
+
+    private void emitPrepared(final Object item) {
         if (overflowKind == OverflowPolicy.OverflowKind.FAIL_FAST) {
             if (!tryEmitValidated(item)) {
                 throw new BackpressureException("edge is full: " + edgeName);
@@ -93,8 +106,20 @@ final class EdgeSender {
     }
 
     boolean emit(final Object item, final long timeoutNanos) {
-        validateItem(item);
+        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        validateItem(outbound);
+        boolean handled = false;
+        try {
+            handled = emitPrepared(outbound, timeoutNanos);
+            return handled;
+        } finally {
+            if (!handled && outbound != item) {
+                releaseIfHandle(outbound);
+            }
+        }
+    }
 
+    private boolean emitPrepared(final Object item, final long timeoutNanos) {
         if (overflowKind == OverflowPolicy.OverflowKind.FAIL_FAST) {
             if (!tryEmitValidated(item)) {
                 throw new BackpressureException("edge is full: " + edgeName);
@@ -110,57 +135,76 @@ final class EdgeSender {
     private boolean emitValidated(final Object item, final long timeoutNanos, final boolean timed) {
         int idle = 0;
         boolean blockedRecorded = false;
+        boolean blockedDurationRecorded = false;
         long blockedStart = 0L;
         final long deadline = timed ? System.nanoTime() + timeoutNanos : Long.MAX_VALUE;
 
-        while (true) {
-            if (coordinator.isAbortRequested()) {
-                throw new GraphRuntimeException("graph is stopping or failed: " + graphName);
-            }
-            if (edge.offer(item)) {
-                if (blockedRecorded) {
-                    recordBackpressureDuration(System.nanoTime() - blockedStart);
+        try {
+            while (true) {
+                if (coordinator.isAbortRequested()) {
+                    throw new GraphRuntimeException("graph is stopping or failed: " + graphName);
                 }
-                graphMetrics.clearOverload();
-                ownerMetrics.recordEmit();
-                return true;
-            }
-            if (edge.isClosed()) {
-                throw new GraphRuntimeException("edge is closed: " + edgeName);
-            }
-            edgeMetrics.recordFailedOffer();
-            graphMetrics.recordFailedOffer();
-            ownerMetrics.recordFailedOutput();
-            if (!blockedRecorded) {
-                blockedStart = System.nanoTime();
-                edgeMetrics.recordBlockedOffer();
-                graphMetrics.recordBlockedOffer();
-                graphMetrics.activateOverload();
-                ownerMetrics.recordBlockedOutput();
+                if (edge.offer(item)) {
+                    if (blockedRecorded) {
+                        recordBackpressureDuration(System.nanoTime() - blockedStart);
+                        blockedDurationRecorded = true;
+                    }
+                    graphMetrics.clearOverload();
+                    ownerMetrics.recordEmit();
+                    return true;
+                }
+                if (edge.isClosed()) {
+                    throw new GraphRuntimeException("edge is closed: " + edgeName);
+                }
+                edgeMetrics.recordFailedOffer();
+                graphMetrics.recordFailedOffer();
+                ownerMetrics.recordFailedOutput();
+                if (!blockedRecorded) {
+                    blockedStart = System.nanoTime();
+                    edgeMetrics.recordBlockedOffer();
+                    graphMetrics.recordBlockedOffer();
+                    graphMetrics.activateOverload();
+                    ownerMetrics.recordBlockedOutput();
 
-                if (jfrEnabled) {
-                    JfrEvents.edgeBackpressure(graphName, edgeFrom, edgeTo);
-                }
+                    if (jfrEnabled) {
+                        JfrEvents.edgeBackpressure(graphName, edgeFrom, edgeTo);
+                    }
 
-                blockedRecorded = true;
-            }
-            if (timed) {
-                final long now = System.nanoTime();
-                if (now >= deadline) {
-                    recordBackpressureDuration(now - blockedStart);
-                    return false;
+                    blockedRecorded = true;
                 }
+                if (timed) {
+                    final long now = System.nanoTime();
+                    if (now >= deadline) {
+                        recordBackpressureDuration(now - blockedStart);
+                        blockedDurationRecorded = true;
+                        return false;
+                    }
+                }
+                idle = waitStrategy.idle(idle, waitMetrics);
             }
-            idle = waitStrategy.idle(idle, waitMetrics);
+        } finally {
+            if (blockedRecorded && !blockedDurationRecorded) {
+                recordBackpressureDuration(System.nanoTime() - blockedStart);
+            }
         }
     }
 
     boolean tryEmit(final Object item) {
-        validateItem(item);
-        if (emitLossy(item)) {
-            return true;
+        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        validateItem(outbound);
+        boolean handled = false;
+        try {
+            if (emitLossy(outbound)) {
+                handled = true;
+                return true;
+            }
+            handled = tryEmitValidated(outbound);
+            return handled;
+        } finally {
+            if (!handled && outbound != item) {
+                releaseIfHandle(outbound);
+            }
         }
-        return tryEmitValidated(item);
     }
 
     private boolean tryEmitValidated(final Object item) {
@@ -212,7 +256,13 @@ final class EdgeSender {
                     graphMetrics.recordDroppedMessage();
                     releaseIfHandle(dropped);
                 }
-                yield tryEmitValidated(item);
+                if (tryEmitValidated(item)) {
+                    yield true;
+                }
+                edgeMetrics.recordDroppedLatest();
+                graphMetrics.recordDroppedMessage();
+                releaseIfHandle(item);
+                yield true;
             }
             case COALESCE -> {
                 if (tryEmitValidated(item)) {

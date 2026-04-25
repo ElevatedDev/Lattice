@@ -11,14 +11,19 @@ import java.util.function.Function;
 
 public final class MpscRingEdge implements MessageEdge {
 
-    private static final VarHandle TAIL;
-    private static final VarHandle HEAD;
+    private static final VarHandle CURSOR;
+    private static final VarHandle CLOSED;
+    private static final VarHandle ELEMENT;
     private static final Object SKIPPED = new Object();
+    private static final Object DROPPED = new Object();
+    private static final long CLOSED_TAIL_BIT = Long.MIN_VALUE;
+    private static final long TAIL_SEQUENCE_MASK = Long.MAX_VALUE;
 
     static {
         try {
-            TAIL = MethodHandles.lookup().findVarHandle(MpscRingEdge.class, "tail", long.class);
-            HEAD = MethodHandles.lookup().findVarHandle(MpscRingEdge.class, "head", long.class);
+            CURSOR = MethodHandles.lookup().findVarHandle(PaddedLong.class, "value", long.class);
+            CLOSED = MethodHandles.lookup().findVarHandle(PaddedBoolean.class, "value", boolean.class);
+            ELEMENT = MethodHandles.arrayElementVarHandle(Object[].class);
         } catch (final ReflectiveOperationException ex) {
             throw new ExceptionInInitializerError(ex);
         }
@@ -34,9 +39,9 @@ public final class MpscRingEdge implements MessageEdge {
     private Object[] buffer;
     private LongAccess sequences;
     private LongAccess publishTimes;
-    private volatile long head;
-    private volatile long tail;
-    private volatile boolean closed;
+    private final PaddedLong head = new PaddedLong();
+    private final PaddedLong tail = new PaddedLong();
+    private final PaddedBoolean closed = new PaddedBoolean();
 
     public MpscRingEdge(
         final String from,
@@ -81,18 +86,23 @@ public final class MpscRingEdge implements MessageEdge {
         final Object[] localBuffer = buffer;
         final LongAccess localSequences = sequences;
         final LongAccess localPublishTimes = publishTimes;
+        long currentTailRaw;
         long currentTail;
         int index;
         while (true) {
-            if (closed) {
+            if (closed()) {
                 return false;
             }
-            currentTail = (long) TAIL.getVolatile(this);
+            currentTailRaw = (long) CURSOR.getVolatile(tail);
+            if (tailClosed(currentTailRaw)) {
+                return false;
+            }
+            currentTail = tailSequence(currentTailRaw);
             index = (int) currentTail & mask;
             final long sequence = localSequences.getAcquire(index);
             final long diff = sequence - currentTail;
             if (diff == 0L) {
-                if (TAIL.compareAndSet(this, currentTail, currentTail + 1L)) {
+                if (CURSOR.compareAndSet(tail, currentTailRaw, currentTail + 1L)) {
                     break;
                 }
             } else if (diff < 0L) {
@@ -102,7 +112,7 @@ public final class MpscRingEdge implements MessageEdge {
             }
         }
 
-        if (closed) {
+        if (closed()) {
             localBuffer[index] = SKIPPED;
             localSequences.setRelease(index, currentTail + 1L);
             return false;
@@ -112,7 +122,7 @@ public final class MpscRingEdge implements MessageEdge {
         if (localPublishTimes != null) {
             localPublishTimes.setPlain(index, System.nanoTime());
         }
-        if (closed) {
+        if (closed()) {
             localBuffer[index] = SKIPPED;
             if (localPublishTimes != null) {
                 localPublishTimes.setPlain(index, 0L);
@@ -128,7 +138,7 @@ public final class MpscRingEdge implements MessageEdge {
 
     @Override
     public Object poll() {
-        final long currentHead = (long) HEAD.get(this);
+        final long currentHead = (long) CURSOR.get(head);
         final int index = (int) currentHead & mask;
         final Object[] localBuffer = buffer;
         final LongAccess localSequences = sequences;
@@ -138,14 +148,16 @@ public final class MpscRingEdge implements MessageEdge {
             return null;
         }
 
-        final Object item = localBuffer[index];
-        localBuffer[index] = null;
+        final Object item = claimReadyItem(localBuffer, index);
+        if (item == null) {
+            return null;
+        }
         final LongAccess localPublishTimes = publishTimes;
-        if (item == SKIPPED) {
+        if (item == SKIPPED || item == DROPPED) {
             if (localPublishTimes != null) {
                 localPublishTimes.setPlain(index, 0L);
             }
-            HEAD.setRelease(this, currentHead + 1L);
+            CURSOR.setRelease(head, currentHead + 1L);
             localSequences.setRelease(index, currentHead + capacity);
             return null;
         }
@@ -153,7 +165,7 @@ public final class MpscRingEdge implements MessageEdge {
             metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
             localPublishTimes.setPlain(index, 0L);
         }
-        HEAD.setRelease(this, currentHead + 1L);
+        CURSOR.setRelease(head, currentHead + 1L);
         localSequences.setRelease(index, currentHead + capacity);
         metrics.recordConsume();
         graphMetrics.recordConsume();
@@ -168,7 +180,7 @@ public final class MpscRingEdge implements MessageEdge {
             return 0;
         }
 
-        final long currentHead = (long) HEAD.get(this);
+        final long currentHead = (long) CURSOR.get(head);
         long nextHead = currentHead;
         int targetIndex = offset;
         final Object[] localBuffer = buffer;
@@ -184,9 +196,11 @@ public final class MpscRingEdge implements MessageEdge {
                 if (sequence - (nextHead + 1L) != 0L) {
                     break;
                 }
-                final Object item = localBuffer[index];
-                localBuffer[index] = null;
-                if (item == SKIPPED) {
+                final Object item = claimReadyItem(localBuffer, index);
+                if (item == null) {
+                    break;
+                }
+                if (item == SKIPPED || item == DROPPED) {
                     localSequences.setRelease(index, nextHead + localCapacity);
                     nextHead++;
                     continue;
@@ -203,9 +217,11 @@ public final class MpscRingEdge implements MessageEdge {
                 if (sequence - (nextHead + 1L) != 0L) {
                     break;
                 }
-                final Object item = localBuffer[index];
-                localBuffer[index] = null;
-                if (item == SKIPPED) {
+                final Object item = claimReadyItem(localBuffer, index);
+                if (item == null) {
+                    break;
+                }
+                if (item == SKIPPED || item == DROPPED) {
                     localPublishTimes.setPlain(index, 0L);
                     localSequences.setRelease(index, nextHead + localCapacity);
                     nextHead++;
@@ -221,7 +237,7 @@ public final class MpscRingEdge implements MessageEdge {
         }
 
         if (nextHead > currentHead) {
-            HEAD.setRelease(this, nextHead);
+            CURSOR.setRelease(head, nextHead);
         }
         if (drained > 0) {
             recordConsumed(drained);
@@ -236,17 +252,8 @@ public final class MpscRingEdge implements MessageEdge {
 
     @Override
     public Object dropOldest() {
-        return poll();
-    }
-
-    @Override
-    public boolean tryCoalesce(final Object item, final Function<Object, ?> keyExtractor) {
-        if (keyExtractor == null || item == null) {
-            return false;
-        }
-        final Object key = keyExtractor.apply(item);
-        final long currentHead = (long) HEAD.getAcquire(this);
-        final long currentTail = (long) TAIL.getVolatile(this);
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         final LongAccess localSequences = sequences;
@@ -255,13 +262,43 @@ public final class MpscRingEdge implements MessageEdge {
             if (localSequences.getAcquire(index) - (sequence + 1L) != 0L) {
                 continue;
             }
-            final Object existing = localBuffer[index];
-            if (existing != null && existing != SKIPPED && keyEquals(key, keyExtractor.apply(existing))) {
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item != null
+                && item != SKIPPED
+                && item != DROPPED
+                && ELEMENT.compareAndSet(localBuffer, index, item, DROPPED)) {
+                reclaimDroppedPrefix();
+                return item;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean tryCoalesce(final Object item, final Function<Object, ?> keyExtractor) {
+        if (keyExtractor == null || item == null) {
+            return false;
+        }
+        final Object key = keyExtractor.apply(item);
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
+        final Object[] localBuffer = buffer;
+        final int localMask = mask;
+        final LongAccess localSequences = sequences;
+        for (long sequence = currentHead; sequence < currentTail; sequence++) {
+            final int index = (int) sequence & localMask;
+            if (localSequences.getAcquire(index) - (sequence + 1L) != 0L) {
+                continue;
+            }
+            final Object existing = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (existing != null
+                && existing != SKIPPED
+                && existing != DROPPED
+                && keyEquals(key, keyExtractor.apply(existing))) {
                 if (containsHandle(existing) || containsHandle(item)) {
                     return false;
                 }
-                localBuffer[index] = item;
-                return true;
+                return ELEMENT.compareAndSet(localBuffer, index, existing, item);
             }
         }
         return false;
@@ -297,22 +334,31 @@ public final class MpscRingEdge implements MessageEdge {
 
     @Override
     public boolean isEmpty() {
-        return (long) HEAD.getAcquire(this) >= (long) TAIL.getVolatile(this);
+        return (long) CURSOR.getAcquire(head) >= tailSequence((long) CURSOR.getVolatile(tail));
+    }
+
+    @Override
+    public int inFlight() {
+        final long currentHead = (long) CURSOR.getAcquire(head);
+        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
+        final long depth = Math.max(0L, currentTail - currentHead);
+        return depth > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) depth;
     }
 
     @Override
     public boolean isClosed() {
-        return closed;
+        return closed();
     }
 
     @Override
     public void close() {
-        closed = true;
+        closeFlag();
     }
 
     @Override
     public void abort() {
-        closed = true;
+        closeFlag();
+        drainAndRelease();
     }
 
     @Override
@@ -323,5 +369,114 @@ public final class MpscRingEdge implements MessageEdge {
     @Override
     public EdgeMetrics metrics() {
         return metrics;
+    }
+
+    private Object claimReadyItem(final Object[] localBuffer, final int index) {
+        while (true) {
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item == null) {
+                return null;
+            }
+            if (ELEMENT.compareAndSet(localBuffer, index, item, null)) {
+                return item;
+            }
+        }
+    }
+
+    private void drainAndRelease() {
+        if (buffer == null || sequences == null) {
+            return;
+        }
+        final long targetTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final LongAccess localSequences = sequences;
+        while (true) {
+            final long currentHead = (long) CURSOR.get(head);
+            if (currentHead >= targetTail) {
+                return;
+            }
+            final int index = (int) currentHead & mask;
+            if (localSequences.getAcquire(index) - (currentHead + 1L) != 0L) {
+                Thread.onSpinWait();
+                continue;
+            }
+            final Object item = claimReadyItem(buffer, index);
+            if (item == null) {
+                Thread.onSpinWait();
+                continue;
+            }
+            final LongAccess localPublishTimes = publishTimes;
+            if (localPublishTimes != null) {
+                localPublishTimes.setPlain(index, 0L);
+            }
+            CURSOR.setRelease(head, currentHead + 1L);
+            localSequences.setRelease(index, currentHead + capacity);
+            if (item != SKIPPED && item != DROPPED) {
+                releaseIfHandle(item);
+            }
+        }
+    }
+
+    private void reclaimDroppedPrefix() {
+        final Object[] localBuffer = buffer;
+        final LongAccess localSequences = sequences;
+        if (localBuffer == null || localSequences == null) {
+            return;
+        }
+        final LongAccess localPublishTimes = publishTimes;
+        while (true) {
+            final long currentHead = (long) CURSOR.getAcquire(head);
+            final int index = (int) currentHead & mask;
+            if (localSequences.getAcquire(index) - (currentHead + 1L) != 0L) {
+                return;
+            }
+            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            if (item != DROPPED) {
+                return;
+            }
+            if (CURSOR.compareAndSet(head, currentHead, currentHead + 1L)) {
+                ELEMENT.compareAndSet(localBuffer, index, DROPPED, null);
+                if (localPublishTimes != null) {
+                    localPublishTimes.setPlain(index, 0L);
+                }
+                localSequences.setRelease(index, currentHead + capacity);
+            }
+        }
+    }
+
+    private boolean closed() {
+        return (boolean) CLOSED.getVolatile(closed);
+    }
+
+    private void closeFlag() {
+        CLOSED.setVolatile(closed, true);
+        closeTail();
+    }
+
+    private void closeTail() {
+        while (true) {
+            final long currentTail = (long) CURSOR.getVolatile(tail);
+            if (tailClosed(currentTail)) {
+                return;
+            }
+            if (CURSOR.compareAndSet(tail, currentTail, currentTail | CLOSED_TAIL_BIT)) {
+                return;
+            }
+        }
+    }
+
+    private static long tailSequence(final long tailValue) {
+        return tailValue & TAIL_SEQUENCE_MASK;
+    }
+
+    private static boolean tailClosed(final long tailValue) {
+        return (tailValue & CLOSED_TAIL_BIT) != 0L;
+    }
+
+    private static void releaseIfHandle(final Object item) {
+        if (item instanceof SlabHandle<?> handle) {
+            handle.release();
+        } else if (item instanceof Stamped<?> stamped) {
+            releaseIfHandle(stamped.value());
+        }
     }
 }

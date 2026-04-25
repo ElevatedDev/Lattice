@@ -6,6 +6,7 @@ import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.placement.MemoryMode;
+import com.lattice.slab.SlabPool;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -68,6 +69,58 @@ class RingEdgeCorrectnessTest {
         assertTrue(edge.isEmpty());
         assertEquals(0, edge.metrics().emittedCount());
         assertEquals(0, edge.metrics().consumedCount());
+    }
+
+    @Test
+    void closeDoesNotCorruptDepthOrEmptiness() {
+        final SpscRingEdge spsc = new SpscRingEdge("source", "sink", 8, edgeMetrics(), graphMetrics());
+        final MpscRingEdge mpsc = new MpscRingEdge("source", "sink", 8, MemoryMode.onHeapSlots(), edgeMetrics(), graphMetrics());
+        mpsc.firstTouch("sink");
+
+        spsc.close();
+        mpsc.close();
+
+        assertTrue(spsc.isEmpty());
+        assertTrue(mpsc.isEmpty());
+        assertEquals(0, spsc.inFlight());
+        assertEquals(0, mpsc.inFlight());
+    }
+
+    @Test
+    void spscDrainSkipsDroppedPrefixAndPreservesSurvivorOrder() {
+        final SpscRingEdge edge = new SpscRingEdge("source", "sink", 4, edgeMetrics(), graphMetrics());
+        assertTrue(edge.offer(1));
+        assertTrue(edge.offer(2));
+        assertTrue(edge.offer(3));
+
+        assertEquals(1, edge.dropOldest());
+
+        final Object[] batch = new Object[2];
+        assertEquals(2, edge.drainTo(batch, 0, 2));
+        assertEquals(2, batch[0]);
+        assertEquals(3, batch[1]);
+        assertTrue(edge.isEmpty());
+        assertEquals(2, edge.metrics().consumedCount());
+    }
+
+    @Test
+    void abortReleasesQueuedSlabHandles() {
+        final SlabPool<String> spscPool = new SlabPool<>("spsc-abort", 1);
+        final SpscRingEdge spsc = new SpscRingEdge("source", "sink", 2, edgeMetrics(), graphMetrics());
+        assertTrue(spsc.offer(spscPool.acquire("queued")));
+        spsc.abort();
+        assertTrue(spsc.isEmpty());
+        assertEquals(0, spsc.inFlight());
+        assertEquals(0, spscPool.leakedCount());
+
+        final SlabPool<String> mpscPool = new SlabPool<>("mpsc-abort", 1);
+        final MpscRingEdge mpsc = new MpscRingEdge("source", "sink", 2, MemoryMode.onHeapSlots(), edgeMetrics(), graphMetrics());
+        mpsc.firstTouch("sink");
+        assertTrue(mpsc.offer(mpscPool.acquire("queued")));
+        mpsc.abort();
+        assertTrue(mpsc.isEmpty());
+        assertEquals(0, mpsc.inFlight());
+        assertEquals(0, mpscPool.leakedCount());
     }
 
     private static void assertMpscAcceptsConcurrentProducers(final MemoryMode memoryMode) throws Exception {

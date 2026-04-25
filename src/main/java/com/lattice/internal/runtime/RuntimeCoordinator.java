@@ -13,16 +13,19 @@ class RuntimeCoordinator {
 
     private static final MessageEdge[] NO_EDGES = new MessageEdge[0];
     private static final StageWorker[] NO_WORKERS = new StageWorker[0];
+    private static final SourceEmitter<?>[] NO_SOURCES = new SourceEmitter<?>[0];
 
     private final String graphName;
     private final AtomicReference<GraphState> state;
     private final AtomicReference<Throwable> failure;
     private final GraphMetrics metrics;
     private final AtomicInteger remainingWorkers;
+    private final AtomicInteger activeWorkers = new AtomicInteger();
     private final CountDownLatch bootstrapLatch;
     private final CountDownLatch runLatch = new CountDownLatch(1);
     private volatile MessageEdge[] edges = NO_EDGES;
     private volatile StageWorker[] workers = NO_WORKERS;
+    private volatile SourceEmitter<?>[] sources = NO_SOURCES;
     private volatile boolean abortRequested;
 
     RuntimeCoordinator(
@@ -40,9 +43,10 @@ class RuntimeCoordinator {
         this.bootstrapLatch = new CountDownLatch(workerCount);
     }
 
-    void attach(final MessageEdge[] edges, final StageWorker[] workers) {
+    void attach(final MessageEdge[] edges, final StageWorker[] workers, final SourceEmitter<?>[] sources) {
         this.edges = edges.clone();
         this.workers = workers.clone();
+        this.sources = sources.clone();
     }
 
     String graphName() {
@@ -67,6 +71,18 @@ class RuntimeCoordinator {
             || current == GraphState.STOPPING
             || current == GraphState.STOPPED
             || current == GraphState.FAILED;
+    }
+
+    void workerActive() {
+        activeWorkers.incrementAndGet();
+    }
+
+    void workerInactive() {
+        activeWorkers.decrementAndGet();
+    }
+
+    boolean hasInFlightWork() {
+        return activeWorkers.get() > 0;
     }
 
     void workerBootstrapped() {
@@ -98,6 +114,11 @@ class RuntimeCoordinator {
 
             JfrEvents.stageException(graphName, stageName, cause);
 
+            final SourceEmitter<?>[] currentSources = sources;
+            for (int i = 0; i < currentSources.length; i++) {
+                currentSources[i].close();
+            }
+
             final MessageEdge[] currentEdges = edges;
             for (int i = 0; i < currentEdges.length; i++) {
                 currentEdges[i].abort();
@@ -112,8 +133,17 @@ class RuntimeCoordinator {
 
     void requestStop() {
         abortRequested = true;
-        state.set(GraphState.STOPPING);
-        releaseWorkers();
+        while (true) {
+            final GraphState current = state.get();
+            if (current == GraphState.STOPPING || current == GraphState.STOPPED || current == GraphState.FAILED) {
+                releaseWorkers();
+                return;
+            }
+            if (state.compareAndSet(current, GraphState.STOPPING)) {
+                releaseWorkers();
+                return;
+            }
+        }
     }
 
     void poison(final String stageName, final Throwable cause, final MessageEdge input, final MessageEdge output) {

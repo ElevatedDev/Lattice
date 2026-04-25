@@ -31,9 +31,11 @@ class RuntimeFailureAndBackpressureTest {
             .build();
 
         graph.start();
-        graph.emitter("ingress", Integer.class).emit(1);
+        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+        ingress.emit(1);
 
         assertEventually(() -> graph.state() == GraphState.FAILED, Duration.ofSeconds(5));
+        assertEventually(ingress::isClosed, Duration.ofSeconds(5));
         assertTrue(graph.failure().isPresent());
         assertEquals(1, graph.metrics().stage("explode").stageExceptions());
     }

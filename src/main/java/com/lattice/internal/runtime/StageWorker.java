@@ -2,6 +2,7 @@ package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.internal.edge.MessageEdge;
 import com.lattice.internal.graph.NodeDefinition;
@@ -72,8 +73,10 @@ final class StageWorker implements Runnable {
     private final long lingerNanos;
     private final int parkIdleThreshold;
     private final boolean jfrEnabled;
+    private final boolean timeBatches;
     private final int[] weightedSchedule;
     private final long[] partitionLaneCounts;
+    private final int outputMask;
     private ArrayBatch batch;
     private Object[] batchItems;
     private int[] batchSources;
@@ -130,6 +133,8 @@ final class StageWorker implements Runnable {
         this.weightedSchedule = dispatchSpec == null ? new int[0] : weightedSchedule(dispatchSpec, outputSenders.length);
         this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
         this.jfrEnabled = JfrEvents.enabled();
+        this.timeBatches = StageMetrics.histogramsEnabled() || jfrEnabled;
+        this.outputMask = powerOfTwoMask(outputSenders.length);
     }
 
     void start() {
@@ -185,38 +190,55 @@ final class StageWorker implements Runnable {
 
             int idle = 0;
             while (!coordinator.isAbortRequested()) {
-                final int received = receive();
-                if (received == 0) {
-                    expireJoinGroups(false);
-                    if (allInputsClosedAndEmpty()) {
-                        break;
-                    }
-                    workerState(WorkerState.IDLE);
-                    if (jfrEnabled) {
-                        JfrEvents.workerBlocked(graphName, stageName);
-                    }
-                    final boolean willPark = parkIdleThreshold >= 0 && idle >= parkIdleThreshold;
-                    idle = waitStrategy.idle(idle, metrics);
-                    if (willPark) {
-                        workerState(WorkerState.PARKED);
-                        if (jfrEnabled) {
-                            JfrEvents.workerParked(graphName, stageName);
+                boolean active = false;
+                int received = 0;
+                try {
+                    coordinator.workerActive();
+                    active = true;
+                    received = receive();
+                    if (received == 0) {
+                        coordinator.workerInactive();
+                        active = false;
+                        expireJoinGroups(false);
+                        if (allInputsClosedAndEmpty()) {
+                            break;
                         }
+                        workerState(WorkerState.IDLE);
+                        if (jfrEnabled) {
+                            JfrEvents.workerBlocked(graphName, stageName);
+                        }
+                        final boolean willPark = parkIdleThreshold >= 0 && idle >= parkIdleThreshold;
+                        idle = waitStrategy.idle(idle, metrics);
+                        if (willPark) {
+                            workerState(WorkerState.PARKED);
+                            if (jfrEnabled) {
+                                JfrEvents.workerParked(graphName, stageName);
+                            }
+                        }
+                        continue;
                     }
-                    continue;
-                }
 
-                idle = 0;
-                workerState(WorkerState.RUNNING);
-                metrics.recordConsume(received);
-                final long started = System.nanoTime();
-                processReceived(received);
-                final long serviceNanos = System.nanoTime() - started;
-                metrics.recordBatch(received, serviceNanos);
-                if (jfrEnabled) {
-                    JfrEvents.batchProcessed(graphName, stageName, received, serviceNanos);
+                    idle = 0;
+                    workerState(WorkerState.RUNNING);
+                    metrics.recordConsume(received);
+                    final long started = timeBatches ? System.nanoTime() : 0L;
+                    try {
+                        processReceived(received);
+                        final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
+                        metrics.recordBatch(received, serviceNanos);
+                        if (jfrEnabled) {
+                            JfrEvents.batchProcessed(graphName, stageName, received, serviceNanos);
+                        }
+                    } catch (final Throwable ex) {
+                        releaseBatchItems(received);
+                        throw ex;
+                    }
+                } finally {
+                    if (active) {
+                        coordinator.workerInactive();
+                    }
+                    batch.clear();
                 }
-                batch.clear();
             }
             if (coordinator.isAbortRequested()) {
                 releaseJoinState();
@@ -225,9 +247,14 @@ final class StageWorker implements Runnable {
             }
         } catch (final Throwable ex) {
             releaseJoinState();
-            if (coordinator.isAbortRequested() && ex instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-                terminalState = WorkerState.STOPPED;
+            if (coordinator.isAbortRequested()
+                && (coordinator.state() != GraphState.FAILED
+                    || ex instanceof GraphRuntimeException
+                    || ex instanceof InterruptedException)) {
+                if (ex instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                terminalState = coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED;
             } else {
                 terminalState = handleException(ex);
             }
@@ -341,16 +368,18 @@ final class StageWorker implements Runnable {
                 sink.accept(item);
             } finally {
                 releaseIfHandle(item);
+                batchItems[i] = null;
             }
         }
     }
 
     private void processBatch(final int received) throws Exception {
-        try {
+        try (HandleOwnership.Scope ignored = HandleOwnership.scope(batchItems, received)) {
             batchLogic.onBatch(batch, output, context);
         } finally {
             for (int i = 0; i < received; i++) {
                 releaseIfHandle(batch.itemAt(i));
+                batchItems[i] = null;
             }
         }
     }
@@ -358,10 +387,11 @@ final class StageWorker implements Runnable {
     private void processMessages(final int received) throws Exception {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
-            try {
+            try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
                 logic.onMessage(item, output, context);
             } finally {
                 releaseIfHandle(item);
+                batchItems[i] = null;
             }
         }
     }
@@ -369,10 +399,19 @@ final class StageWorker implements Runnable {
     private void processDispatch(final int received) {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
-            final int branch = dispatchBranch(item);
-            metrics.recordRoutingDecision();
-            outputSenders[branch].edgeMetrics().recordLaneSelection();
-            outputSenders[branch].emit(item);
+            boolean transferred = false;
+            try {
+                final int branch = dispatchBranch(item);
+                metrics.recordRoutingDecision();
+                outputSenders[branch].edgeMetrics().recordLaneSelection();
+                outputSenders[branch].emit(item);
+                transferred = true;
+            } finally {
+                if (!transferred) {
+                    releaseIfHandle(item);
+                }
+                batchItems[i] = null;
+            }
         }
     }
 
@@ -448,15 +487,24 @@ final class StageWorker implements Runnable {
     private void processPartition(final int received) {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
-            final Object key = partitionSpec.keyExtractor().apply(item);
-            final int lane = floorMod(key == null ? 0 : key.hashCode(), outputSenders.length);
-            metrics.recordRoutingDecision();
-            outputSenders[lane].edgeMetrics().recordLaneSelection();
-            final long laneCount = ++partitionLaneCounts[lane];
-            if (partitionSpec.hotKeyThreshold() > 0L && laneCount == partitionSpec.hotKeyThreshold()) {
-                outputSenders[lane].edgeMetrics().recordHotKeySignal();
+            boolean transferred = false;
+            try {
+                final Object key = partitionSpec.keyExtractor().apply(item);
+                final int lane = branchForKey(key);
+                metrics.recordRoutingDecision();
+                outputSenders[lane].edgeMetrics().recordLaneSelection();
+                final long laneCount = ++partitionLaneCounts[lane];
+                if (partitionSpec.hotKeyThreshold() > 0L && laneCount == partitionSpec.hotKeyThreshold()) {
+                    outputSenders[lane].edgeMetrics().recordHotKeySignal();
+                }
+                outputSenders[lane].emit(item);
+                transferred = true;
+            } finally {
+                if (!transferred) {
+                    releaseIfHandle(item);
+                }
+                batchItems[i] = null;
             }
-            outputSenders[lane].emit(item);
         }
     }
 
@@ -472,10 +520,18 @@ final class StageWorker implements Runnable {
             case ROUND_ROBIN -> (int) (routeSequence++ % outputSenders.length);
             case KEYED -> {
                 final Object key = dispatchSpec.keyExtractor().apply(item);
-                yield floorMod(key == null ? 0 : key.hashCode(), outputSenders.length);
+                yield branchForKey(key);
             }
             case WEIGHTED -> weightedSchedule[(int) (routeSequence++ % weightedSchedule.length)];
         };
+    }
+
+    private int branchForKey(final Object key) {
+        final int hash = spread(key == null ? 0 : key.hashCode());
+        if (outputMask >= 0) {
+            return hash & outputMask;
+        }
+        return floorMod(hash, outputSenders.length);
     }
 
     private void processJoinItem(final int sourceIndex, final Object item) {
@@ -489,16 +545,9 @@ final class StageWorker implements Runnable {
             metrics.recordOpenJoinGroup();
         }
 
-        if (state.values.containsKey(source)) {
-            metrics.recordDuplicateJoinStamp();
-            switch (joinSpec.duplicatePolicy()) {
-                case IGNORE, COUNT -> {
-                    releaseIfHandle(item);
-                    return;
-                }
-                case FAIL -> throw new IllegalStateException("duplicate join stamp " + stamp + " from " + source);
-                default -> throw new IllegalStateException("unknown duplicate policy: " + joinSpec.duplicatePolicy());
-            }
+        if (state.values.containsKey(source) || (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
+            handleDuplicateJoinStamp(stamp, source, item);
+            return;
         }
 
         state.values.put(source, item);
@@ -520,6 +569,22 @@ final class StageWorker implements Runnable {
         if (state.values.size() == inputs.length) {
             emitJoin(stamp, state, source, false, true);
             joinStates.remove(stamp);
+        }
+    }
+
+    private void handleDuplicateJoinStamp(final Object stamp, final String source, final Object item) {
+        switch (joinSpec.duplicatePolicy()) {
+            case IGNORE -> releaseIfHandle(item);
+            case COUNT -> {
+                metrics.recordDuplicateJoinStamp();
+                releaseIfHandle(item);
+            }
+            case FAIL -> {
+                metrics.recordDuplicateJoinStamp();
+                releaseIfHandle(item);
+                throw new IllegalStateException("duplicate join stamp " + stamp + " from " + source);
+            }
+            default -> throw new IllegalStateException("unknown duplicate policy: " + joinSpec.duplicatePolicy());
         }
     }
 
@@ -586,7 +651,9 @@ final class StageWorker implements Runnable {
             triggeringSource
         );
         final Object outputItem = ((JoinSpec) joinSpec).combiner().apply(group);
-        outputSenders[0].emit(outputItem);
+        try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values.values())) {
+            outputSenders[0].emit(outputItem);
+        }
         metrics.recordCompletedJoinGroup();
         if (releaseValues) {
             releaseJoinValues(state);
@@ -620,6 +687,19 @@ final class StageWorker implements Runnable {
             }
         }
         return true;
+    }
+
+    private void releaseBatchItems(final int received) {
+        if (processingMode == PROCESS_BROADCAST || processingMode == PROCESS_JOIN) {
+            return;
+        }
+        for (int i = 0; i < received; i++) {
+            final Object item = batchItems[i];
+            if (item != null) {
+                releaseIfHandle(item);
+                batchItems[i] = null;
+            }
+        }
     }
 
     private WorkerState handleException(final Throwable ex) {
@@ -712,6 +792,14 @@ final class StageWorker implements Runnable {
     private static int floorMod(final int value, final int modulo) {
         final int result = value % modulo;
         return result < 0 ? result + modulo : result;
+    }
+
+    private static int powerOfTwoMask(final int value) {
+        return value > 0 && Integer.bitCount(value) == 1 ? value - 1 : -1;
+    }
+
+    private static int spread(final int value) {
+        return value ^ (value >>> 16);
     }
 
     private static void releaseIfHandle(final Object item) {
