@@ -6,6 +6,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * Live metrics for one stage worker.
+ * <p>
+ * Hot-path counters can be disabled with {@code lattice.metrics.hotCounters}.
+ * Batch and service-time histograms are opt-in through
+ * {@code lattice.metrics.stageHistograms}; histogram accessors return defensive
+ * copies.
+ */
 public final class StageMetrics implements WaitMetrics {
 
     private static final boolean HISTOGRAMS_ENABLED = Boolean.getBoolean("lattice.metrics.stageHistograms");
@@ -53,14 +61,23 @@ public final class StageMetrics implements WaitMetrics {
     private final AtomicLong startNanos = new AtomicLong();
     private final AtomicLong stopNanos = new AtomicLong();
 
+    /**
+     * Creates metrics for a named stage.
+     */
     public StageMetrics(final String name) {
         this.name = name;
     }
 
+    /**
+     * Returns whether hot-path counters are enabled for this JVM.
+     */
     public static boolean hotCountersEnabled() {
         return HOT_COUNTERS_ENABLED;
     }
 
+    /**
+     * Returns the stage name.
+     */
     public String name() {
         return name;
     }
@@ -153,6 +170,9 @@ public final class StageMetrics implements WaitMetrics {
         return releasedHandles.sum();
     }
 
+    /**
+     * Returns approximate processed-message throughput since start.
+     */
     public double processRatePerSecond() {
         final Instant started = startTime.get();
         if (started == null) {
@@ -165,16 +185,25 @@ public final class StageMetrics implements WaitMetrics {
         return processedMessages.sum() * 1_000_000_000.0d / elapsed;
     }
 
+    /**
+     * Returns a copy of batch-size histogram data.
+     */
     public Histogram batchSizeHistogram() {
         return batchSizeHistogram == null ? new Histogram(1, 1_000_000, 3) : batchSizeHistogram.copy();
     }
 
+    /**
+     * Returns a copy of service-time histogram data.
+     */
     public Histogram serviceTimeNanosHistogram() {
         return serviceTimeNanosHistogram == null
             ? new Histogram(1, 60_000_000_000L, 3)
             : serviceTimeNanosHistogram.copy();
     }
 
+    /**
+     * Returns whether stage histograms are enabled for this JVM.
+     */
     public static boolean histogramsEnabled() {
         return HISTOGRAMS_ENABLED;
     }

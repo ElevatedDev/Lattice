@@ -4,6 +4,14 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Reference-counted handle for a slab payload.
+ * <p>
+ * Each retained handle must be released exactly once. The payload returns to
+ * the owning {@link SlabPool} when the last retained handle is released.
+ *
+ * @param <T> payload type
+ */
 public final class SlabHandle<T> implements AutoCloseable {
 
     private final SlabPool<T> pool;
@@ -17,10 +25,17 @@ public final class SlabHandle<T> implements AutoCloseable {
         this.references = Objects.requireNonNull(references, "references");
     }
 
+    /**
+     * Returns the shared payload.
+     */
     public T payload() {
         return payload;
     }
 
+    /**
+     * Retains the payload and returns another handle sharing the same reference
+     * count.
+     */
     public SlabHandle<T> retain() {
         while (true) {
             final int current = references.get();
@@ -33,19 +48,31 @@ public final class SlabHandle<T> implements AutoCloseable {
         }
     }
 
+    /**
+     * Returns the current shared reference count.
+     */
     public int references() {
         return references.get();
     }
 
+    /**
+     * Returns whether this handle instance has been released.
+     */
     public boolean released() {
         return released.get();
     }
 
+    /**
+     * Releases this handle.
+     */
     @Override
     public void close() {
         release();
     }
 
+    /**
+     * Releases this handle if it has not already been released.
+     */
     public void release() {
         if (!released.compareAndSet(false, true)) {
             return;

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Latice has not shipped a 1.0 release yet. The current repository state should
+Lattice has not shipped a 1.0 release yet. The current repository state should
 be treated as pre-release software.
 
 | Version | Supported |
@@ -43,6 +43,6 @@ Pay particular attention to:
 - user-provided stage logic and exception handlers;
 - denial-of-service risks from backpressure, joins, and retained state.
 
-Latice does not sandbox user stage code. Applications must treat stage logic,
+Lattice does not sandbox user stage code. Applications must treat stage logic,
 copiers, key extractors, stamp extractors, join combiners, and exception
 handlers as trusted application code.

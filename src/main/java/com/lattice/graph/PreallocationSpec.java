@@ -27,6 +27,17 @@ public final class PreallocationSpec<T> {
         this.poolSize = poolSize;
     }
 
+    /**
+     * Creates a factory-backed pool sized by graph compilation.
+     * <p>
+     * The factory receives the slot index and is called once per pool slot while
+     * the graph is built. Use {@link #pool(IntFunction, int)} or
+     * {@link #poolSize(int)} when the default size should be overridden.
+     *
+     * @param factory creates one reusable item per pool slot
+     * @param <T> item type
+     * @return preallocation spec
+     */
     public static <T> PreallocationSpec<T> pool(final IntFunction<? extends T> factory) {
         return new PreallocationSpec<>(Objects.requireNonNull(factory, "factory"), null, 0);
     }
@@ -91,18 +102,35 @@ public final class PreallocationSpec<T> {
         return new PreallocationSpec<>(factory, fixedPool, poolSize);
     }
 
+    /**
+     * Returns whether this spec uses caller-provided pool instances.
+     */
     public boolean fixed() {
         return fixedPool != null;
     }
 
+    /**
+     * Returns the factory for factory-backed pools, or {@code null} for fixed
+     * pools.
+     */
     public IntFunction<? extends T> factory() {
         return factory;
     }
 
+    /**
+     * Returns a defensive copy of the fixed pool array, or {@code null} for
+     * factory-backed pools.
+     */
     public T[] fixedPool() {
         return fixedPool == null ? null : fixedPool.clone();
     }
 
+    /**
+     * Returns the requested pool size.
+     * <p>
+     * A value of {@code 0} means the graph compiler should choose a size from
+     * the source reuse bound.
+     */
     public int requestedPoolSize() {
         return poolSize;
     }

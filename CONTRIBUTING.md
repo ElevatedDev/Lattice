@@ -1,6 +1,6 @@
 # Contributing
 
-Latice is still moving toward Phase 5 release hardening. Contributions should
+Lattice is still moving toward Phase 5 release hardening. Contributions should
 keep the runtime aligned with the five-phase plan and preserve the hot-path
 discipline documented there.
 

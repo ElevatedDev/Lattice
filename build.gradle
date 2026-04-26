@@ -205,6 +205,75 @@ tasks.register('jcstress', JavaExec) {
     args = ['-v']
 }
 
+tasks.register('verifyDocumentationRelease') {
+    group = 'verification'
+    description = 'Checks public docs links, benchmark artifact references, and project spelling.'
+
+    doLast {
+        def failures = []
+        def markdownFiles = fileTree(rootDir) {
+            include '*.md'
+            include 'docs/**/*.md'
+        }.files.sort { left, right -> left.path <=> right.path }
+
+        def staleProjectSpellings = ['Lati' + 'ce', 'lati' + 'ce']
+        def allowedLocalPathPattern = ~('IdeaProjects[\\\\/]' + staleProjectSpellings[0])
+        def spellingFiles = markdownFiles + [file('settings.gradle')]
+        spellingFiles.findAll { it.isFile() }.each { checkedFile ->
+            checkedFile.eachLine('UTF-8') { line, lineNumber ->
+                if (staleProjectSpellings.any { line.contains(it) }
+                    && !(line =~ allowedLocalPathPattern)) {
+                    failures << "${relativePath(checkedFile)}:${lineNumber} uses stale project spelling"
+                }
+            }
+        }
+
+        def markdownLinkPattern = ~/\[[^\]]+\]\(([^)]+)\)/
+        markdownFiles.each { markdownFile ->
+            markdownFile.eachLine('UTF-8') { line, lineNumber ->
+                def matcher = line =~ markdownLinkPattern
+                matcher.each { match ->
+                    def target = match[1].trim()
+                    if (target.startsWith('<') && target.endsWith('>')) {
+                        target = target.substring(1, target.length() - 1)
+                    }
+                    def targetWithoutFragment = target.split('#', 2)[0].split('\\?', 2)[0]
+                    if (targetWithoutFragment
+                        && !(targetWithoutFragment ==~ /(?i)^[a-z][a-z0-9+.-]*:.*/)
+                        && !targetWithoutFragment.startsWith('#')) {
+                        def linkedFile = new File(markdownFile.parentFile, targetWithoutFragment).canonicalFile
+                        if (!linkedFile.exists()) {
+                            failures << "${relativePath(markdownFile)}:${lineNumber} links to missing ${target}"
+                        }
+                    }
+                }
+            }
+        }
+
+        def benchmarkArtifactPattern = ~/`([^`]*\.json)`/
+        markdownFiles.each { markdownFile ->
+            markdownFile.eachLine('UTF-8') { line, lineNumber ->
+                def matcher = line =~ benchmarkArtifactPattern
+                matcher.each { match ->
+                    def artifact = match[1]
+                    if (artifact.startsWith('results/')) {
+                        failures << "${relativePath(markdownFile)}:${lineNumber} references ignored benchmark artifact ${artifact}"
+                    } else if (artifact.startsWith('docs/benchmark-results/')) {
+                        def artifactFile = file(artifact)
+                        if (!artifactFile.isFile()) {
+                            failures << "${relativePath(markdownFile)}:${lineNumber} references missing benchmark artifact ${artifact}"
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!failures.isEmpty()) {
+            throw new GradleException("Documentation release checks failed:\n - ${failures.join('\n - ')}")
+        }
+    }
+}
+
 tasks.register('releaseCheck') {
     group = 'verification'
     description = 'Runs the portable release verification gate.'
@@ -214,6 +283,7 @@ tasks.register('releaseCheck') {
     dependsOn tasks.named('examplesClasses')
     dependsOn tasks.named('testkitClasses')
     dependsOn tasks.named('verifyReleaseArtifacts')
+    dependsOn tasks.named('verifyDocumentationRelease')
 }
 
 tasks.register('verifyReleaseArtifacts') {
@@ -291,4 +361,8 @@ tasks.register('verifyOpenSourceRelease') {
             throw new GradleException("Open-source release metadata is incomplete:\n - ${missing.join('\n - ')}")
         }
     }
+}
+
+tasks.named('releaseCheck') {
+    dependsOn tasks.named('verifyOpenSourceRelease')
 }

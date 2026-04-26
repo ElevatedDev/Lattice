@@ -159,22 +159,21 @@ where the topology allows it.
 
 ## Benchmark Snapshot
 
-The repository includes local benchmark artifacts from
-`results/apples-2026-04-26/` and additional smoke artifacts under
+The repository includes local benchmark artifacts under
 `docs/benchmark-results/`. These numbers are useful for orientation, but they
 are not Linux, NUMA, or release-grade performance claims.
 
 | Scenario | Result | Source Artifact | Notes |
 | --- | ---: | --- | --- |
-| Lattice fused three-stage pipeline | 79.13M ops/s | `pipeline-current-isolated.json` | Fusion enabled; internal handoffs compiled away. |
-| Lattice physical three-stage pipeline | 27.13M ops/s | `pipeline-current-isolated.json` | Same pipeline shape without fused execution. |
-| Disruptor three-stage pipeline | 6.97M ops/s | `pipeline-current-isolated.json` | Comparison row for this benchmark model. |
-| Lattice fused pipeline with GC profiler | 41.07M ops/s, about 0 B/op | `pipeline-fused-current-isolated-gc.json` | GC profiler overhead changes throughput; use allocation data separately. |
-| Lattice semantic join | 6.05M ops/s, about 0 B/op | `apples-fair-join-pooled.json` | Join semantics and payload model matter. |
-| Disruptor dependency graph | 10.32M ops/s | `apples-fair-join-pooled.json` | Dependency graph comparison, not a general Disruptor result. |
-| Lattice MPSC reference row | 8.51M ops/s | `apples-fair-join-pooled.json` | Four benchmark threads. |
-| Disruptor MPSC reference row | 19.44M ops/s | `apples-fair-join-pooled.json` | Four benchmark threads. |
-| Disruptor single-producer baseline | 33.66M ops/s | `disruptor-baseline-single.json` | Preferred baseline over the anomalous SPSC apples Disruptor row. |
+| Lattice fused three-stage pipeline | 79.13M ops/s | `docs/benchmark-results/apples-2026-04-26/pipeline-current-isolated.json` | Fusion enabled; internal handoffs compiled away. |
+| Lattice physical three-stage pipeline | 27.13M ops/s | `docs/benchmark-results/apples-2026-04-26/pipeline-current-isolated.json` | Same pipeline shape without fused execution. |
+| Disruptor three-stage pipeline | 6.97M ops/s | `docs/benchmark-results/apples-2026-04-26/pipeline-current-isolated.json` | Comparison row for this benchmark model. |
+| Lattice fused pipeline with GC profiler | 41.07M ops/s, about 0 B/op | `docs/benchmark-results/apples-2026-04-26/pipeline-fused-current-isolated-gc.json` | GC profiler overhead changes throughput; use allocation data separately. |
+| Lattice semantic join | 6.78M ops/s | `docs/benchmark-results/apples-2026-04-26/final-hotpaths-after-final-pass.json` | Join semantics and payload model matter. |
+| Disruptor dependency graph | 6.96M ops/s | `docs/benchmark-results/apples-2026-04-26/final-hotpaths-after-final-pass.json` | Dependency graph comparison, not a general Disruptor result. |
+| Lattice MPSC reference row | 8.69M ops/s | `docs/benchmark-results/apples-2026-04-26/final-hotpaths-after-final-pass.json` | Four benchmark threads. |
+| Disruptor MPSC reference row | 21.47M ops/s | `docs/benchmark-results/apples-2026-04-26/final-hotpaths-after-final-pass.json` | Four benchmark threads. |
+| Disruptor single-producer baseline | 33.66M ops/s | `docs/benchmark-results/apples-2026-04-26/disruptor-baseline-single.json` | Preferred baseline over the anomalous SPSC apples Disruptor row. |
 
 Benchmark caveats:
 
@@ -205,6 +204,7 @@ For tuning guidance, JVM flags, and methodology notes, see
 - [Failure Modes](docs/failure-modes.md)
 - [Compatibility Matrix](docs/compatibility-matrix.md)
 - [Linux Validation Notes](docs/linux-validation.md)
+- [Release Packaging Notes](docs/release.md)
 
 Examples:
 

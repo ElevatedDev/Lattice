@@ -143,6 +143,9 @@ public final class JoinSpec<O> {
         );
     }
 
+    /**
+     * Returns a copy with a different maximum number of open join groups.
+     */
     public JoinSpec<O> capacity(final int capacity) {
         return new JoinSpec<>(
             kind,
@@ -157,6 +160,9 @@ public final class JoinSpec<O> {
         );
     }
 
+    /**
+     * Returns a copy with a different timeout for incomplete groups.
+     */
     public JoinSpec<O> timeout(final Duration timeout) {
         return new JoinSpec<>(
             kind,
@@ -171,6 +177,10 @@ public final class JoinSpec<O> {
         );
     }
 
+    /**
+     * Returns a copy with the policy used when an input branch closes or times
+     * out before a group is complete.
+     */
     public JoinSpec<O> missingBranches(final MissingBranchPolicy policy) {
         return new JoinSpec<>(
             kind,
@@ -185,6 +195,10 @@ public final class JoinSpec<O> {
         );
     }
 
+    /**
+     * Returns a copy with the policy used when a branch supplies the same stamp
+     * more than once.
+     */
     public JoinSpec<O> duplicates(final DuplicatePolicy policy) {
         return new JoinSpec<>(
             kind,
@@ -199,14 +213,26 @@ public final class JoinSpec<O> {
         );
     }
 
+    /**
+     * Returns whether this join waits for all branches or emits on any branch.
+     */
     public JoinKind kind() {
         return kind;
     }
 
+    /**
+     * Returns the combiner invoked for completed or policy-emitted groups.
+     */
     public Function<JoinGroup, ? extends O> combiner() {
         return combiner;
     }
 
+    /**
+     * Returns an object stamp extractor.
+     * <p>
+     * For long-stamped specs this adapter boxes the primitive long stamp; prefer
+     * {@link #extractLongStamp(Object)} when {@link #longStamp()} is true.
+     */
     public Function<Object, ?> stampExtractor() {
         return longStamp ? item -> longStampExtractor.applyAsLong(item) : stampExtractor;
     }
@@ -223,6 +249,9 @@ public final class JoinSpec<O> {
         return longStamp;
     }
 
+    /**
+     * Extracts this item's stamp using the configured extractor.
+     */
     public Object extractStamp(final Object item) {
         if (longStamp) {
             return longStampExtractor.applyAsLong(item);
@@ -230,6 +259,11 @@ public final class JoinSpec<O> {
         return stampExtractor.apply(item);
     }
 
+    /**
+     * Extracts this item's primitive long stamp.
+     *
+     * @throws IllegalStateException if this spec uses object-valued stamps
+     */
     public long extractLongStamp(final Object item) {
         if (!longStamp) {
             throw new IllegalStateException("join spec does not use long stamps");
@@ -237,18 +271,30 @@ public final class JoinSpec<O> {
         return longStampExtractor.applyAsLong(item);
     }
 
+    /**
+     * Returns the maximum number of open groups retained by this join.
+     */
     public int capacity() {
         return capacity;
     }
 
+    /**
+     * Returns the join timeout, or {@link Duration#ZERO} when disabled.
+     */
     public Duration timeout() {
         return timeout;
     }
 
+    /**
+     * Returns how incomplete groups are handled.
+     */
     public MissingBranchPolicy missingBranchPolicy() {
         return missingBranchPolicy;
     }
 
+    /**
+     * Returns how duplicate branch values are handled.
+     */
     public DuplicatePolicy duplicatePolicy() {
         return duplicatePolicy;
     }
@@ -265,18 +311,45 @@ public final class JoinSpec<O> {
     }
 
     public enum JoinKind {
+        /**
+         * Emit when every branch has supplied the same stamp.
+         */
         ALL_OF,
+        /**
+         * Emit on the first branch seen for each stamp.
+         */
         ANY_OF
     }
 
+    /**
+     * Handling for groups that cannot receive every expected branch.
+     */
     public enum MissingBranchPolicy {
+        /**
+         * Drop incomplete groups and record the missing branch.
+         */
         DISCARD,
+        /**
+         * Emit incomplete groups to the combiner.
+         */
         EMIT_PARTIAL
     }
 
+    /**
+     * Handling for duplicate values from the same branch and stamp.
+     */
     public enum DuplicatePolicy {
+        /**
+         * Ignore duplicate values.
+         */
         IGNORE,
+        /**
+         * Count duplicate values in metrics and keep processing.
+         */
         COUNT,
+        /**
+         * Fail when a duplicate value is observed.
+         */
         FAIL
     }
 }

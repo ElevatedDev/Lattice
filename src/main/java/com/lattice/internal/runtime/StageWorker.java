@@ -5,7 +5,6 @@ import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.internal.edge.MessageEdge;
-import com.lattice.internal.edge.SpscRingEdge;
 import com.lattice.internal.graph.NodeDefinition;
 import com.lattice.internal.jfr.JfrEvents;
 import com.lattice.internal.placement.PlacementBootstrap;
@@ -81,6 +80,13 @@ final class StageWorker implements Runnable {
     private final BroadcastSpec<Object> broadcastSpec;
     private final PartitionSpec<Object, ?> partitionSpec;
     private final JoinSpec<?> joinSpec;
+    private final boolean joinLongStamp;
+    private final int joinCapacity;
+    private final long joinTimeoutNanos;
+    private final boolean joinTimeoutEnabled;
+    private final JoinSpec.JoinKind joinKind;
+    private final JoinSpec.MissingBranchPolicy joinMissingBranchPolicy;
+    private final JoinSpec.DuplicatePolicy joinDuplicatePolicy;
     private final int processingMode;
     private final int batchLimit;
     private final long lingerNanos;
@@ -160,8 +166,16 @@ final class StageWorker implements Runnable {
         this.broadcastSpec = (BroadcastSpec<Object>) node.broadcastSpec();
         this.partitionSpec = (PartitionSpec<Object, ?>) node.partitionSpec();
         this.joinSpec = node.joinSpec();
+        this.joinLongStamp = joinSpec != null && joinSpec.longStamp();
+        this.joinCapacity = joinSpec == null ? 0 : joinSpec.capacity();
+        this.joinTimeoutNanos = joinSpec == null ? 0L : joinSpec.timeout().toNanos();
+        this.joinTimeoutEnabled = joinTimeoutNanos > 0L;
+        this.joinKind = joinSpec == null ? null : joinSpec.kind();
+        this.joinMissingBranchPolicy = joinSpec == null ? null : joinSpec.missingBranchPolicy();
+        this.joinDuplicatePolicy = joinSpec == null ? null : joinSpec.duplicatePolicy();
         this.processingMode = processingMode(node);
-        this.directSinkDrain = processingMode == PROCESS_SINK && inputs.length == 1 && inputs[0] instanceof SpscRingEdge;
+        this.directSinkDrain = processingMode == PROCESS_SINK && inputs.length == 1
+            && directSinkDrainSafe(inputSpecs[0]);
         this.weightedSchedule = dispatchSpec == null ? new int[0] : weightedSchedule(dispatchSpec, outputSenders.length);
         this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
         this.jfrEnabled = JfrEvents.enabled();
@@ -245,9 +259,9 @@ final class StageWorker implements Runnable {
             this.batchItems = batch.items();
             this.batchSources = new int[batchLimit];
             if (processingMode == PROCESS_JOIN) {
-                this.joinStates = joinSpec.longStamp()
-                    ? new LongJoinStateTable(joinSpec.capacity(), inputs.length)
-                    : new ObjectJoinStateTable(joinSpec.capacity(), inputs.length);
+                this.joinStates = joinLongStamp
+                    ? new LongJoinStateTable(joinCapacity, inputs.length)
+                    : new ObjectJoinStateTable(joinCapacity, inputs.length);
                 this.joinValuesMap = new JoinValuesMap(inputSources);
                 this.reusableJoinGroup = JoinGroup.reusableRuntimeGroup(joinValuesMap);
             }
@@ -481,6 +495,13 @@ final class StageWorker implements Runnable {
             }
         }
         return received;
+    }
+
+    private static boolean directSinkDrainSafe(final EdgeSpec spec) {
+        return switch (spec.overflowPolicy().kind()) {
+            case DROP_OLDEST, COALESCE -> false;
+            default -> true;
+        };
     }
 
     private void processSinkItem(final Object item) {
@@ -728,21 +749,21 @@ final class StageWorker implements Runnable {
     }
 
     private void processJoinItem(final int sourceIndex, final Object item) {
-        final boolean longStamp = joinSpec.longStamp();
-        final long stampLong = longStamp ? joinSpec.extractLongStamp(item) : 0L;
-        final Object stampObject = longStamp ? null
+        final long stampLong = joinLongStamp ? joinSpec.extractLongStamp(item) : 0L;
+        final Object stampObject = joinLongStamp ? null
             : ObjectsRequireNonNull(joinSpec.extractStamp(item), "join stamp");
         final String source = inputSources[sourceIndex];
-        JoinState state = longStamp ? joinStates.get(stampLong) : joinStates.get(stampObject);
+        JoinState state = joinLongStamp ? joinStates.get(stampLong) : joinStates.get(stampObject);
         if (state == null) {
             ensureJoinCapacity();
-            state = longStamp ? joinStates.create(stampLong, System.nanoTime())
-                : joinStates.create(stampObject, System.nanoTime());
+            final long createdNanos = joinTimeoutEnabled ? System.nanoTime() : 0L;
+            state = joinLongStamp ? joinStates.create(stampLong, createdNanos)
+                : joinStates.create(stampObject, createdNanos);
             metrics.recordOpenJoinGroup();
         }
 
-        if (state.hasValue(sourceIndex) || (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
-            handleDuplicateJoinStamp(state.stamp(), source, item);
+        if (state.hasValue(sourceIndex) || (joinKind == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
+            handleDuplicateJoinStamp(state, source, item);
             return;
         }
 
@@ -751,7 +772,7 @@ final class StageWorker implements Runnable {
             metrics.recordRetainedHandle();
         }
 
-        if (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF) {
+        if (joinKind == JoinSpec.JoinKind.ANY_OF) {
             if (!state.emitted) {
                 emitJoin(state, source, false, false);
                 state.emitted = true;
@@ -769,8 +790,8 @@ final class StageWorker implements Runnable {
         }
     }
 
-    private void handleDuplicateJoinStamp(final Object stamp, final String source, final Object item) {
-        switch (joinSpec.duplicatePolicy()) {
+    private void handleDuplicateJoinStamp(final JoinState state, final String source, final Object item) {
+        switch (joinDuplicatePolicy) {
             case IGNORE -> releaseIfHandle(item);
             case COUNT -> {
                 metrics.recordDuplicateJoinStamp();
@@ -779,14 +800,14 @@ final class StageWorker implements Runnable {
             case FAIL -> {
                 metrics.recordDuplicateJoinStamp();
                 releaseIfHandle(item);
-                throw new IllegalStateException("duplicate join stamp " + stamp + " from " + source);
+                throw new IllegalStateException("duplicate join stamp " + state.stamp() + " from " + source);
             }
-            default -> throw new IllegalStateException("unknown duplicate policy: " + joinSpec.duplicatePolicy());
+            default -> throw new IllegalStateException("unknown duplicate policy: " + joinDuplicatePolicy);
         }
     }
 
     private void ensureJoinCapacity() {
-        if (joinStates.size() < joinSpec.capacity()) {
+        if (joinStates.size() < joinCapacity) {
             return;
         }
         final JoinState eldest = joinStates.removeEldest();
@@ -801,14 +822,16 @@ final class StageWorker implements Runnable {
         if (processingMode != PROCESS_JOIN || joinStates == null || joinStates.isEmpty()) {
             return;
         }
-        final long timeoutNanos = joinSpec.timeout().toNanos();
-        final long now = System.nanoTime();
+        if (!closing && !joinTimeoutEnabled) {
+            return;
+        }
+        final long now = closing ? 0L : System.nanoTime();
         while (true) {
             final JoinState state = joinStates.eldest();
             if (state == null) {
                 return;
             }
-            final boolean timedOut = timeoutNanos > 0L && now - state.createdNanos >= timeoutNanos;
+            final boolean timedOut = joinTimeoutEnabled && now - state.createdNanos >= joinTimeoutNanos;
             if (!closing && !timedOut) {
                 break;
             }
@@ -816,8 +839,8 @@ final class StageWorker implements Runnable {
             if (state.receivedCount < inputs.length) {
                 metrics.recordMissingJoinBranch();
             }
-            if ((timedOut || closing) && joinSpec.missingBranchPolicy() == JoinSpec.MissingBranchPolicy.EMIT_PARTIAL) {
-                if (joinSpec.kind() != JoinSpec.JoinKind.ANY_OF || !state.emitted) {
+            if ((timedOut || closing) && joinMissingBranchPolicy == JoinSpec.MissingBranchPolicy.EMIT_PARTIAL) {
+                if (joinKind != JoinSpec.JoinKind.ANY_OF || !state.emitted) {
                     emitJoin(state, "", timedOut, true);
                     joinStates.recycle(state);
                 } else {
@@ -1676,7 +1699,6 @@ final class StageWorker implements Runnable {
 
     private static final class LongJoinStateTable extends AbstractJoinStateTable {
         private final long[] keys;
-        private final boolean[] occupied;
         private final JoinState[] states;
         private final int mask;
 
@@ -1684,7 +1706,6 @@ final class StageWorker implements Runnable {
             super(capacity, sourceCount);
             final int tableSize = tableSize(capacity);
             this.keys = new long[tableSize];
-            this.occupied = new boolean[tableSize];
             this.states = new JoinState[tableSize];
             this.mask = tableSize - 1;
         }
@@ -1725,7 +1746,7 @@ final class StageWorker implements Runnable {
 
         private int findIndex(final long stamp) {
             int index = spread(Long.hashCode(stamp)) & mask;
-            while (occupied[index]) {
+            while (states[index] != null) {
                 if (keys[index] == stamp) {
                     return index;
                 }
@@ -1736,23 +1757,20 @@ final class StageWorker implements Runnable {
 
         private void insert(final long stamp, final JoinState state) {
             int index = spread(Long.hashCode(stamp)) & mask;
-            while (occupied[index]) {
+            while (states[index] != null) {
                 index = (index + 1) & mask;
             }
-            occupied[index] = true;
             keys[index] = stamp;
             states[index] = state;
         }
 
         private void deleteIndex(final int deleteIndex) {
-            occupied[deleteIndex] = false;
             keys[deleteIndex] = 0L;
             states[deleteIndex] = null;
             int index = (deleteIndex + 1) & mask;
-            while (occupied[index]) {
+            while (states[index] != null) {
                 final long key = keys[index];
                 final JoinState state = states[index];
-                occupied[index] = false;
                 keys[index] = 0L;
                 states[index] = null;
                 insert(key, state);
@@ -1901,11 +1919,21 @@ final class StageWorker implements Runnable {
 
     private final class JoinValuesMap extends AbstractMap<String, Object> {
         private final String[] sources;
+        private final String[] lookupKeys;
+        private final int[] lookupIndexes;
+        private final int lookupMask;
         private final JoinEntrySet entrySet = new JoinEntrySet();
         private JoinState state;
 
         JoinValuesMap(final String[] sources) {
             this.sources = sources.clone();
+            final int lookupSize = joinValuesLookupSize(sources.length);
+            this.lookupKeys = new String[lookupSize];
+            this.lookupIndexes = new int[lookupSize];
+            this.lookupMask = lookupSize - 1;
+            for (int i = 0; i < sources.length; i++) {
+                insertSourceLookup(sources[i], i);
+            }
         }
 
         void state(final JoinState state) {
@@ -1924,12 +1952,8 @@ final class StageWorker implements Runnable {
             if (current == null) {
                 return null;
             }
-            for (int i = 0; i < sources.length; i++) {
-                if (sources[i].equals(key)) {
-                    return current.values[i];
-                }
-            }
-            return null;
+            final int index = sourceIndex(key);
+            return index < 0 ? null : current.values[index];
         }
 
         @Override
@@ -1946,6 +1970,38 @@ final class StageWorker implements Runnable {
         @Override
         public Set<Map.Entry<String, Object>> entrySet() {
             return entrySet;
+        }
+
+        private void insertSourceLookup(final String source, final int sourceIndex) {
+            int index = spread(source.hashCode()) & lookupMask;
+            while (lookupKeys[index] != null) {
+                index = (index + 1) & lookupMask;
+            }
+            lookupKeys[index] = source;
+            lookupIndexes[index] = sourceIndex;
+        }
+
+        private int sourceIndex(final Object key) {
+            if (key == null) {
+                return -1;
+            }
+            int index = spread(key.hashCode()) & lookupMask;
+            while (lookupKeys[index] != null) {
+                if (lookupKeys[index].equals(key)) {
+                    return lookupIndexes[index];
+                }
+                index = (index + 1) & lookupMask;
+            }
+            return -1;
+        }
+
+        private static int joinValuesLookupSize(final int sourceCount) {
+            int size = 1;
+            final int target = Math.max(2, sourceCount << 1);
+            while (size < target) {
+                size <<= 1;
+            }
+            return size;
         }
 
         private final class JoinEntrySet extends AbstractSet<Map.Entry<String, Object>> {

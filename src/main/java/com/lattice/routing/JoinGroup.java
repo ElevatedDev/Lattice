@@ -108,6 +108,12 @@ public final class JoinGroup {
         this.triggeringSource = triggeringSource == null ? "" : triggeringSource;
     }
 
+    /**
+     * Returns this group's stamp.
+     * <p>
+     * Long-stamped groups return a boxed {@link Long}; use {@link #longStamp()}
+     * in performance-sensitive combiners.
+     */
     public Object stamp() {
         return usesLongStamp ? longStamp : stamp;
     }
@@ -119,6 +125,11 @@ public final class JoinGroup {
         return usesLongStamp;
     }
 
+    /**
+     * Returns the stamp as a primitive long.
+     *
+     * @throws IllegalStateException if the stamp is not long-compatible
+     */
     public long longStamp() {
         if (usesLongStamp) {
             return longStamp;
@@ -129,6 +140,12 @@ public final class JoinGroup {
         throw new IllegalStateException("join stamp is not a long-compatible value");
     }
 
+    /**
+     * Returns the current values by source name.
+     * <p>
+     * Runtime groups may reuse this map after the combiner returns. Use
+     * {@link #snapshotValuesBySource()} to retain values beyond the callback.
+     */
     public Map<String, Object> valuesBySource() {
         return valuesBySource;
     }
@@ -143,18 +160,31 @@ public final class JoinGroup {
         return Collections.unmodifiableMap(new LinkedHashMap<>(valuesBySource));
     }
 
+    /**
+     * Returns whether all expected branches are present.
+     */
     public boolean complete() {
         return complete;
     }
 
+    /**
+     * Returns whether this group was emitted because a join timeout elapsed.
+     */
     public boolean timedOut() {
         return timedOut;
     }
 
+    /**
+     * Returns the source branch that completed or triggered this group, when
+     * known.
+     */
     public String triggeringSource() {
         return triggeringSource;
     }
 
+    /**
+     * Returns a typed value from the source map.
+     */
     public <T> Optional<T> value(final String sourceName, final Class<T> type) {
         final Object value = valuesBySource.get(sourceName);
         if (value == null) {

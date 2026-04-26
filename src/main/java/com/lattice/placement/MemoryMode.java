@@ -1,5 +1,11 @@
 package com.lattice.placement;
 
+/**
+ * Declares where edge slot or handle metadata is allocated.
+ * <p>
+ * Memory modes are immutable. The graph compiler validates whether a selected
+ * mode is supported for the target edge implementation and capacity.
+ */
 public final class MemoryMode {
 
     private final MemoryKind kind;
@@ -10,6 +16,9 @@ public final class MemoryMode {
         this.bytes = bytes;
     }
 
+    /**
+     * Uses normal Java heap references for edge slots.
+     */
     public static MemoryMode onHeapSlots() {
         return new MemoryMode(MemoryKind.ON_HEAP_SLOTS, 0L);
     }
@@ -22,6 +31,10 @@ public final class MemoryMode {
         return new MemoryMode(MemoryKind.OFF_HEAP_SLOTS, 0L);
     }
 
+    /**
+     * Uses off-heap metadata for handle and sequence storage with compiler
+     * selected sizing.
+     */
     public static MemoryMode offHeapHandles() {
         return new MemoryMode(MemoryKind.OFF_HEAP_HANDLES, 0L);
     }
@@ -37,17 +50,36 @@ public final class MemoryMode {
         return new MemoryMode(MemoryKind.OFF_HEAP_HANDLES, bytes);
     }
 
+    /**
+     * Returns the memory mode kind.
+     */
     public MemoryKind kind() {
         return kind;
     }
 
+    /**
+     * Returns the requested off-heap metadata budget, or {@code 0} when the
+     * compiler should choose the budget.
+     */
     public long bytes() {
         return bytes;
     }
 
+    /**
+     * Memory allocation families.
+     */
     public enum MemoryKind {
+        /**
+         * Java heap slots.
+         */
         ON_HEAP_SLOTS,
+        /**
+         * Off-heap handle and sequence metadata.
+         */
         OFF_HEAP_HANDLES,
+        /**
+         * Unsupported phase-1 placeholder retained for source compatibility.
+         */
         OFF_HEAP_SLOTS
     }
 }

@@ -5,6 +5,13 @@ import org.HdrHistogram.Histogram;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * Live metrics for one edge.
+ * <p>
+ * Hot-path counters can be disabled with {@code lattice.metrics.hotCounters}.
+ * Residence-time histograms are opt-in through {@code lattice.metrics.residence}
+ * and histogram accessors return defensive copies.
+ */
 public final class EdgeMetrics implements WaitMetrics {
 
     private static final boolean RESIDENCE_TIMING_ENABLED = Boolean.getBoolean("lattice.metrics.residence");
@@ -41,14 +48,23 @@ public final class EdgeMetrics implements WaitMetrics {
         : null;
     private final long createdNanos = System.nanoTime();
 
+    /**
+     * Creates on-heap edge metrics without an allocation owner.
+     */
     public EdgeMetrics(final String from, final String to) {
         this(from, to, "", MemoryMode.MemoryKind.ON_HEAP_SLOTS);
     }
 
+    /**
+     * Returns whether hot-path counters are enabled for this JVM.
+     */
     public static boolean hotCountersEnabled() {
         return HOT_COUNTERS_ENABLED;
     }
 
+    /**
+     * Creates edge metrics with allocation metadata.
+     */
     public EdgeMetrics(
         final String from,
         final String to,
@@ -61,18 +77,30 @@ public final class EdgeMetrics implements WaitMetrics {
         this.memoryKind = memoryKind == null ? MemoryMode.MemoryKind.ON_HEAP_SLOTS : memoryKind;
     }
 
+    /**
+     * Returns the source node name.
+     */
     public String from() {
         return from;
     }
 
+    /**
+     * Returns the target node name.
+     */
     public String to() {
         return to;
     }
 
+    /**
+     * Returns the stage or subsystem that owns this edge allocation, when known.
+     */
     public String allocationOwner() {
         return allocationOwner;
     }
 
+    /**
+     * Returns the configured edge memory kind.
+     */
     public MemoryMode.MemoryKind memoryKind() {
         return memoryKind;
     }
@@ -137,6 +165,10 @@ public final class EdgeMetrics implements WaitMetrics {
         return parkCount.sum();
     }
 
+    /**
+     * Returns current logical depth, derived from emitted, consumed, and dropped
+     * oldest counts.
+     */
     public long depth() {
         return currentDepth();
     }
@@ -157,20 +189,32 @@ public final class EdgeMetrics implements WaitMetrics {
         return firstTouchNanos.sum();
     }
 
+    /**
+     * Returns a copy of residence-time histogram data.
+     */
     public Histogram residenceTimeNanosHistogram() {
         return residenceTimeNanosHistogram == null
             ? new Histogram(1, 60_000_000_000L, 3)
             : residenceTimeNanosHistogram.copy();
     }
 
+    /**
+     * Returns whether residence timing is enabled for this JVM.
+     */
     public static boolean residenceTimingEnabled() {
         return RESIDENCE_TIMING_ENABLED;
     }
 
+    /**
+     * Returns approximate offer throughput since metric creation.
+     */
     public double offerRatePerSecond() {
         return ratePerSecond(emittedCount.get());
     }
 
+    /**
+     * Returns approximate poll throughput since metric creation.
+     */
     public double pollRatePerSecond() {
         return ratePerSecond(consumedCount.get());
     }

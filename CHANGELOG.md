@@ -39,10 +39,11 @@ state is pre-1.0 and follows the five-phase development plan in
 
 ### Known Release Gaps
 
-- No Maven artifacts or JPMS module split yet.
+- No published Maven artifacts or JPMS module descriptor yet.
 - Java 21 is the current build baseline; JDK 25 and JDK 26 validation remain
   Phase 5 work.
 - No FFM/jextract native backend yet.
-- No checked-in publication-grade benchmark report yet.
+- Checked-in Windows benchmark artifacts exist; no Linux/NUMA
+  publication-grade benchmark report yet.
 - No Micrometer or JMX integration yet.
-- No project `LICENSE` file yet.
+- Maven Central signing and remote publishing are not configured yet.

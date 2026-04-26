@@ -75,6 +75,7 @@ public final class MpscRingEdge implements MessageEdge {
         final GraphMetrics graphMetrics,
         final boolean plainClaim
     ) {
+        validateCapacity(capacity);
         this.from = from;
         this.to = to;
         this.capacity = capacity;
@@ -104,9 +105,6 @@ public final class MpscRingEdge implements MessageEdge {
         long currentTail;
         int index;
         while (true) {
-            if (closed()) {
-                return false;
-            }
             currentTailRaw = (long) CURSOR.getAcquire(tail);
             if (tailClosed(currentTailRaw)) {
                 return false;
@@ -124,12 +122,6 @@ public final class MpscRingEdge implements MessageEdge {
             } else {
                 Thread.onSpinWait();
             }
-        }
-
-        if (closed()) {
-            localBuffer[index] = SKIPPED;
-            localSequences.setRelease(index, currentTail + 1L);
-            return false;
         }
 
         localBuffer[index] = item;
@@ -261,6 +253,96 @@ public final class MpscRingEdge implements MessageEdge {
             recordConsumed(drained);
         }
         return drained;
+    }
+
+    @Override
+    public int drainToProcessor(final ItemProcessor processor, final int limit) throws Exception {
+        if (limit <= 0) {
+            return 0;
+        }
+
+        final long currentHead = (long) CURSOR.get(head);
+        long nextHead = currentHead;
+        int processed = 0;
+        final Object[] localBuffer = buffer;
+        final int localMask = mask;
+        final int localCapacity = capacity;
+        final LongAccess localSequences = sequences;
+        final LongAccess localPublishTimes = publishTimes;
+
+        try {
+            if (localPublishTimes == null) {
+                while (processed < limit) {
+                    final int index = (int) nextHead & localMask;
+                    final long sequence = localSequences.getAcquire(index);
+                    if (sequence - (nextHead + 1L) != 0L) {
+                        break;
+                    }
+                    final Object item = claimReadyItem(localBuffer, index);
+                    if (item == null) {
+                        break;
+                    }
+                    localSequences.setRelease(index, nextHead + localCapacity);
+                    nextHead++;
+                    if (!plainClaim) {
+                        releaseHeadAtLeast(nextHead);
+                    }
+                    if (item == SKIPPED || item == DROPPED) {
+                        continue;
+                    }
+                    processed++;
+                    processor.process(item);
+                }
+            } else {
+                while (processed < limit) {
+                    final int index = (int) nextHead & localMask;
+                    final long sequence = localSequences.getAcquire(index);
+                    if (sequence - (nextHead + 1L) != 0L) {
+                        break;
+                    }
+                    final Object item = claimReadyItem(localBuffer, index);
+                    if (item == null) {
+                        break;
+                    }
+                    if (item == SKIPPED || item == DROPPED) {
+                        localPublishTimes.setPlain(index, 0L);
+                        localSequences.setRelease(index, nextHead + localCapacity);
+                        nextHead++;
+                        if (!plainClaim) {
+                            releaseHeadAtLeast(nextHead);
+                        }
+                        continue;
+                    }
+                    metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
+                    localPublishTimes.setPlain(index, 0L);
+                    localSequences.setRelease(index, nextHead + localCapacity);
+                    nextHead++;
+                    if (!plainClaim) {
+                        releaseHeadAtLeast(nextHead);
+                    }
+                    processed++;
+                    processor.process(item);
+                }
+            }
+        } finally {
+            if (nextHead > currentHead) {
+                releaseHeadAtLeast(nextHead);
+            }
+            recordConsumed(processed);
+        }
+        return processed;
+    }
+
+    private void releaseHeadAtLeast(final long nextHead) {
+        while (true) {
+            final long currentHead = (long) CURSOR.getAcquire(head);
+            if (currentHead >= nextHead) {
+                return;
+            }
+            if (CURSOR.compareAndSet(head, currentHead, nextHead)) {
+                return;
+            }
+        }
     }
 
     private void recordConsumed(final int count) {
@@ -480,6 +562,15 @@ public final class MpscRingEdge implements MessageEdge {
             if (CURSOR.compareAndSet(tail, currentTail, currentTail | CLOSED_TAIL_BIT)) {
                 return;
             }
+        }
+    }
+
+    private static void validateCapacity(final int capacity) {
+        if (capacity < 2) {
+            throw new IllegalArgumentException("MPSC edge capacity must be at least 2");
+        }
+        if (Integer.bitCount(capacity) != 1) {
+            throw new IllegalArgumentException("MPSC edge capacity must be a power of two: " + capacity);
         }
     }
 

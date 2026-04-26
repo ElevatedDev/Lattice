@@ -274,9 +274,9 @@ Run GC-profiler measurements separately:
 ```
 
 Do not mix profiled and unprofiled throughput rows in the same claim. The
-current `pipeline-fused-current-isolated-gc.json` row still shows effectively
-zero allocation, but its throughput is lower than the non-profiled fused row
-because the profiler itself changes the run.
+current `docs/benchmark-results/apples-2026-04-26/pipeline-fused-current-isolated-gc.json`
+row still shows effectively zero allocation, but its throughput is lower than
+the non-profiled fused row because the profiler itself changes the run.
 
 For Disruptor comparisons:
 
@@ -292,9 +292,10 @@ For Disruptor comparisons:
 
 ## Current Data Caveats
 
-The current public result set under `results/apples-2026-04-26/` is a Windows
-JDK 21 data set. It shows the architectural value of fusion and preallocation,
-but it is not a NUMA release report.
+The current public result set under
+`docs/benchmark-results/apples-2026-04-26/` is a Windows JDK 21 data set. It
+shows the architectural value of fusion and preallocation, but it is not a NUMA
+release report.
 
 Known caveats:
 
@@ -304,7 +305,8 @@ Known caveats:
 - Apples-to-apples benchmark rows are only fair when the payload model and
   dependency semantics match the claim.
 - The SPSC apples Disruptor row had an anomalously poor result. Prefer
-  `disruptor-baseline-single.json` for the single-producer Disruptor baseline.
+  `docs/benchmark-results/apples-2026-04-26/disruptor-baseline-single.json`
+  for the single-producer Disruptor baseline.
 
 The practical reading of the current data is mixed: Lattice is strong when the
 compiler can specialize a static topology, while Disruptor remains a strong

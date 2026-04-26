@@ -9,6 +9,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * Live metrics for one graph instance.
+ * <p>
+ * Counters are monotonic unless the method name describes state
+ * ({@link #overloaded()}, {@link #startTime()}, {@link #stopTime()}). The stage
+ * and edge maps are immutable views of the graph topology; the metric objects
+ * inside those maps continue to update while the graph runs.
+ */
 public final class GraphMetrics {
     private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
         System.getProperty("lattice.metrics.hotCounters", "true")
@@ -31,6 +39,9 @@ public final class GraphMetrics {
     private final Map<String, StageMetrics> stageMetrics;
     private final Map<String, EdgeMetrics> edgeMetrics;
 
+    /**
+     * Creates graph metrics from already-created stage and edge metrics.
+     */
     public GraphMetrics(
         final String graphName,
         final Map<String, StageMetrics> stageMetrics,
@@ -41,18 +52,30 @@ public final class GraphMetrics {
         this.edgeMetrics = Collections.unmodifiableMap(new LinkedHashMap<>(edgeMetrics));
     }
 
+    /**
+     * Returns the graph name.
+     */
     public String graphName() {
         return graphName;
     }
 
+    /**
+     * Returns total accepted source emissions when hot counters are enabled.
+     */
     public long emittedCount() {
         return emittedCount.sum();
     }
 
+    /**
+     * Returns total consumed graph messages when hot counters are enabled.
+     */
     public long consumedCount() {
         return consumedCount.sum();
     }
 
+    /**
+     * Returns failed edge offers.
+     */
     public long failedOffers() {
         return failedOffers.sum();
     }
@@ -97,22 +120,37 @@ public final class GraphMetrics {
         return stopTime.get();
     }
 
+    /**
+     * Returns the immutable stage metrics map keyed by stage name.
+     */
     public Map<String, StageMetrics> stages() {
         return stageMetrics;
     }
 
+    /**
+     * Returns the immutable edge metrics map keyed as {@code from->to}.
+     */
     public Map<String, EdgeMetrics> edges() {
         return edgeMetrics;
     }
 
+    /**
+     * Returns metrics for a named stage, or {@code null} if absent.
+     */
     public StageMetrics stage(final String name) {
         return stageMetrics.get(name);
     }
 
+    /**
+     * Returns metrics for an edge, or {@code null} if absent.
+     */
     public EdgeMetrics edge(final String from, final String to) {
         return edgeMetrics.get(from + "->" + to);
     }
 
+    /**
+     * Returns a snapshot-style placement report for all stages.
+     */
     public List<StagePlacement> placementReport() {
         return stageMetrics.values().stream()
             .map(stage -> new StagePlacement(
@@ -202,6 +240,9 @@ public final class GraphMetrics {
         stopTime.compareAndSet(null, Instant.now());
     }
 
+    /**
+     * Stage placement row used by {@link #placementReport()}.
+     */
     public record StagePlacement(
         String stageName,
         PlacementStatus status,
