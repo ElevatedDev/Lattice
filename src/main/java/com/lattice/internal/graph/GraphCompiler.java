@@ -198,6 +198,9 @@ final class GraphCompiler {
         if (Integer.bitCount(spec.capacity()) != 1) {
             throw new GraphBuildException("edge capacity must be a power of two: " + spec.capacity());
         }
+        if (spec.kind() == EdgeSpec.EdgeKind.MPSC_RING && spec.capacity() < 2) {
+            throw new GraphBuildException("MPSC edge capacity must be at least 2");
+        }
         if (spec.memoryMode().kind() == MemoryMode.MemoryKind.OFF_HEAP_SLOTS) {
             throw new GraphBuildException("off-heap payload slots are not implemented; use slab handles for payloads");
         }

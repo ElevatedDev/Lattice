@@ -123,6 +123,21 @@ class GraphValidationTest {
             .build());
     }
 
+    @Test
+    void rejectsMpscCapacityOneBecauseProducerSequenceCannotDistinguishFullFromFree() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad-mpsc-capacity-one")
+            .source("ingress", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(1))
+            .build());
+
+        StaticGraph.builder("valid-spsc-capacity-one")
+            .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.spscRing(1))
+            .build();
+    }
+
     static StaticGraph.Builder phaseOneBuilder() {
         return StaticGraph.builder("phase1-orders")
             .source("ingress", Order.class)

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RingEdgeCorrectnessTest {
@@ -121,6 +122,20 @@ class RingEdgeCorrectnessTest {
         assertTrue(mpsc.isEmpty());
         assertEquals(0, mpsc.inFlight());
         assertEquals(0, mpscPool.leakedCount());
+    }
+
+    @Test
+    void spscDirectProcessorDrainRemovesOnlyProcessedItemWhenProcessorThrows() {
+        final SpscRingEdge edge = new SpscRingEdge("source", "sink", 4, edgeMetrics(), graphMetrics());
+        assertTrue(edge.offer(1));
+        assertTrue(edge.offer(2));
+
+        assertThrows(IllegalStateException.class, () -> edge.drainToProcessor(item -> {
+            throw new IllegalStateException("boom " + item);
+        }, 4));
+
+        assertEquals(2, edge.poll());
+        assertTrue(edge.isEmpty());
     }
 
     private static void assertMpscAcceptsConcurrentProducers(final MemoryMode memoryMode) throws Exception {

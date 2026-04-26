@@ -82,6 +82,10 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    maxParallelForks = providers.gradleProperty('testMaxParallelForks')
+        .map { value -> Integer.parseInt(value) }
+        .orElse(Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)))
+        .get()
 }
 
 tasks.withType(JavaCompile).configureEach {
