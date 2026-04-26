@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 final class StageWorker implements Runnable {
 
@@ -62,6 +63,7 @@ final class StageWorker implements Runnable {
     private final String[] inputSources;
     private final MessageEdge[] outputEdges;
     private final EdgeSender[] outputSenders;
+    private final EdgeMetrics[] outputMetrics;
     private final MessageEdge[] ownedEdges;
     private final Output<Object> output;
     private final MessageEdge.ItemProcessor sinkProcessor;
@@ -80,6 +82,10 @@ final class StageWorker implements Runnable {
     private final BroadcastSpec<Object> broadcastSpec;
     private final PartitionSpec<Object, ?> partitionSpec;
     private final JoinSpec<?> joinSpec;
+    private final boolean broadcastSlabHandles;
+    private final boolean isolateBroadcastBranches;
+    private final Function<Object, Object> broadcastCopier;
+    private final Function<Object, ?> partitionKeyExtractor;
     private final boolean joinLongStamp;
     private final int joinCapacity;
     private final long joinTimeoutNanos;
@@ -87,16 +93,20 @@ final class StageWorker implements Runnable {
     private final JoinSpec.JoinKind joinKind;
     private final JoinSpec.MissingBranchPolicy joinMissingBranchPolicy;
     private final JoinSpec.DuplicatePolicy joinDuplicatePolicy;
+    private final Function<JoinGroup, ?> joinCombiner;
     private final int processingMode;
     private final int batchLimit;
     private final long lingerNanos;
     private final int parkIdleThreshold;
     private final boolean jfrEnabled;
     private final boolean timeBatches;
+    private final boolean hotMetricsEnabled;
+    private final boolean edgeHotMetricsEnabled;
     private final boolean messageMayCarryOwnedHandle;
     private final boolean directSinkDrain;
     private final int[] weightedSchedule;
     private final long[] partitionLaneCounts;
+    private final long partitionHotKeyThreshold;
     private final int outputMask;
     private ArrayBatch batch;
     private Object[] batchItems;
@@ -136,6 +146,7 @@ final class StageWorker implements Runnable {
         this.inputSources = inputSources.clone();
         this.outputEdges = outputEdges.clone();
         this.outputSenders = outputSenders.clone();
+        this.outputMetrics = outputMetrics(this.outputSenders);
         this.ownedEdges = ownedEdges.clone();
         final LinearStageSinkLoop linearStageSinkLoop = linearStageSinkLoop(fusedSink, fusedStage);
         this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
@@ -166,6 +177,11 @@ final class StageWorker implements Runnable {
         this.broadcastSpec = (BroadcastSpec<Object>) node.broadcastSpec();
         this.partitionSpec = (PartitionSpec<Object, ?>) node.partitionSpec();
         this.joinSpec = node.joinSpec();
+        this.broadcastSlabHandles = broadcastSpec != null
+            && broadcastSpec.kind() == BroadcastSpec.BroadcastKind.SLAB_HANDLE;
+        this.isolateBroadcastBranches = broadcastSpec != null && broadcastSpec.isolateSlowBranches();
+        this.broadcastCopier = broadcastSpec == null ? null : (Function<Object, Object>) broadcastSpec.copier();
+        this.partitionKeyExtractor = partitionSpec == null ? null : (Function<Object, ?>) partitionSpec.keyExtractor();
         this.joinLongStamp = joinSpec != null && joinSpec.longStamp();
         this.joinCapacity = joinSpec == null ? 0 : joinSpec.capacity();
         this.joinTimeoutNanos = joinSpec == null ? 0L : joinSpec.timeout().toNanos();
@@ -173,13 +189,17 @@ final class StageWorker implements Runnable {
         this.joinKind = joinSpec == null ? null : joinSpec.kind();
         this.joinMissingBranchPolicy = joinSpec == null ? null : joinSpec.missingBranchPolicy();
         this.joinDuplicatePolicy = joinSpec == null ? null : joinSpec.duplicatePolicy();
+        this.joinCombiner = joinSpec == null ? null : (Function<JoinGroup, ?>) joinSpec.combiner();
         this.processingMode = processingMode(node);
         this.directSinkDrain = processingMode == PROCESS_SINK && inputs.length == 1
             && directSinkDrainSafe(inputSpecs[0]);
         this.weightedSchedule = dispatchSpec == null ? new int[0] : weightedSchedule(dispatchSpec, outputSenders.length);
         this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
+        this.partitionHotKeyThreshold = partitionSpec == null ? 0L : partitionSpec.hotKeyThreshold();
         this.jfrEnabled = JfrEvents.enabled();
         this.timeBatches = StageMetrics.histogramsEnabled() || jfrEnabled;
+        this.hotMetricsEnabled = StageMetrics.hotCountersEnabled();
+        this.edgeHotMetricsEnabled = EdgeMetrics.hotCountersEnabled();
         this.outputMask = powerOfTwoMask(outputSenders.length);
     }
 
@@ -307,7 +327,7 @@ final class StageWorker implements Runnable {
 
                     idle = 0;
                     workerState(WorkerState.RUNNING);
-                    if (StageMetrics.hotCountersEnabled()) {
+                    if (hotMetricsEnabled) {
                         metrics.recordConsume(received);
                     }
                     final long processStarted = directSinkDrain ? started : timeBatches ? System.nanoTime() : 0L;
@@ -316,7 +336,7 @@ final class StageWorker implements Runnable {
                             processReceived(received);
                         }
                         final long serviceNanos = timeBatches ? System.nanoTime() - processStarted : 0L;
-                        if (StageMetrics.hotCountersEnabled()) {
+                        if (hotMetricsEnabled) {
                             metrics.recordBatch(received, serviceNanos);
                         }
                         if (jfrEnabled) {
@@ -515,24 +535,54 @@ final class StageWorker implements Runnable {
     }
 
     private int receiveJoinInputs() {
+        if (inputs.length == 2) {
+            return receiveTwoJoinInputs();
+        }
+        return receiveManyJoinInputs();
+    }
+
+    private int receiveTwoJoinInputs() {
         int received = 0;
-        while (received < batchLimit) {
-            boolean progressed = false;
-            for (int i = 0; i < inputs.length && received < batchLimit; i++) {
-                final Object item = inputs[i].poll();
-                if (item != null) {
-                    batchItems[received] = item;
-                    batchSources[received] = i;
-                    received++;
-                    progressed = true;
-                }
-            }
-            if (!progressed) {
-                break;
-            }
+        final int firstQuota = Math.max(1, batchLimit >>> 1);
+        received += drainJoinSource(0, received, firstQuota);
+        received += drainJoinSource(1, received, batchLimit - received);
+        if (received < batchLimit) {
+            received += drainJoinSource(0, received, batchLimit - received);
         }
         batch.size(received);
         return received;
+    }
+
+    private int receiveManyJoinInputs() {
+        int received = 0;
+        final int inputCount = inputs.length;
+        if (inputCount == 0) {
+            batch.size(0);
+            return 0;
+        }
+        final int quota = Math.max(1, batchLimit / inputCount);
+        for (int source = 0; source < inputCount && received < batchLimit; source++) {
+            received += drainJoinSource(source, received, Math.min(quota, batchLimit - received));
+        }
+        for (int source = 0; source < inputCount && received < batchLimit; source++) {
+            received += drainJoinSource(source, received, batchLimit - received);
+        }
+        batch.size(received);
+        return received;
+    }
+
+    private int drainJoinSource(final int sourceIndex, final int offset, final int limit) {
+        if (limit <= 0) {
+            return 0;
+        }
+        final int drained = inputs[sourceIndex].drainTo(batchItems, offset, limit);
+        if (drained > 0) {
+            final int end = offset + drained;
+            for (int i = offset; i < end; i++) {
+                batchSources[i] = sourceIndex;
+            }
+        }
+        return drained;
     }
 
     private void processReceived(final int received) throws Exception {
@@ -604,8 +654,12 @@ final class StageWorker implements Runnable {
             boolean transferred = false;
             try {
                 final int branch = dispatchBranch(item);
-                metrics.recordRoutingDecision();
-                outputSenders[branch].edgeMetrics().recordLaneSelection();
+                if (hotMetricsEnabled) {
+                    metrics.recordRoutingDecision();
+                }
+                if (edgeHotMetricsEnabled) {
+                    outputMetrics[branch].recordLaneSelection();
+                }
                 outputSenders[branch].emit(item);
                 transferred = true;
             } finally {
@@ -622,12 +676,14 @@ final class StageWorker implements Runnable {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
             try {
-                if (broadcastSpec.kind() == BroadcastSpec.BroadcastKind.SLAB_HANDLE) {
+                if (broadcastSlabHandles) {
                     broadcastHandle(item);
                 } else {
                     broadcastCopy(item);
                 }
-                metrics.recordRoutingDecision();
+                if (hotMetricsEnabled) {
+                    metrics.recordRoutingDecision();
+                }
             } finally {
                 batchItems[i] = null;
             }
@@ -636,16 +692,24 @@ final class StageWorker implements Runnable {
     }
 
     private void broadcastCopy(final Object item) {
-        for (int branch = 0; branch < outputSenders.length; branch++) {
-            final Object branchItem = copyForBranch(item);
-            if (broadcastSpec.isolateSlowBranches()) {
-                if (!outputSenders[branch].tryEmit(branchItem)) {
-                    metrics.recordBranchIsolationAction();
-                    outputSenders[branch].edgeMetrics().recordBranchIsolationAction();
+        final EdgeSender[] senders = outputSenders;
+        final EdgeMetrics[] metricsByBranch = outputMetrics;
+        final Function<Object, Object> copier = broadcastCopier;
+        final boolean isolate = isolateBroadcastBranches;
+        for (int branch = 0; branch < senders.length; branch++) {
+            final Object branchItem = copier == null ? item : copier.apply(item);
+            if (isolate) {
+                if (!senders[branch].tryEmit(branchItem)) {
+                    if (hotMetricsEnabled) {
+                        metrics.recordBranchIsolationAction();
+                    }
+                    if (edgeHotMetricsEnabled) {
+                        metricsByBranch[branch].recordBranchIsolationAction();
+                    }
                     releaseIfHandle(branchItem);
                 }
             } else {
-                outputSenders[branch].emit(branchItem);
+                senders[branch].emit(branchItem);
             }
         }
     }
@@ -655,41 +719,48 @@ final class StageWorker implements Runnable {
             throw new IllegalArgumentException("slab-handle broadcast requires SlabHandle payloads");
         }
         try {
-            for (int branch = 0; branch < outputSenders.length; branch++) {
+            final EdgeSender[] senders = outputSenders;
+            final EdgeMetrics[] metricsByBranch = outputMetrics;
+            final boolean isolate = isolateBroadcastBranches;
+            for (int branch = 0; branch < senders.length; branch++) {
                 final SlabHandle<?> branchHandle = handle.retain();
-                metrics.recordRetainedHandle();
-                if (broadcastSpec.isolateSlowBranches()) {
-                    if (!outputSenders[branch].tryEmit(branchHandle)) {
-                        metrics.recordBranchIsolationAction();
-                        outputSenders[branch].edgeMetrics().recordBranchIsolationAction();
+                if (hotMetricsEnabled) {
+                    metrics.recordRetainedHandle();
+                }
+                if (isolate) {
+                    if (!senders[branch].tryEmit(branchHandle)) {
+                        if (hotMetricsEnabled) {
+                            metrics.recordBranchIsolationAction();
+                        }
+                        if (edgeHotMetricsEnabled) {
+                            metricsByBranch[branch].recordBranchIsolationAction();
+                        }
                         branchHandle.release();
-                        metrics.recordReleasedHandle();
+                        if (hotMetricsEnabled) {
+                            metrics.recordReleasedHandle();
+                        }
                     }
                 } else {
                     boolean enqueued = false;
                     try {
-                        outputSenders[branch].emit(branchHandle);
+                        senders[branch].emit(branchHandle);
                         enqueued = true;
                     } finally {
                         if (!enqueued) {
                             branchHandle.release();
-                            metrics.recordReleasedHandle();
+                            if (hotMetricsEnabled) {
+                                metrics.recordReleasedHandle();
+                            }
                         }
                     }
                 }
             }
         } finally {
             handle.release();
-            metrics.recordReleasedHandle();
+            if (hotMetricsEnabled) {
+                metrics.recordReleasedHandle();
+            }
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Object copyForBranch(final Object item) {
-        if (broadcastSpec.copier() == null) {
-            return item;
-        }
-        return ((BroadcastSpec<Object>) broadcastSpec).copier().apply(item);
     }
 
     private void processPartition(final int received) {
@@ -697,13 +768,19 @@ final class StageWorker implements Runnable {
             final Object item = batch.itemAt(i);
             boolean transferred = false;
             try {
-                final Object key = partitionSpec.keyExtractor().apply(item);
+                final Object key = partitionKeyExtractor.apply(item);
                 final int lane = branchForKey(key);
-                metrics.recordRoutingDecision();
-                outputSenders[lane].edgeMetrics().recordLaneSelection();
-                final long laneCount = ++partitionLaneCounts[lane];
-                if (partitionSpec.hotKeyThreshold() > 0L && laneCount == partitionSpec.hotKeyThreshold()) {
-                    outputSenders[lane].edgeMetrics().recordHotKeySignal();
+                if (hotMetricsEnabled) {
+                    metrics.recordRoutingDecision();
+                }
+                if (edgeHotMetricsEnabled) {
+                    outputMetrics[lane].recordLaneSelection();
+                }
+                if (partitionHotKeyThreshold > 0L) {
+                    final long laneCount = ++partitionLaneCounts[lane];
+                    if (laneCount == partitionHotKeyThreshold && edgeHotMetricsEnabled) {
+                        outputMetrics[lane].recordHotKeySignal();
+                    }
                 }
                 outputSenders[lane].emit(item);
                 transferred = true;
@@ -726,12 +803,17 @@ final class StageWorker implements Runnable {
             }
         }
         batch.size(0);
-        expireJoinGroups(false);
+        if (joinTimeoutEnabled) {
+            expireJoinGroups(false);
+        }
     }
 
     private int dispatchBranch(final Object item) {
         return switch (dispatchSpec.kind()) {
-            case ROUND_ROBIN -> (int) (routeSequence++ % outputSenders.length);
+            case ROUND_ROBIN -> {
+                final long sequence = routeSequence++;
+                yield outputMask >= 0 ? (int) sequence & outputMask : (int) (sequence % outputSenders.length);
+            }
             case KEYED -> {
                 final Object key = dispatchSpec.keyExtractor().apply(item);
                 yield branchForKey(key);
@@ -759,7 +841,9 @@ final class StageWorker implements Runnable {
             final long createdNanos = joinTimeoutEnabled ? System.nanoTime() : 0L;
             state = joinLongStamp ? joinStates.create(stampLong, createdNanos)
                 : joinStates.create(stampObject, createdNanos);
-            metrics.recordOpenJoinGroup();
+            if (hotMetricsEnabled) {
+                metrics.recordOpenJoinGroup();
+            }
         }
 
         if (state.hasValue(sourceIndex) || (joinKind == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
@@ -768,7 +852,7 @@ final class StageWorker implements Runnable {
         }
 
         state.setValue(sourceIndex, item);
-        if (item instanceof SlabHandle<?>) {
+        if (hotMetricsEnabled && item instanceof SlabHandle<?>) {
             metrics.recordRetainedHandle();
         }
 
@@ -794,11 +878,15 @@ final class StageWorker implements Runnable {
         switch (joinDuplicatePolicy) {
             case IGNORE -> releaseIfHandle(item);
             case COUNT -> {
-                metrics.recordDuplicateJoinStamp();
+                if (hotMetricsEnabled) {
+                    metrics.recordDuplicateJoinStamp();
+                }
                 releaseIfHandle(item);
             }
             case FAIL -> {
-                metrics.recordDuplicateJoinStamp();
+                if (hotMetricsEnabled) {
+                    metrics.recordDuplicateJoinStamp();
+                }
                 releaseIfHandle(item);
                 throw new IllegalStateException("duplicate join stamp " + state.stamp() + " from " + source);
             }
@@ -814,7 +902,9 @@ final class StageWorker implements Runnable {
         if (eldest == null) {
             return;
         }
-        metrics.recordTimedOutJoinGroup();
+        if (hotMetricsEnabled) {
+            metrics.recordTimedOutJoinGroup();
+        }
         releaseAndRecycleJoinState(eldest);
     }
 
@@ -837,7 +927,9 @@ final class StageWorker implements Runnable {
             }
             joinStates.remove(state);
             if (state.receivedCount < inputs.length) {
-                metrics.recordMissingJoinBranch();
+                if (hotMetricsEnabled) {
+                    metrics.recordMissingJoinBranch();
+                }
             }
             if ((timedOut || closing) && joinMissingBranchPolicy == JoinSpec.MissingBranchPolicy.EMIT_PARTIAL) {
                 if (joinKind != JoinSpec.JoinKind.ANY_OF || !state.emitted) {
@@ -850,12 +942,13 @@ final class StageWorker implements Runnable {
                 releaseAndRecycleJoinState(state);
             }
             if (timedOut) {
-                metrics.recordTimedOutJoinGroup();
+                if (hotMetricsEnabled) {
+                    metrics.recordTimedOutJoinGroup();
+                }
             }
         }
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private void emitJoin(
         final JoinState state,
         final String triggeringSource,
@@ -878,11 +971,17 @@ final class StageWorker implements Runnable {
                 triggeringSource
             );
         }
-        final Object outputItem = ((JoinSpec) joinSpec).combiner().apply(reusableJoinGroup);
-        try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values, state.values.length)) {
+        final Object outputItem = joinCombiner.apply(reusableJoinGroup);
+        if (!messageMayCarryOwnedHandle) {
             outputSenders[0].emit(outputItem);
+        } else {
+            try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values, state.values.length)) {
+                outputSenders[0].emit(outputItem);
+            }
         }
-        metrics.recordCompletedJoinGroup();
+        if (hotMetricsEnabled) {
+            metrics.recordCompletedJoinGroup();
+        }
         if (releaseValues) {
             releaseJoinValues(state);
         }
@@ -906,7 +1005,7 @@ final class StageWorker implements Runnable {
         final Object[] values = state.values;
         for (int i = 0; i < values.length; i++) {
             final Object value = values[i];
-            if (value instanceof SlabHandle<?>) {
+            if (hotMetricsEnabled && value instanceof SlabHandle<?>) {
                 metrics.recordReleasedHandle();
             }
             releaseIfHandle(value);
@@ -1075,6 +1174,14 @@ final class StageWorker implements Runnable {
             }
         }
         return schedule;
+    }
+
+    private static EdgeMetrics[] outputMetrics(final EdgeSender[] outputSenders) {
+        final EdgeMetrics[] metricsByBranch = new EdgeMetrics[outputSenders.length];
+        for (int i = 0; i < outputSenders.length; i++) {
+            metricsByBranch[i] = outputSenders[i].edgeMetrics();
+        }
+        return metricsByBranch;
     }
 
     private static int floorMod(final int value, final int modulo) {
@@ -1283,7 +1390,7 @@ final class StageWorker implements Runnable {
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {
@@ -1363,7 +1470,7 @@ final class StageWorker implements Runnable {
         private void processDirectStage(final Object outbound, final long started) throws Exception {
             stage.logic.onMessage(outbound, output, stage.context);
             final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-            if (StageMetrics.hotCountersEnabled()) {
+            if (hotMetricsEnabled) {
                 stage.metrics.recordBatch(1, serviceNanos);
             }
             if (jfrEnabled) {
@@ -1438,7 +1545,7 @@ final class StageWorker implements Runnable {
         ) throws Exception {
             stage.logic.onMessage(outbound, outputs[index + 1], stage.context);
             final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-            if (StageMetrics.hotCountersEnabled()) {
+            if (hotMetricsEnabled) {
                 stage.metrics.recordBatch(1, serviceNanos);
             }
             if (jfrEnabled) {
@@ -1452,7 +1559,7 @@ final class StageWorker implements Runnable {
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {

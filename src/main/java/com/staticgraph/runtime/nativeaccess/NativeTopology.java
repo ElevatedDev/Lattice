@@ -71,6 +71,25 @@ public final class NativeTopology {
         requireZero(NativeTopologyNatives.pinCurrentThreadToCpu0(cpu), "pin current thread to CPU " + cpu);
     }
 
+    public static int pinCurrentThreadToNumaNode(final int numaNode) {
+        NativeTopologyNatives.ensureLoaded();
+        if (numaNode < 0) {
+            throw new IllegalArgumentException("NUMA node must not be negative");
+        }
+        try {
+            return requireNonNegative(
+                NativeTopologyNatives.pinCurrentThreadToNumaNode0(numaNode),
+                "pin current thread to NUMA node " + numaNode
+            );
+        } catch (final UnsatisfiedLinkError error) {
+            throw new NativeTopologyUnavailableException(
+                "pin current thread to NUMA node " + numaNode
+                    + " is not supported by the loaded native topology library",
+                error
+            );
+        }
+    }
+
     public static void pinCurrentThreadToCpuSet(final BitSet cpus) {
         Objects.requireNonNull(cpus, "cpus");
         NativeTopologyNatives.ensureLoaded();

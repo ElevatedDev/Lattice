@@ -17,6 +17,8 @@ import com.lattice.slab.SlabHandle;
 
 final class EdgeSender {
 
+    private static final long FAILED_OFFER_FLUSH_THRESHOLD = 1024L;
+
     private final String ownerName;
     private final Class<?> messageType;
     private final String messageTypeName;
@@ -89,6 +91,11 @@ final class EdgeSender {
     }
 
     void emit(final Object item) {
+        if (canUseTrustedFastPath()) {
+            validateItem(item);
+            emitBlockingFastPathTrusted(item);
+            return;
+        }
         final Object outbound = HandleOwnership.prepareForEnqueue(item);
         validateItem(outbound);
         boolean handled = false;
@@ -120,7 +127,7 @@ final class EdgeSender {
     }
 
     void emitTrustedFromSource(final Object item) {
-        if (!canUseTrustedSourceFastPath()) {
+        if (!canUseTrustedFastPath()) {
             emitFromSource(item);
             return;
         }
@@ -131,7 +138,7 @@ final class EdgeSender {
         return blockingFastPath && (!mayCarryOwnedHandle || !HandleOwnership.active());
     }
 
-    private boolean canUseTrustedSourceFastPath() {
+    private boolean canUseTrustedFastPath() {
         return blockingFastPath && !mayCarryOwnedHandle;
     }
 
@@ -179,6 +186,7 @@ final class EdgeSender {
 
     private boolean emitValidated(final Object item, final long timeoutNanos, final boolean timed) {
         int idle = 0;
+        long failedOffers = 0L;
         boolean blockedRecorded = false;
         boolean blockedDurationRecorded = false;
         long blockedStart = 0L;
@@ -203,9 +211,11 @@ final class EdgeSender {
                 if (edge.isClosed()) {
                     throw new GraphRuntimeException("edge is closed: " + edgeName);
                 }
-                edgeMetrics.recordFailedOffer();
-                graphMetrics.recordFailedOffer();
-                ownerMetrics.recordFailedOutput();
+                failedOffers++;
+                if (failedOffers >= FAILED_OFFER_FLUSH_THRESHOLD) {
+                    flushFailedOffers(failedOffers);
+                    failedOffers = 0L;
+                }
                 if (!blockedRecorded) {
                     blockedStart = System.nanoTime();
                     edgeMetrics.recordBlockedOffer();
@@ -230,6 +240,7 @@ final class EdgeSender {
                 idle = waitStrategy.idle(idle, waitMetrics);
             }
         } finally {
+            flushFailedOffers(failedOffers);
             if (blockedRecorded && !blockedDurationRecorded) {
                 recordBackpressureDuration(System.nanoTime() - blockedStart);
             }
@@ -238,6 +249,7 @@ final class EdgeSender {
 
     private void emitBlockingFastPath(final Object item) {
         int idle = 0;
+        long failedOffers = 0L;
         boolean blockedRecorded = false;
         boolean blockedDurationRecorded = false;
         long blockedStart = 0L;
@@ -261,9 +273,11 @@ final class EdgeSender {
                 if (edge.isClosed()) {
                     throw new GraphRuntimeException("edge is closed: " + edgeName);
                 }
-                edgeMetrics.recordFailedOffer();
-                graphMetrics.recordFailedOffer();
-                ownerMetrics.recordFailedOutput();
+                failedOffers++;
+                if (failedOffers >= FAILED_OFFER_FLUSH_THRESHOLD) {
+                    flushFailedOffers(failedOffers);
+                    failedOffers = 0L;
+                }
                 if (!blockedRecorded) {
                     blockedStart = System.nanoTime();
                     edgeMetrics.recordBlockedOffer();
@@ -280,6 +294,7 @@ final class EdgeSender {
                 idle = waitStrategy.idle(idle, waitMetrics);
             }
         } finally {
+            flushFailedOffers(failedOffers);
             if (blockedRecorded && !blockedDurationRecorded) {
                 recordBackpressureDuration(System.nanoTime() - blockedStart);
             }
@@ -448,6 +463,15 @@ final class EdgeSender {
         if (StageMetrics.hotCountersEnabled()) {
             ownerMetrics.recordEmit();
         }
+    }
+
+    private void flushFailedOffers(final long count) {
+        if (count <= 0L) {
+            return;
+        }
+        edgeMetrics.recordFailedOffers(count);
+        graphMetrics.recordFailedOffers(count);
+        ownerMetrics.recordFailedOutputs(count);
     }
 
     private record CombinedWaitMetrics(StageMetrics owner, EdgeMetrics edge) implements WaitMetrics {

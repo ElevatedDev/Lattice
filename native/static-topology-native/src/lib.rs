@@ -106,6 +106,15 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
     platform::pin_current_thread_to_cpu(cpu)
 }
 
+#[no_mangle]
+pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToNumaNode0(
+    _env: JNIEnv,
+    _class: JClass,
+    numa_node: JInt,
+) -> JInt {
+    platform::pin_current_thread_to_numa_node(numa_node)
+}
+
 #[allow(clippy::too_many_arguments)]
 #[no_mangle]
 pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpuMask0(
@@ -220,11 +229,22 @@ fn cpu_list_selector_matches(selector: &CpuListSelector, offset: usize) -> bool 
     }
 }
 
+#[allow(dead_code)]
+fn preferred_cpu(candidates: &[JInt], current_cpu: JInt, seed: usize) -> Option<JInt> {
+    if candidates.is_empty() {
+        return None;
+    }
+    if current_cpu >= 0 && candidates.iter().any(|candidate| *candidate == current_cpu) {
+        return Some(current_cpu);
+    }
+    Some(candidates[seed % candidates.len()])
+}
+
 #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
 mod platform {
     use super::{
-        cpu_list_contains, JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, CAP_LINUX,
-        CAP_LOCAL_MEM_POLICY, CAP_NUMA_QUERY, JNI_WORD_COUNT,
+        cpu_list_contains, preferred_cpu, JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU,
+        CAP_FIRST_TOUCH, CAP_LINUX, CAP_LOCAL_MEM_POLICY, CAP_NUMA_QUERY, JNI_WORD_COUNT,
     };
     use core::ffi::{c_int, c_long, c_ulong};
     use core::ptr;
@@ -235,6 +255,7 @@ mod platform {
     const CPU_WORD_COUNT: usize = CPU_SETSIZE / CPU_WORD_BITS;
 
     const EINVAL: i32 = 22;
+    const ENOENT: i32 = 2;
     const ENODEV: i32 = 19;
     const ENOSYS: i32 = 38;
     const ERANGE: i32 = 34;
@@ -252,6 +273,11 @@ mod platform {
     const SYS_SET_MEMPOLICY: c_long = 238;
     #[cfg(target_arch = "aarch64")]
     const SYS_SET_MEMPOLICY: c_long = 237;
+
+    #[cfg(target_arch = "x86_64")]
+    const SYS_GETTID: c_long = 186;
+    #[cfg(target_arch = "aarch64")]
+    const SYS_GETTID: c_long = 178;
 
     #[repr(C)]
     struct CpuSet {
@@ -404,6 +430,52 @@ mod platform {
         set_affinity(&set)
     }
 
+    pub fn pin_current_thread_to_numa_node(numa_node: JInt) -> JInt {
+        if numa_node < 0 {
+            return -EINVAL;
+        }
+
+        let mut allowed = CpuSet {
+            bits: [0; CPU_WORD_COUNT],
+        };
+        let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut allowed) };
+        if rc != 0 {
+            return -last_errno();
+        }
+
+        let mut candidates = [0; CPU_SETSIZE];
+        let candidate_count = allowed_numa_cpus(numa_node, &allowed, &mut candidates);
+        if candidate_count < 0 {
+            return candidate_count;
+        }
+        if candidate_count == 0 {
+            return -ENODEV;
+        }
+        let candidate_count = candidate_count as usize;
+        let candidates = &candidates[..candidate_count];
+
+        let selected = preferred_cpu(candidates, current_cpu(), thread_selection_seed())
+            .unwrap_or(candidates[0]);
+        let start = candidates
+            .iter()
+            .position(|candidate| *candidate == selected)
+            .unwrap_or(0);
+        let mut last_failure = ENODEV;
+
+        for offset in 0..candidate_count {
+            let cpu = candidates[(start + offset) % candidate_count];
+            let pin_rc = pin_current_thread_to_cpu(cpu);
+            if pin_rc == 0 {
+                return cpu;
+            }
+            if pin_rc < 0 {
+                last_failure = -pin_rc;
+            }
+        }
+
+        -last_failure
+    }
+
     pub fn pin_current_thread_to_cpu_mask(words: [JLong; JNI_WORD_COUNT]) -> JInt {
         if CPU_WORD_COUNT != JNI_WORD_COUNT {
             return -ERANGE;
@@ -510,6 +582,57 @@ mod platform {
         }
     }
 
+    fn allowed_numa_cpus(
+        numa_node: JInt,
+        allowed: &CpuSet,
+        output: &mut [JInt; CPU_SETSIZE],
+    ) -> JInt {
+        let cpulist_path = format!("/sys/devices/system/node/node{numa_node}/cpulist");
+        let cpulist = match fs::read_to_string(cpulist_path) {
+            Ok(cpulist) => cpulist,
+            Err(err) => {
+                let errno = err.raw_os_error().unwrap_or(ENODEV);
+                return if errno == ENOENT { -ENODEV } else { -errno };
+            }
+        };
+
+        let mut count = 0;
+        for cpu in 0..CPU_SETSIZE {
+            if cpu_set_contains(allowed, cpu) && cpu_list_contains(&cpulist, cpu) {
+                output[count] = cpu as JInt;
+                count += 1;
+            }
+        }
+
+        count as JInt
+    }
+
+    fn cpu_set_contains(set: &CpuSet, cpu: usize) -> bool {
+        if cpu >= CPU_SETSIZE {
+            return false;
+        }
+        let word = cpu / CPU_WORD_BITS;
+        let bit = cpu % CPU_WORD_BITS;
+        set.bits[word] & (1usize << bit) != 0
+    }
+
+    fn thread_selection_seed() -> usize {
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            let tid = unsafe { syscall(SYS_GETTID) };
+            if tid > 0 {
+                return tid as usize;
+            }
+        }
+
+        let cpu = current_cpu();
+        if cpu >= 0 {
+            cpu as usize
+        } else {
+            0
+        }
+    }
+
     fn last_errno() -> JInt {
         unsafe { *__errno_location() }
     }
@@ -570,6 +693,10 @@ mod platform {
         -ENOSYS
     }
 
+    pub fn pin_current_thread_to_numa_node(_numa_node: JInt) -> JInt {
+        -ENOSYS
+    }
+
     pub fn pin_current_thread_to_cpu_mask(_words: [JLong; JNI_WORD_COUNT]) -> JInt {
         -ENOSYS
     }
@@ -585,7 +712,7 @@ mod platform {
 
 #[cfg(test)]
 mod tests {
-    use super::cpu_list_contains;
+    use super::{cpu_list_contains, preferred_cpu};
 
     #[test]
     fn cpulist_single_values() {
@@ -620,5 +747,21 @@ mod tests {
     fn cpulist_ignores_invalid_segments() {
         assert!(cpu_list_contains("bad,5-7", 6));
         assert!(!cpu_list_contains("bad,5-7", 8));
+    }
+
+    #[test]
+    fn preferred_cpu_keeps_current_cpu_when_already_local() {
+        assert_eq!(Some(6), preferred_cpu(&[4, 6, 8], 6, 99));
+    }
+
+    #[test]
+    fn preferred_cpu_spreads_by_seed_when_current_cpu_is_not_local() {
+        assert_eq!(Some(8), preferred_cpu(&[4, 6, 8], 2, 5));
+        assert_eq!(Some(4), preferred_cpu(&[4, 6, 8], -1, 6));
+    }
+
+    #[test]
+    fn preferred_cpu_handles_empty_candidates() {
+        assert_eq!(None, preferred_cpu(&[], 0, 0));
     }
 }

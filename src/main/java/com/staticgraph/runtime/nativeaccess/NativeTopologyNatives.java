@@ -86,6 +86,8 @@ final class NativeTopologyNatives {
 
     static native int pinCurrentThreadToCpu0(int cpu);
 
+    static native int pinCurrentThreadToNumaNode0(int numaNode);
+
     static native int pinCurrentThreadToCpuMask0(
         long word0,
         long word1,

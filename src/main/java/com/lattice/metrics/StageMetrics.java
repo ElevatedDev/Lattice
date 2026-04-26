@@ -279,6 +279,12 @@ public final class StageMetrics implements WaitMetrics {
         failedOutputs.increment();
     }
 
+    public void recordFailedOutputs(final long count) {
+        if (count > 0L) {
+            failedOutputs.add(count);
+        }
+    }
+
     public void recordBlockedOutput() {
         blockedOutputs.increment();
     }
@@ -328,38 +334,65 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public void recordRoutingDecision() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         routingDecisions.increment();
     }
 
     public void recordBranchIsolationAction() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         branchIsolationActions.increment();
     }
 
     public void recordOpenJoinGroup() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         openJoinGroups.increment();
     }
 
     public void recordCompletedJoinGroup() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         completedJoinGroups.increment();
     }
 
     public void recordTimedOutJoinGroup() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         timedOutJoinGroups.increment();
     }
 
     public void recordDuplicateJoinStamp() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         duplicateJoinStamps.increment();
     }
 
     public void recordMissingJoinBranch() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         missingJoinBranches.increment();
     }
 
     public void recordRetainedHandle() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         retainedHandles.increment();
     }
 
     public void recordReleasedHandle() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         releasedHandles.increment();
     }
 

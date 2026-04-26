@@ -123,7 +123,7 @@ public class ApplesToApplesDisruptorBenchmark {
     }
 
     @Benchmark
-    public void disruptorThreeStagePipeline(final DisruptorPipelineState state) {
+    public void disruptorThreeStagePipelinePhysical(final DisruptorPipelineState state) {
         final Signal signal = state.nextSignal();
         final long sequence = state.ringBuffer.next();
         try {
@@ -136,12 +136,36 @@ public class ApplesToApplesDisruptorBenchmark {
     }
 
     @Benchmark
-    public void latticeDependencyJoin(final LatticeDependencyState state) {
+    public void disruptorThreeStagePipelineManuallyFused(final DisruptorFusedPipelineState state) {
+        final Signal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = signal.id;
+            event.value = signal.value;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void disruptorThreeStagePipelineManuallyFusedReference(final DisruptorFusedReferencePipelineState state) {
+        final Signal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            state.ringBuffer.get(sequence).signal = signal;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void latticeParallelDependencyJoin(final LatticeDependencyState state) {
         state.emitter.emit(state.nextSignal());
     }
 
     @Benchmark
-    public void disruptorDependencyGraph(final DisruptorDependencyState state) {
+    public void disruptorParallelDependencyGraph(final DisruptorDependencyState state) {
         final ImmutableSignal signal = state.nextSignal();
         final long sequence = state.ringBuffer.next();
         try {
@@ -343,7 +367,59 @@ public class ApplesToApplesDisruptorBenchmark {
         @TearDown(Level.Trial)
         public void tearDown() {
             disruptor.shutdown();
-            requireConsumed("disruptorThreeStagePipeline", consumed);
+            requireConsumed("disruptorThreeStagePipelinePhysical", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorFusedPipelineState extends PooledSignals {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
+                event.value++;
+                event.value++;
+                event.value++;
+                consumed.incrementAndGet();
+            });
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorThreeStagePipelineManuallyFused", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorFusedReferencePipelineState extends PooledSignals {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<RefEvent> disruptor;
+        RingBuffer<RefEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptorRef("aa-disruptor-pipeline-fused-ref", ProducerType.SINGLE);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
+                final Signal signal = event.signal;
+                signal.value++;
+                signal.value++;
+                signal.value++;
+                consumed.incrementAndGet();
+                event.signal = null;
+            });
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorThreeStagePipelineManuallyFusedReference", consumed);
         }
     }
 
@@ -382,7 +458,7 @@ public class ApplesToApplesDisruptorBenchmark {
         public void tearDown() {
             emitter.close();
             graph.stop(STOP_TIMEOUT);
-            requireConsumed("latticeDependencyJoin", committed);
+            requireConsumed("latticeParallelDependencyJoin", committed);
         }
     }
 
@@ -404,7 +480,7 @@ public class ApplesToApplesDisruptorBenchmark {
         @TearDown(Level.Trial)
         public void tearDown() {
             disruptor.shutdown();
-            requireConsumed("disruptorDependencyGraph", committed);
+            requireConsumed("disruptorParallelDependencyGraph", committed);
         }
     }
 

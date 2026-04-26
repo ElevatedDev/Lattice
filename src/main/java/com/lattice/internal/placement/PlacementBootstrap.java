@@ -136,6 +136,11 @@ public final class PlacementBootstrap {
             maybeStrict(stageName, new NativeTopologyException("native affinity is unavailable"));
             return PinAttempt.notApplied("native affinity is unavailable", -1, -1);
         }
+        if (policy.kind() == PinPolicy.PinKind.NUMA_NODE && !capabilities.numaQuery()) {
+            final NativeTopologyException unavailable = new NativeTopologyException("native NUMA query is unavailable");
+            maybeStrict(stageName, unavailable);
+            return PinAttempt.notApplied(unavailable.getMessage(), -1, policy.numaNode());
+        }
 
         try {
             return switch (policy.kind()) {
@@ -158,19 +163,39 @@ public final class PlacementBootstrap {
     }
 
     private static PinAttempt pinToNumaNode(final int numaNode) {
+        try {
+            final int cpu = NativeTopology.pinCurrentThreadToNumaNode(numaNode);
+            return PinAttempt.applied("pinned to CPU " + cpu + " on NUMA node " + numaNode, cpu, numaNode);
+        } catch (final NativeTopologyUnavailableException ex) {
+            return scanAndPinToNumaNode(numaNode, ex);
+        }
+    }
+
+    private static PinAttempt scanAndPinToNumaNode(
+        final int numaNode,
+        final NativeTopologyUnavailableException unavailable
+    ) {
+        RuntimeException lastFailure = unavailable;
         final int maxCpu = NativeTopology.maxCpuCount();
         for (int cpu = 0; cpu < maxCpu; cpu++) {
             try {
-                if (NativeTopology.numaNodeOfCpu(cpu) != numaNode) {
+                if (!NativeTopology.isCpuAllowed(cpu) || NativeTopology.numaNodeOfCpu(cpu) != numaNode) {
                     continue;
                 }
                 NativeTopology.pinCurrentThreadToCpu(cpu);
-                return PinAttempt.applied("pinned to CPU " + cpu + " on NUMA node " + numaNode, cpu, numaNode);
-            } catch (final NativeTopologyException ignored) {
-                // Try the next CPU in the requested node; cpusets can reject a subset.
+                return PinAttempt.applied(
+                    "pinned to CPU " + cpu + " on NUMA node " + numaNode + " using Java scan fallback",
+                    cpu,
+                    numaNode
+                );
+            } catch (final NativeTopologyException | IllegalArgumentException ex) {
+                lastFailure = ex;
             }
         }
-        throw new NativeTopologyException("no usable CPU found for NUMA node " + numaNode);
+        throw new NativeTopologyException(
+            "no usable CPU found for NUMA node " + numaNode + " after native helper fallback",
+            lastFailure
+        );
     }
 
     private static long firstTouch(final MessageEdge[] ownedEdges, final String ownerName) {

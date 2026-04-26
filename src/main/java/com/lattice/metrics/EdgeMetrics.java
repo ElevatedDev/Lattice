@@ -248,6 +248,12 @@ public final class EdgeMetrics implements WaitMetrics {
         failedOffers.increment();
     }
 
+    public void recordFailedOffers(final long count) {
+        if (count > 0L) {
+            failedOffers.add(count);
+        }
+    }
+
     public void recordBlockedOffer() {
         blockedOffers.increment();
     }
@@ -276,14 +282,23 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public void recordBranchIsolationAction() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         branchIsolationActions.increment();
     }
 
     public void recordLaneSelection() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         laneSelections.increment();
     }
 
     public void recordHotKeySignal() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         hotKeySignals.increment();
     }
 

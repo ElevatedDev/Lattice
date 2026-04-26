@@ -194,6 +194,12 @@ public final class GraphMetrics {
         failedOffers.increment();
     }
 
+    public void recordFailedOffers(final long count) {
+        if (count > 0L) {
+            failedOffers.add(count);
+        }
+    }
+
     public void recordBlockedOffer() {
         blockedOffers.increment();
     }
