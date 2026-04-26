@@ -53,6 +53,8 @@ final class NativeTopologyNatives {
 
     static native int numaNodeOfCpu0(int cpu);
 
+    static native int isCpuAllowed0(int cpu);
+
     static native int pinCurrentThreadToCpu0(int cpu);
 
     static native int pinCurrentThreadToCpuMask0(

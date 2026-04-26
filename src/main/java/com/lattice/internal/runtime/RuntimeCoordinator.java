@@ -20,7 +20,6 @@ class RuntimeCoordinator {
     private final AtomicReference<Throwable> failure;
     private final GraphMetrics metrics;
     private final AtomicInteger remainingWorkers;
-    private final AtomicInteger activeWorkers = new AtomicInteger();
     private final CountDownLatch bootstrapLatch;
     private final CountDownLatch runLatch = new CountDownLatch(1);
     private volatile MessageEdge[] edges = NO_EDGES;
@@ -73,16 +72,14 @@ class RuntimeCoordinator {
             || current == GraphState.FAILED;
     }
 
-    void workerActive() {
-        activeWorkers.incrementAndGet();
-    }
-
-    void workerInactive() {
-        activeWorkers.decrementAndGet();
-    }
-
     boolean hasInFlightWork() {
-        return activeWorkers.get() > 0;
+        final StageWorker[] currentWorkers = workers;
+        for (int i = 0; i < currentWorkers.length; i++) {
+            if (currentWorkers[i].active()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void workerBootstrapped() {

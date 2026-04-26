@@ -89,6 +89,15 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_isCpuAllowed0(
+    _env: JNIEnv,
+    _class: JClass,
+    cpu: JInt,
+) -> JInt {
+    platform::is_cpu_allowed(cpu)
+}
+
+#[no_mangle]
 pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpu0(
     _env: JNIEnv,
     _class: JClass,
@@ -251,6 +260,7 @@ mod platform {
 
     extern "C" {
         fn sched_setaffinity(pid: c_int, cpusetsize: usize, mask: *const CpuSet) -> c_int;
+        fn sched_getaffinity(pid: c_int, cpusetsize: usize, mask: *mut CpuSet) -> c_int;
         fn sched_getcpu() -> c_int;
         fn sysconf(name: c_int) -> c_long;
         fn syscall(num: c_long, ...) -> c_long;
@@ -355,6 +365,28 @@ mod platform {
         }
 
         -ENODEV
+    }
+
+    pub fn is_cpu_allowed(cpu: JInt) -> JInt {
+        if !(0..CPU_SETSIZE as JInt).contains(&cpu) {
+            return -EINVAL;
+        }
+
+        let mut set = CpuSet {
+            bits: [0; CPU_WORD_COUNT],
+        };
+        let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut set) };
+        if rc != 0 {
+            return -last_errno();
+        }
+
+        let word = cpu as usize / CPU_WORD_BITS;
+        let bit = cpu as usize % CPU_WORD_BITS;
+        if set.bits[word] & (1usize << bit) == 0 {
+            0
+        } else {
+            1
+        }
     }
 
     pub fn pin_current_thread_to_cpu(cpu: JInt) -> JInt {
@@ -527,6 +559,10 @@ mod platform {
     }
 
     pub fn numa_node_of_cpu(_cpu: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn is_cpu_allowed(_cpu: JInt) -> JInt {
         -ENOSYS
     }
 

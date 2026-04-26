@@ -372,15 +372,7 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private Object claimReadyItem(final Object[] localBuffer, final int index) {
-        while (true) {
-            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
-            if (item == null) {
-                return null;
-            }
-            if (ELEMENT.compareAndSet(localBuffer, index, item, null)) {
-                return item;
-            }
-        }
+        return (Object) ELEMENT.getAndSetAcquire(localBuffer, index, null);
     }
 
     private void drainAndRelease() {

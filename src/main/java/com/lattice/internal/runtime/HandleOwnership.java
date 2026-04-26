@@ -69,11 +69,17 @@ final class HandleOwnership {
 
     private static final class OwnershipContext {
         private final ReusableScope reusableScope = new ReusableScope(this);
+        private final NestedScope nestedScope = new NestedScope(this);
         private boolean active;
         private Object single;
         private Object[] array;
         private int arrayCount;
         private Iterable<?> iterable;
+        private Object[] previousSingles = new Object[8];
+        private Object[][] previousArrays = new Object[8][];
+        private int[] previousArrayCounts = new int[8];
+        private Iterable<?>[] previousIterables = new Iterable<?>[8];
+        private int depth;
 
         Scope activate(final Object input) {
             return activate(input, null, 0, null);
@@ -119,7 +125,12 @@ final class HandleOwnership {
             final Iterable<?> iterableInputs
         ) {
             if (active) {
-                return new NestedScope(this).activate(input, inputs, count, iterableInputs);
+                pushCurrent();
+                single = input;
+                array = inputs;
+                arrayCount = Math.max(0, count);
+                iterable = iterableInputs;
+                return nestedScope;
             }
             active = true;
             single = input;
@@ -130,11 +141,54 @@ final class HandleOwnership {
         }
 
         private void deactivate() {
+            while (depth > 0) {
+                depth--;
+                previousSingles[depth] = null;
+                previousArrays[depth] = null;
+                previousArrayCounts[depth] = 0;
+                previousIterables[depth] = null;
+            }
             active = false;
             single = null;
             array = null;
             arrayCount = 0;
             iterable = null;
+        }
+
+        private void pushCurrent() {
+            if (depth == previousSingles.length) {
+                grow();
+            }
+            previousSingles[depth] = single;
+            previousArrays[depth] = array;
+            previousArrayCounts[depth] = arrayCount;
+            previousIterables[depth] = iterable;
+            depth++;
+        }
+
+        private void popNested() {
+            if (depth == 0) {
+                deactivate();
+                return;
+            }
+            depth--;
+            single = previousSingles[depth];
+            array = previousArrays[depth];
+            arrayCount = previousArrayCounts[depth];
+            iterable = previousIterables[depth];
+            previousSingles[depth] = null;
+            previousArrays[depth] = null;
+            previousArrayCounts[depth] = 0;
+            previousIterables[depth] = null;
+            active = true;
+        }
+
+        private void grow() {
+            final int newLength = previousSingles.length << 1;
+            previousSingles = java.util.Arrays.copyOf(previousSingles, newLength);
+            previousArrays = java.util.Arrays.copyOf(previousArrays, newLength);
+            previousArrayCounts = java.util.Arrays.copyOf(previousArrayCounts, newLength);
+            previousIterables = java.util.Arrays.copyOf(previousIterables, newLength);
         }
     }
 
@@ -159,37 +213,14 @@ final class HandleOwnership {
 
     private static final class NestedScope implements Scope {
         private final OwnershipContext context;
-        private boolean previousActive;
-        private Object previousSingle;
-        private Object[] previousArray;
-        private int previousArrayCount;
-        private Iterable<?> previousIterable;
 
         private NestedScope(final OwnershipContext context) {
             this.context = context;
         }
 
-        Scope activate(final Object input, final Object[] inputs, final int count, final Iterable<?> iterableInputs) {
-            previousActive = context.active;
-            previousSingle = context.single;
-            previousArray = context.array;
-            previousArrayCount = context.arrayCount;
-            previousIterable = context.iterable;
-            context.active = true;
-            context.single = input;
-            context.array = inputs;
-            context.arrayCount = Math.max(0, count);
-            context.iterable = iterableInputs;
-            return this;
-        }
-
         @Override
         public void close() {
-            context.active = previousActive;
-            context.single = previousSingle;
-            context.array = previousArray;
-            context.arrayCount = previousArrayCount;
-            context.iterable = previousIterable;
+            context.popNested();
         }
     }
 }

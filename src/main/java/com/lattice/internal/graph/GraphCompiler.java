@@ -4,6 +4,7 @@ import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.SourceMode;
 import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
 import com.lattice.routing.DispatchSpec;
@@ -144,6 +145,7 @@ final class GraphCompiler {
             validateEdgeEndpoints(from, to);
             validateEdgeSpec(from, pending.spec());
             validateTypeCompatibility(from, to);
+            final EdgeSpec effectiveSpec = effectiveEdgeSpec(from, pending.spec());
 
             final String key = from.name() + "->" + to.name();
             final boolean redirectOnly = redirectKeys.contains(key);
@@ -152,7 +154,7 @@ final class GraphCompiler {
                 from.name(),
                 to.name(),
                 from.outputType(),
-                pending.spec(),
+                effectiveSpec,
                 pending.declarationOrder(),
                 branchIndex,
                 redirectOnly
@@ -209,12 +211,21 @@ final class GraphCompiler {
             && spec.overflowPolicy().coalescingKey() == null) {
             throw new GraphBuildException("coalescing overflow requires a key extractor");
         }
-        if (from.kind() == GraphPlan.NodeKind.SOURCE && spec.kind() != EdgeSpec.EdgeKind.MPSC_RING) {
-            throw new GraphBuildException("source ingress edges must use EdgeSpec.mpscRing(...)");
+        if (from.kind() == GraphPlan.NodeKind.SOURCE
+            && from.sourceMode() != SourceMode.SINGLE_PRODUCER
+            && spec.kind() != EdgeSpec.EdgeKind.MPSC_RING) {
+            throw new GraphBuildException("multi-producer source ingress edges must use EdgeSpec.mpscRing(...)");
         }
         if (from.kind() != GraphPlan.NodeKind.SOURCE && spec.kind() != EdgeSpec.EdgeKind.SPSC_RING) {
             throw new GraphBuildException("worker-owned edges must use EdgeSpec.spscRing(...)");
         }
+    }
+
+    private static EdgeSpec effectiveEdgeSpec(final NodeDefinition from, final EdgeSpec spec) {
+        if (from.kind() == GraphPlan.NodeKind.SOURCE && from.sourceMode() == SourceMode.SINGLE_PRODUCER) {
+            return spec.withKind(EdgeSpec.EdgeKind.SPSC_RING);
+        }
+        return spec;
     }
 
     private void validatePinPolicy(final String stageName, final PinPolicy pinPolicy) {
@@ -425,7 +436,14 @@ final class GraphCompiler {
 
     private List<GraphPlan.Node> buildPlanNodes(final Map<String, NodeDefinition> nodes) {
         return nodes.values().stream()
-            .map(node -> new GraphPlan.Node(node.name(), node.kind(), node.inputType(), node.outputType(), node.spec()))
+            .map(node -> new GraphPlan.Node(
+                node.name(),
+                node.kind(),
+                node.inputType(),
+                node.outputType(),
+                node.spec(),
+                node.sourceMode()
+            ))
             .toList();
     }
 

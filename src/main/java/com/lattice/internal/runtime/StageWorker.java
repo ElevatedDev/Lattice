@@ -11,6 +11,8 @@ import com.lattice.internal.placement.PlacementBootstrap;
 import com.lattice.internal.placement.PlacementResult;
 import com.lattice.internal.wait.WaitStrategies;
 import com.lattice.internal.wait.WaitStrategy;
+import com.lattice.metrics.EdgeMetrics;
+import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.metrics.WorkerState;
 import com.lattice.placement.PinPolicy;
@@ -55,6 +57,8 @@ final class StageWorker implements Runnable {
     private final EdgeSender[] outputSenders;
     private final MessageEdge[] ownedEdges;
     private final Output<Object> output;
+    private final FusedSink fusedSink;
+    private final FusedStage fusedStage;
     private final StageMetrics metrics;
     private final RuntimeCoordinator coordinator;
     private final RuntimeStageContext context;
@@ -81,6 +85,7 @@ final class StageWorker implements Runnable {
     private Object[] batchItems;
     private int[] batchSources;
     private WorkerState currentWorkerState = WorkerState.NEW;
+    private volatile boolean active;
     private Thread thread;
     private long routeSequence;
     private LinkedHashMap<Object, JoinState> joinStates;
@@ -95,10 +100,16 @@ final class StageWorker implements Runnable {
         final EdgeSender[] outputSenders,
         final MessageEdge[] ownedEdges,
         final Output<Object> output,
+        final FusedSink fusedSink,
+        final FusedStage fusedStage,
+        final PinPolicy effectivePinPolicy,
         final StageMetrics metrics,
         final RuntimeCoordinator coordinator,
         final StageExceptionHandler exceptionHandler
     ) {
+        if (fusedSink != null && fusedStage != null) {
+            throw new IllegalArgumentException("a worker cannot fuse both a sink and a stage");
+        }
         this.graphName = coordinator.graphName();
         this.stageName = node.name();
         this.inputs = inputs.clone();
@@ -107,7 +118,12 @@ final class StageWorker implements Runnable {
         this.outputEdges = outputEdges.clone();
         this.outputSenders = outputSenders.clone();
         this.ownedEdges = ownedEdges.clone();
-        this.output = output;
+        final LinearStageSinkLoop linearStageSinkLoop = linearStageSinkLoop(fusedSink, fusedStage);
+        this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
+            : fusedStage != null ? new DirectStageOutput(fusedStage)
+            : fusedSink == null ? output : new DirectSinkOutput(fusedSink);
+        this.fusedSink = fusedSink;
+        this.fusedStage = fusedStage;
         this.metrics = metrics;
         this.coordinator = coordinator;
         this.context = new RuntimeStageContext(coordinator, stageName, metrics);
@@ -115,7 +131,7 @@ final class StageWorker implements Runnable {
         this.waitStrategy = WaitStrategies.from(waitSpec);
         this.parkIdleThreshold = parkIdleThreshold(waitSpec);
         this.exceptionHandler = exceptionHandler;
-        this.pinPolicy = node.spec().pinPolicy();
+        this.pinPolicy = ObjectsRequireNonNull(effectivePinPolicy, "effectivePinPolicy");
         final BatchPolicy activeBatchPolicy = activeBatchPolicy(node, inputSpecs);
         this.batchLimit = batchLimit(activeBatchPolicy);
         this.lingerNanos = activeBatchPolicy.kind() == BatchPolicy.BatchKind.LINGER
@@ -135,6 +151,36 @@ final class StageWorker implements Runnable {
         this.jfrEnabled = JfrEvents.enabled();
         this.timeBatches = StageMetrics.histogramsEnabled() || jfrEnabled;
         this.outputMask = powerOfTwoMask(outputSenders.length);
+    }
+
+    private LinearStageSinkLoop linearStageSinkLoop(final FusedSink sink, final FusedStage stage) {
+        if (sink != null) {
+            return new LinearStageSinkLoop(new FusedStage[0], sink);
+        }
+        if (stage == null) {
+            return null;
+        }
+
+        int count = 0;
+        FusedStage current = stage;
+        while (current != null) {
+            count++;
+            if (current.nextStage() == null) {
+                if (current.terminalSink() == null) {
+                    return null;
+                }
+                break;
+            }
+            current = current.nextStage();
+        }
+
+        final FusedStage[] stages = new FusedStage[count];
+        current = stage;
+        for (int i = 0; i < count; i++) {
+            stages[i] = current;
+            current = current.nextStage();
+        }
+        return new LinearStageSinkLoop(stages, stages[count - 1].terminalSink());
     }
 
     void start() {
@@ -169,6 +215,10 @@ final class StageWorker implements Runnable {
         }
     }
 
+    boolean active() {
+        return active;
+    }
+
     @Override
     public void run() {
         WorkerState terminalState = WorkerState.STOPPED;
@@ -187,18 +237,20 @@ final class StageWorker implements Runnable {
             coordinator.awaitRunRelease();
             metrics.markStarted();
             workerState(WorkerState.RUNNING);
+            startFusedSink();
+            startFusedStage();
 
             int idle = 0;
             while (!coordinator.isAbortRequested()) {
-                boolean active = false;
+                boolean activeNow = false;
                 int received = 0;
                 try {
-                    coordinator.workerActive();
                     active = true;
+                    activeNow = true;
                     received = receive();
                     if (received == 0) {
-                        coordinator.workerInactive();
                         active = false;
+                        activeNow = false;
                         expireJoinGroups(false);
                         if (allInputsClosedAndEmpty()) {
                             break;
@@ -234,8 +286,8 @@ final class StageWorker implements Runnable {
                         throw ex;
                     }
                 } finally {
-                    if (active) {
-                        coordinator.workerInactive();
+                    if (activeNow) {
+                        active = false;
                     }
                     batch.clear();
                 }
@@ -263,6 +315,9 @@ final class StageWorker implements Runnable {
                 coordinator.workerBootstrapped();
             }
             closeOutputs();
+            active = false;
+            stopFusedStage();
+            stopFusedSink();
             workerState(coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : terminalState);
             metrics.markStopped();
             if (batch != null) {
@@ -301,6 +356,64 @@ final class StageWorker implements Runnable {
                 JfrEvents.numaMismatch(graphName, stageName, placement.expectedNumaNode(), placement.observedNumaNode());
             }
         }
+    }
+
+    private void startFusedSink() {
+        startFusedSink(fusedSink);
+    }
+
+    private void startFusedSink(final FusedSink sink) {
+        if (sink == null) {
+            return;
+        }
+        sink.metrics().markStarted();
+        sink.metrics().workerState(WorkerState.RUNNING);
+    }
+
+    private void stopFusedSink() {
+        stopFusedSink(fusedSink);
+    }
+
+    private void stopFusedSink(final FusedSink sink) {
+        if (sink == null) {
+            return;
+        }
+        final WorkerState state = sink.poisoned()
+            ? WorkerState.POISONED
+            : coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED;
+        sink.metrics().workerState(state);
+        sink.metrics().markStopped();
+    }
+
+    private void startFusedStage() {
+        startFusedStage(fusedStage);
+    }
+
+    private void startFusedStage(final FusedStage stage) {
+        if (stage == null) {
+            return;
+        }
+        stage.metrics().markStarted();
+        stage.metrics().workerState(WorkerState.RUNNING);
+        startFusedStage(stage.nextStage());
+        startFusedSink(stage.terminalSink());
+    }
+
+    private void stopFusedStage() {
+        stopFusedStage(fusedStage);
+    }
+
+    private void stopFusedStage(final FusedStage stage) {
+        if (stage == null) {
+            return;
+        }
+        stopFusedStage(stage.nextStage());
+        stopFusedSink(stage.terminalSink());
+        final WorkerState state = stage.poisoned()
+            ? WorkerState.POISONED
+            : coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED;
+        stage.metrics().workerState(state);
+        stage.metrics().markStopped();
     }
 
     private int receive() {
@@ -371,6 +484,7 @@ final class StageWorker implements Runnable {
                 batchItems[i] = null;
             }
         }
+        batch.size(0);
     }
 
     private void processBatch(final int received) throws Exception {
@@ -381,6 +495,7 @@ final class StageWorker implements Runnable {
                 releaseIfHandle(batch.itemAt(i));
                 batchItems[i] = null;
             }
+            batch.size(0);
         }
     }
 
@@ -394,6 +509,7 @@ final class StageWorker implements Runnable {
                 batchItems[i] = null;
             }
         }
+        batch.size(0);
     }
 
     private void processDispatch(final int received) {
@@ -413,6 +529,7 @@ final class StageWorker implements Runnable {
                 batchItems[i] = null;
             }
         }
+        batch.size(0);
     }
 
     private void processBroadcast(final int received) {
@@ -506,6 +623,7 @@ final class StageWorker implements Runnable {
                 batchItems[i] = null;
             }
         }
+        batch.size(0);
     }
 
     private void processJoin(final int received) {
@@ -703,22 +821,62 @@ final class StageWorker implements Runnable {
     }
 
     private WorkerState handleException(final Throwable ex) {
-        metrics.recordException();
+        final FusedStageException fusedFailure = ex instanceof FusedStageException failure ? failure : null;
+        final String failedStageName = fusedFailure == null ? stageName : fusedFailure.stageName();
+        final StageMetrics failedMetrics = fusedFailure == null ? metrics : fusedFailure.metrics();
+        final RuntimeStageContext failedContext = fusedFailure == null ? context : fusedFailure.context();
+        final Throwable cause = fusedFailure == null ? ex : fusedFailure.getCause();
+
+        failedMetrics.recordException();
         final StageExceptionAction action;
         try {
-            action = exceptionHandler.onException(graphName, stageName, ex, context);
+            action = exceptionHandler.onException(graphName, failedStageName, cause, failedContext);
         } catch (final Throwable handlerFailure) {
-            coordinator.fail(stageName, handlerFailure);
+            coordinator.fail(failedStageName, handlerFailure);
             return WorkerState.FAILED;
         }
 
         if (action == StageExceptionAction.POISON_STAGE) {
-            coordinator.poison(stageName, ex, inputs, outputEdges);
+            markFusedPoisoned(fusedFailure);
+            coordinator.poison(failedStageName, cause, inputs, outputEdges);
             return WorkerState.POISONED;
         }
 
-        coordinator.fail(stageName, ex);
+        coordinator.fail(failedStageName, cause);
         return WorkerState.FAILED;
+    }
+
+    private void markFusedPoisoned(final FusedStageException failure) {
+        if (failure == null) {
+            return;
+        }
+        final FusedStage stage = fusedStage;
+        if (stage != null && stage.name().equals(failure.stageName())) {
+            stage.markPoisoned();
+        }
+        markFusedPoisoned(stage == null ? null : stage.nextStage(), failure.stageName());
+        final FusedSink sink = fusedSink;
+        if (sink != null && sink.name().equals(failure.stageName())) {
+            sink.markPoisoned();
+        }
+        final FusedSink terminalSink = stage == null ? null : stage.terminalSink();
+        if (terminalSink != null && terminalSink.name().equals(failure.stageName())) {
+            terminalSink.markPoisoned();
+        }
+    }
+
+    private void markFusedPoisoned(final FusedStage stage, final String failedStageName) {
+        if (stage == null) {
+            return;
+        }
+        if (stage.name().equals(failedStageName)) {
+            stage.markPoisoned();
+        }
+        markFusedPoisoned(stage.nextStage(), failedStageName);
+        final FusedSink terminalSink = stage.terminalSink();
+        if (terminalSink != null && terminalSink.name().equals(failedStageName)) {
+            terminalSink.markPoisoned();
+        }
     }
 
     private void closeOutputs() {
@@ -815,6 +973,431 @@ final class StageWorker implements Runnable {
             throw new NullPointerException(label);
         }
         return value;
+    }
+
+    static final class FusedSink {
+        private final String name;
+        private final Class<?> inputType;
+        private final String inputTypeName;
+        private final boolean acceptsAnyType;
+        private final Consumer<Object> consumer;
+        private final StageMetrics metrics;
+        private final StageMetrics ownerMetrics;
+        private final EdgeMetrics logicalEdgeMetrics;
+        private final GraphMetrics graphMetrics;
+        private final RuntimeStageContext context;
+        private boolean poisoned;
+
+        @SuppressWarnings("unchecked")
+        FusedSink(
+            final String name,
+            final Class<?> inputType,
+            final Consumer<?> consumer,
+            final StageMetrics metrics,
+            final StageMetrics ownerMetrics,
+            final EdgeMetrics logicalEdgeMetrics,
+            final GraphMetrics graphMetrics,
+            final RuntimeCoordinator coordinator
+        ) {
+            this.name = name;
+            this.inputType = inputType;
+            this.inputTypeName = inputType.getName();
+            this.acceptsAnyType = inputType == Object.class;
+            this.consumer = (Consumer<Object>) consumer;
+            this.metrics = metrics;
+            this.ownerMetrics = ownerMetrics;
+            this.logicalEdgeMetrics = logicalEdgeMetrics;
+            this.graphMetrics = graphMetrics;
+            this.context = new RuntimeStageContext(coordinator, name, metrics);
+        }
+
+        String name() {
+            return name;
+        }
+
+        StageMetrics metrics() {
+            return metrics;
+        }
+
+        void markPoisoned() {
+            poisoned = true;
+        }
+
+        boolean poisoned() {
+            return poisoned;
+        }
+    }
+
+    static final class FusedStage {
+        private final String name;
+        private final Class<?> inputType;
+        private final String inputTypeName;
+        private final boolean acceptsAnyType;
+        private final StageLogic<Object, Object> logic;
+        private final Output<Object> output;
+        private final StageMetrics metrics;
+        private final StageMetrics ownerMetrics;
+        private final EdgeMetrics logicalEdgeMetrics;
+        private final GraphMetrics graphMetrics;
+        private final RuntimeStageContext context;
+        private final FusedStage nextStage;
+        private final FusedSink terminalSink;
+        private boolean poisoned;
+
+        @SuppressWarnings("unchecked")
+        FusedStage(
+            final String name,
+            final Class<?> inputType,
+            final StageLogic<?, ?> logic,
+            final Output<Object> output,
+            final StageMetrics metrics,
+            final StageMetrics ownerMetrics,
+            final EdgeMetrics logicalEdgeMetrics,
+            final GraphMetrics graphMetrics,
+            final RuntimeCoordinator coordinator,
+            final FusedStage nextStage,
+            final FusedSink terminalSink
+        ) {
+            this.name = name;
+            this.inputType = inputType;
+            this.inputTypeName = inputType.getName();
+            this.acceptsAnyType = inputType == Object.class;
+            this.logic = (StageLogic<Object, Object>) logic;
+            this.output = output;
+            this.metrics = metrics;
+            this.ownerMetrics = ownerMetrics;
+            this.logicalEdgeMetrics = logicalEdgeMetrics;
+            this.graphMetrics = graphMetrics;
+            this.context = new RuntimeStageContext(coordinator, name, metrics);
+            this.nextStage = nextStage;
+            this.terminalSink = terminalSink;
+        }
+
+        String name() {
+            return name;
+        }
+
+        StageMetrics metrics() {
+            return metrics;
+        }
+
+        FusedStage nextStage() {
+            return nextStage;
+        }
+
+        FusedSink terminalSink() {
+            return terminalSink;
+        }
+
+        void markPoisoned() {
+            poisoned = true;
+        }
+
+        boolean poisoned() {
+            return poisoned;
+        }
+    }
+
+    private final class DirectSinkOutput implements Output<Object> {
+        private final FusedSink sink;
+
+        private DirectSinkOutput(final FusedSink sink) {
+            this.sink = sink;
+        }
+
+        @Override
+        public void push(final Object item) {
+            emit(item);
+        }
+
+        @Override
+        public boolean push(final Object item, final Duration timeout) {
+            emit(item);
+            return true;
+        }
+
+        @Override
+        public boolean tryPush(final Object item) {
+            emit(item);
+            return true;
+        }
+
+        private void emit(final Object item) {
+            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            validate(outbound);
+            sink.logicalEdgeMetrics.recordEmit();
+            sink.graphMetrics.recordEmit();
+            sink.ownerMetrics.recordEmit();
+            sink.logicalEdgeMetrics.recordConsume();
+            sink.graphMetrics.recordConsume();
+            sink.metrics.recordConsume();
+            try {
+                sink.consumer.accept(outbound);
+                sink.metrics.recordBatch(1, 0L);
+            } catch (final Throwable ex) {
+                throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
+            } finally {
+                releaseIfHandle(outbound);
+            }
+        }
+
+        private void validate(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(sink.name + " cannot consume null");
+            }
+            if (!sink.acceptsAnyType && !sink.inputType.isInstance(item)) {
+                throw new ClassCastException(sink.name + " received " + item.getClass().getName()
+                    + ", expected " + sink.inputTypeName);
+            }
+        }
+    }
+
+    private final class DirectStageOutput implements Output<Object> {
+        private final FusedStage stage;
+        private final Output<Object> output;
+
+        private DirectStageOutput(final FusedStage stage) {
+            this.stage = stage;
+            this.output = stage.nextStage() != null ? new DirectStageOutput(stage.nextStage())
+                : stage.terminalSink() == null ? stage.output : new DirectSinkOutput(stage.terminalSink());
+        }
+
+        @Override
+        public void push(final Object item) {
+            emit(item);
+        }
+
+        @Override
+        public boolean push(final Object item, final Duration timeout) {
+            emit(item);
+            return true;
+        }
+
+        @Override
+        public boolean tryPush(final Object item) {
+            emit(item);
+            return true;
+        }
+
+        private void emit(final Object item) {
+            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            validate(outbound);
+            stage.logicalEdgeMetrics.recordEmit();
+            stage.graphMetrics.recordEmit();
+            stage.ownerMetrics.recordEmit();
+            stage.logicalEdgeMetrics.recordConsume();
+            stage.graphMetrics.recordConsume();
+            stage.metrics.recordConsume();
+
+            final long started = timeBatches ? System.nanoTime() : 0L;
+            try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                stage.logic.onMessage(outbound, output, stage.context);
+                final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
+                stage.metrics.recordBatch(1, serviceNanos);
+                if (jfrEnabled) {
+                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                }
+            } catch (final FusedStageException ex) {
+                throw ex;
+            } catch (final Throwable ex) {
+                throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
+            } finally {
+                releaseIfHandle(outbound);
+            }
+        }
+
+        private void validate(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(stage.name + " cannot consume null");
+            }
+            if (!stage.acceptsAnyType && !stage.inputType.isInstance(item)) {
+                throw new ClassCastException(stage.name + " received " + item.getClass().getName()
+                    + ", expected " + stage.inputTypeName);
+            }
+        }
+    }
+
+    private final class LinearStageSinkLoop {
+        private final FusedStage[] stages;
+        private final FusedSink sink;
+        private final Output<Object>[] outputs;
+        private final boolean retainForScope;
+
+        @SuppressWarnings("unchecked")
+        private LinearStageSinkLoop(final FusedStage[] stages, final FusedSink sink) {
+            this.stages = stages;
+            this.sink = sink;
+            this.retainForScope = mayCarryOwnedHandle(stages) || mayCarryOwnedHandle(sink);
+            this.outputs = new Output[stages.length + 1];
+            for (int i = 0; i < stages.length; i++) {
+                outputs[i] = new LinearStageOutput(i);
+            }
+            outputs[stages.length] = new LinearSinkOutput();
+        }
+
+        Output<Object> entryOutput() {
+            return outputs[0];
+        }
+
+        private void emitStage(final int index, final Object item) {
+            final FusedStage stage = stages[index];
+            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
+            validate(stage, outbound);
+            stage.logicalEdgeMetrics.recordEmit();
+            stage.graphMetrics.recordEmit();
+            stage.ownerMetrics.recordEmit();
+            stage.logicalEdgeMetrics.recordConsume();
+            stage.graphMetrics.recordConsume();
+            stage.metrics.recordConsume();
+
+            final long started = timeBatches ? System.nanoTime() : 0L;
+            try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                stage.logic.onMessage(outbound, outputs[index + 1], stage.context);
+                final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
+                stage.metrics.recordBatch(1, serviceNanos);
+                if (jfrEnabled) {
+                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                }
+            } catch (final FusedStageException ex) {
+                throw ex;
+            } catch (final Throwable ex) {
+                throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
+            } finally {
+                releaseIfHandle(outbound);
+            }
+        }
+
+        private void emitSink(final Object item) {
+            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
+            validate(sink, outbound);
+            sink.logicalEdgeMetrics.recordEmit();
+            sink.graphMetrics.recordEmit();
+            sink.ownerMetrics.recordEmit();
+            sink.logicalEdgeMetrics.recordConsume();
+            sink.graphMetrics.recordConsume();
+            sink.metrics.recordConsume();
+            try {
+                sink.consumer.accept(outbound);
+                sink.metrics.recordBatch(1, 0L);
+            } catch (final Throwable ex) {
+                throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
+            } finally {
+                releaseIfHandle(outbound);
+            }
+        }
+
+        private static boolean mayCarryOwnedHandle(final FusedStage[] stages) {
+            for (int i = 0; i < stages.length; i++) {
+                if (mayCarryOwnedHandle(stages[i].inputType)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static boolean mayCarryOwnedHandle(final FusedSink sink) {
+            return mayCarryOwnedHandle(sink.inputType);
+        }
+
+        private static boolean mayCarryOwnedHandle(final Class<?> inputType) {
+            return inputType == Object.class
+                || inputType.isAssignableFrom(SlabHandle.class)
+                || inputType.isAssignableFrom(Stamped.class);
+        }
+
+        private void validate(final FusedStage stage, final Object item) {
+            if (item == null) {
+                throw new NullPointerException(stage.name + " cannot consume null");
+            }
+            if (!stage.acceptsAnyType && !stage.inputType.isInstance(item)) {
+                throw new ClassCastException(stage.name + " received " + item.getClass().getName()
+                    + ", expected " + stage.inputTypeName);
+            }
+        }
+
+        private void validate(final FusedSink sink, final Object item) {
+            if (item == null) {
+                throw new NullPointerException(sink.name + " cannot consume null");
+            }
+            if (!sink.acceptsAnyType && !sink.inputType.isInstance(item)) {
+                throw new ClassCastException(sink.name + " received " + item.getClass().getName()
+                    + ", expected " + sink.inputTypeName);
+            }
+        }
+
+        private final class LinearStageOutput implements Output<Object> {
+            private final int index;
+
+            private LinearStageOutput(final int index) {
+                this.index = index;
+            }
+
+            @Override
+            public void push(final Object item) {
+                emitStage(index, item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitStage(index, item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitStage(index, item);
+                return true;
+            }
+        }
+
+        private final class LinearSinkOutput implements Output<Object> {
+            @Override
+            public void push(final Object item) {
+                emitSink(item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitSink(item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitSink(item);
+                return true;
+            }
+        }
+    }
+
+    private static final class FusedStageException extends RuntimeException {
+        private final String stageName;
+        private final StageMetrics metrics;
+        private final RuntimeStageContext context;
+
+        private FusedStageException(
+            final String stageName,
+            final StageMetrics metrics,
+            final RuntimeStageContext context,
+            final Throwable cause
+        ) {
+            super(cause);
+            this.stageName = stageName;
+            this.metrics = metrics;
+            this.context = context;
+        }
+
+        String stageName() {
+            return stageName;
+        }
+
+        StageMetrics metrics() {
+            return metrics;
+        }
+
+        RuntimeStageContext context() {
+            return context;
+        }
     }
 
     private static final class JoinState {

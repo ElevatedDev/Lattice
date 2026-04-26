@@ -2,6 +2,7 @@ package com.lattice.internal.runtime;
 
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.SourceMode;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.metrics.WorkerState;
 import com.lattice.routing.Stamped;
@@ -18,6 +19,7 @@ final class SourceEmitter<T> implements Emitter<T> {
     private final AtomicReference<GraphState> graphState;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final boolean stampItems;
+    private final boolean singleProducer;
     private long nextStamp;
 
     SourceEmitter(
@@ -25,13 +27,15 @@ final class SourceEmitter<T> implements Emitter<T> {
         final EdgeSender sender,
         final StageMetrics metrics,
         final AtomicReference<GraphState> graphState,
-        final boolean stampItems
+        final boolean stampItems,
+        final SourceMode sourceMode
     ) {
         this.name = name;
         this.sender = sender;
         this.metrics = metrics;
         this.graphState = graphState;
         this.stampItems = stampItems;
+        this.singleProducer = sourceMode == SourceMode.SINGLE_PRODUCER;
     }
 
     @Override
@@ -43,7 +47,11 @@ final class SourceEmitter<T> implements Emitter<T> {
     public void emit(final T item) {
         ensureOpenAndRunning();
         if (stampItems) {
-            emitStamped(item);
+            if (singleProducer) {
+                emitStampedSingleProducer(item);
+            } else {
+                emitStamped(item);
+            }
         } else {
             sender.emit(item);
         }
@@ -53,7 +61,9 @@ final class SourceEmitter<T> implements Emitter<T> {
     public boolean emit(final T item, final Duration timeout) {
         ensureOpenAndRunning();
         if (stampItems) {
-            return emitStamped(item, timeout.toNanos());
+            return singleProducer
+                ? emitStampedSingleProducer(item, timeout.toNanos())
+                : emitStamped(item, timeout.toNanos());
         }
         return sender.emit(item, timeout.toNanos());
     }
@@ -64,7 +74,7 @@ final class SourceEmitter<T> implements Emitter<T> {
             return false;
         }
         if (stampItems) {
-            return tryEmitStamped(item);
+            return singleProducer ? tryEmitStampedSingleProducer(item) : tryEmitStamped(item);
         }
         return sender.tryEmit(item);
     }
@@ -98,11 +108,19 @@ final class SourceEmitter<T> implements Emitter<T> {
     }
 
     private synchronized void emitStamped(final T item) {
+        emitStampedSingleProducer(item);
+    }
+
+    private void emitStampedSingleProducer(final T item) {
         sender.emit(Stamped.of(nextStamp, item));
         nextStamp++;
     }
 
     private synchronized boolean emitStamped(final T item, final long timeoutNanos) {
+        return emitStampedSingleProducer(item, timeoutNanos);
+    }
+
+    private boolean emitStampedSingleProducer(final T item, final long timeoutNanos) {
         if (!sender.emit(Stamped.of(nextStamp, item), timeoutNanos)) {
             return false;
         }
@@ -111,6 +129,10 @@ final class SourceEmitter<T> implements Emitter<T> {
     }
 
     private synchronized boolean tryEmitStamped(final T item) {
+        return tryEmitStampedSingleProducer(item);
+    }
+
+    private boolean tryEmitStampedSingleProducer(final T item) {
         if (!sender.tryEmit(Stamped.of(nextStamp, item))) {
             return false;
         }

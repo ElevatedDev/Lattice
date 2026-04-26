@@ -1,15 +1,28 @@
 plugins {
     id 'java'
+    id 'maven-publish'
     id 'me.champeau.jmh' version '0.7.3'
 }
 
 group = 'com.lattice'
-version = '1.0-SNAPSHOT'
+version = providers.gradleProperty('releaseVersion').orElse('1.0-SNAPSHOT').get()
+
+base {
+    archivesName = 'lattice'
+}
+
+def releasePomUrl = 'https://github.com/ElevatedDev/Lattice'
+def releaseLicenseName = providers.gradleProperty('releaseLicenseName')
+def releaseLicenseUrl = providers.gradleProperty('releaseLicenseUrl')
+def releaseLicenseDistribution = providers.gradleProperty('releaseLicenseDistribution').orElse('repo')
 
 java {
+    modularity.inferModulePath = true
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -21,11 +34,25 @@ sourceSets {
         java.srcDir 'src/jcstress/java'
         resources.srcDir 'src/jcstress/resources'
     }
+    examples {
+        java.srcDir 'src/examples/java'
+        resources.srcDir 'src/examples/resources'
+        compileClasspath += sourceSets.main.output + configurations.runtimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+    testkit {
+        java.srcDir 'src/testkit/java'
+        resources.srcDir 'src/testkit/resources'
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
 }
 
 configurations {
     jcstressCompileOnly.extendsFrom compileOnly
     jcstressAnnotationProcessor.extendsFrom annotationProcessor
+    examplesImplementation.extendsFrom implementation
+    testkitImplementation.extendsFrom testImplementation
 }
 
 dependencies {
@@ -57,6 +84,94 @@ test {
     useJUnitPlatform()
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.named('compileJava', JavaCompile) {
+    doFirst {
+        options.compilerArgs.addAll(['--module-path', classpath.asPath])
+        classpath = files()
+    }
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
+tasks.named('javadoc', Javadoc) {
+    exclude 'module-info.java'
+    classpath = configurations.compileClasspath
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+tasks.named('jar', Jar) {
+    manifest {
+        attributes(
+            'Automatic-Module-Name': 'com.lattice',
+            'Implementation-Title': 'Lattice',
+            'Implementation-Version': project.version.toString(),
+            'Implementation-Vendor': 'ElevatedDev',
+            'Specification-Title': 'Lattice',
+            'Specification-Version': project.version.toString().replaceFirst(/-SNAPSHOT$/, ''),
+            'Specification-Vendor': 'ElevatedDev'
+        )
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = 'lattice'
+
+            pom {
+                name = 'Lattice'
+                description = 'Static topology Java runtime with deterministic routing, bounded edges, metrics, and optional native placement support.'
+                url = releasePomUrl
+                inceptionYear = '2026'
+
+                if (releaseLicenseName.isPresent() && releaseLicenseUrl.isPresent()) {
+                    licenses {
+                        license {
+                            name = releaseLicenseName.get()
+                            url = releaseLicenseUrl.get()
+                            distribution = releaseLicenseDistribution.get()
+                        }
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'ElevatedDev'
+                        name = 'ElevatedDev'
+                        url = 'https://github.com/ElevatedDev'
+                    }
+                }
+
+                scm {
+                    connection = 'scm:git:https://github.com/ElevatedDev/Lattice.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/ElevatedDev/Lattice.git'
+                    url = releasePomUrl
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'localRelease'
+            url = layout.buildDirectory.dir('repos/releases')
+        }
+    }
+}
+
 jmh {
     fork = 1
     warmupIterations = 3
@@ -70,6 +185,13 @@ tasks.register('nativeBuildRelease', Exec) {
     commandLine 'cargo', 'build', '--release'
 }
 
+tasks.register('nativeTest', Exec) {
+    group = 'verification'
+    description = 'Runs Rust native backend tests.'
+    workingDir = file('native/static-topology-native')
+    commandLine 'cargo', 'test'
+}
+
 tasks.register('jcstress', JavaExec) {
     group = 'verification'
     description = 'Runs JCStress concurrency tests.'
@@ -77,4 +199,92 @@ tasks.register('jcstress', JavaExec) {
     classpath = sourceSets.jcstress.runtimeClasspath
     mainClass = 'org.openjdk.jcstress.Main'
     args = ['-v']
+}
+
+tasks.register('releaseCheck') {
+    group = 'verification'
+    description = 'Runs the portable release verification gate.'
+    dependsOn tasks.named('test')
+    dependsOn tasks.named('jmhClasses')
+    dependsOn tasks.named('jcstressClasses')
+    dependsOn tasks.named('examplesClasses')
+    dependsOn tasks.named('testkitClasses')
+    dependsOn tasks.named('verifyReleaseArtifacts')
+}
+
+tasks.register('verifyReleaseArtifacts') {
+    group = 'verification'
+    description = 'Builds and verifies Maven release artifacts and generated POM metadata.'
+    dependsOn tasks.named('jar')
+    dependsOn tasks.named('sourcesJar')
+    dependsOn tasks.named('javadocJar')
+    dependsOn tasks.named('generatePomFileForMavenJavaPublication')
+
+    doLast {
+        def jarTask = tasks.named('jar').get()
+        def sourcesJarTask = tasks.named('sourcesJar').get()
+        def javadocJarTask = tasks.named('javadocJar').get()
+        def pomFile = layout.buildDirectory.file('publications/mavenJava/pom-default.xml').get().asFile
+        def artifacts = [
+            jarTask.archiveFile.get().asFile,
+            sourcesJarTask.archiveFile.get().asFile,
+            javadocJarTask.archiveFile.get().asFile,
+            pomFile
+        ]
+
+        artifacts.each { artifact ->
+            if (!artifact.isFile()) {
+                throw new GradleException("Missing release artifact: ${artifact}")
+            }
+            if (artifact.length() == 0L) {
+                throw new GradleException("Release artifact is empty: ${artifact}")
+            }
+        }
+
+        new java.util.jar.JarFile(jarTask.archiveFile.get().asFile).withCloseable { jarFile ->
+            def manifest = jarFile.manifest?.mainAttributes
+            if (manifest == null) {
+                throw new GradleException('Main jar is missing META-INF/MANIFEST.MF')
+            }
+
+            ['Implementation-Title', 'Implementation-Version', 'Implementation-Vendor',
+             'Specification-Title', 'Specification-Version', 'Specification-Vendor'].each { attribute ->
+                if (!manifest.getValue(attribute)) {
+                    throw new GradleException("Main jar manifest is missing ${attribute}")
+                }
+            }
+
+            if (manifest.getValue('Automatic-Module-Name') != 'com.lattice'
+                && jarFile.getEntry('module-info.class') == null) {
+                throw new GradleException('Main jar must provide either module-info.class or Automatic-Module-Name=com.lattice')
+            }
+        }
+    }
+}
+
+tasks.register('verifyOpenSourceRelease') {
+    group = 'verification'
+    description = 'Checks release files and metadata that must be settled before public publishing.'
+    dependsOn tasks.named('verifyReleaseArtifacts')
+
+    doLast {
+        def rootFiles = rootDir.listFiles()?.findAll { it.isFile() } ?: []
+        def hasReadme = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('README') }
+        def hasLicense = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('LICENSE') }
+        def missing = []
+
+        if (!hasReadme) {
+            missing << 'root README'
+        }
+        if (!hasLicense) {
+            missing << 'root LICENSE'
+        }
+        if (!releaseLicenseName.isPresent() || !releaseLicenseUrl.isPresent()) {
+            missing << 'releaseLicenseName/releaseLicenseUrl Gradle properties for POM license metadata'
+        }
+
+        if (!missing.isEmpty()) {
+            throw new GradleException("Open-source release metadata is incomplete:\n - ${missing.join('\n - ')}")
+        }
+    }
 }

@@ -53,9 +53,17 @@ public interface StaticGraph extends AutoCloseable {
 
     interface Builder {
 
-        <T> Builder source(String name, Class<T> type);
+        default <T> Builder source(final String name, final Class<T> type) {
+            return source(name, type, SourceMode.MULTI_PRODUCER);
+        }
 
-        <T> Builder stampedSource(String name, Class<T> payloadType);
+        <T> Builder source(String name, Class<T> type, SourceMode mode);
+
+        default <T> Builder stampedSource(final String name, final Class<T> payloadType) {
+            return stampedSource(name, payloadType, SourceMode.MULTI_PRODUCER);
+        }
+
+        <T> Builder stampedSource(String name, Class<T> payloadType, SourceMode mode);
 
         <I, O> Builder stage(
             String name,

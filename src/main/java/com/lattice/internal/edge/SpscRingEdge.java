@@ -35,11 +35,14 @@ public final class SpscRingEdge implements MessageEdge {
     private final MemoryMode.MemoryKind memoryKind;
     private final EdgeMetrics metrics;
     private final GraphMetrics graphMetrics;
+    private final boolean plainClaim;
     private Object[] buffer;
     private LongAccess publishTimes;
     private final PaddedLong head = new PaddedLong();
     private final PaddedLong tail = new PaddedLong();
     private final PaddedBoolean closed = new PaddedBoolean();
+    private long producerHeadCache;
+    private long consumerTailCache;
 
     public SpscRingEdge(
         final String from,
@@ -48,7 +51,7 @@ public final class SpscRingEdge implements MessageEdge {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics
     ) {
-        this(from, to, capacity, MemoryMode.onHeapSlots(), metrics, graphMetrics);
+        this(from, to, capacity, MemoryMode.onHeapSlots(), metrics, graphMetrics, true);
         firstTouch(from);
     }
 
@@ -60,6 +63,18 @@ public final class SpscRingEdge implements MessageEdge {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics
     ) {
+        this(from, to, capacity, memoryMode, metrics, graphMetrics, true);
+    }
+
+    public SpscRingEdge(
+        final String from,
+        final String to,
+        final int capacity,
+        final MemoryMode memoryMode,
+        final EdgeMetrics metrics,
+        final GraphMetrics graphMetrics,
+        final boolean plainClaim
+    ) {
         this.from = from;
         this.to = to;
         this.capacity = capacity;
@@ -67,6 +82,7 @@ public final class SpscRingEdge implements MessageEdge {
         this.memoryKind = memoryMode.kind();
         this.metrics = metrics;
         this.graphMetrics = graphMetrics;
+        this.plainClaim = plainClaim;
     }
 
     @Override
@@ -90,12 +106,11 @@ public final class SpscRingEdge implements MessageEdge {
         }
         final long currentTail = tailSequence(currentTailRaw);
         final long wrapPoint = currentTail - capacity;
-        final long currentHead = (long) CURSOR.getAcquire(head);
-        if (currentHead <= wrapPoint) {
-            return false;
-        }
-        if (!CURSOR.compareAndSet(tail, currentTailRaw, currentTail + 1L)) {
-            return false;
+        if (producerHeadCache <= wrapPoint) {
+            producerHeadCache = (long) CURSOR.getAcquire(head);
+            if (producerHeadCache <= wrapPoint) {
+                return false;
+            }
         }
 
         final int index = (int) currentTail & mask;
@@ -106,12 +121,14 @@ public final class SpscRingEdge implements MessageEdge {
                 localPublishTimes.setPlain(index, 0L);
             }
             ELEMENT.setRelease(localBuffer, index, DROPPED);
+            CURSOR.setRelease(tail, currentTail + 1L);
             return false;
         }
         if (localPublishTimes != null) {
             localPublishTimes.setPlain(index, System.nanoTime());
         }
-        ELEMENT.setRelease(localBuffer, index, item);
+        localBuffer[index] = item;
+        CURSOR.setRelease(tail, currentTail + 1L);
         metrics.recordEmit();
         graphMetrics.recordEmit();
         return true;
@@ -120,7 +137,11 @@ public final class SpscRingEdge implements MessageEdge {
     @Override
     public Object poll() {
         final long currentHead = (long) CURSOR.get(head);
-        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        long currentTail = consumerTailCache;
+        if (currentHead >= currentTail) {
+            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            consumerTailCache = currentTail;
+        }
         if (currentHead >= currentTail) {
             return null;
         }
@@ -156,7 +177,11 @@ public final class SpscRingEdge implements MessageEdge {
         }
 
         final long currentHead = (long) CURSOR.get(head);
-        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        long currentTail = consumerTailCache;
+        if (currentHead >= currentTail) {
+            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            consumerTailCache = currentTail;
+        }
         if (currentHead >= currentTail) {
             return 0;
         }
@@ -319,15 +344,14 @@ public final class SpscRingEdge implements MessageEdge {
     }
 
     private Object claimReadyItem(final Object[] localBuffer, final int index) {
-        while (true) {
+        if (plainClaim) {
             final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
-            if (item == null) {
-                return null;
+            if (item != null) {
+                ELEMENT.setRelease(localBuffer, index, null);
             }
-            if (ELEMENT.compareAndSet(localBuffer, index, item, null)) {
-                return item;
-            }
+            return item;
         }
+        return (Object) ELEMENT.getAndSetAcquire(localBuffer, index, null);
     }
 
     private void drainAndRelease() {

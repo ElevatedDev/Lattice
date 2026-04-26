@@ -20,6 +20,7 @@ public final class EdgeMetrics implements WaitMetrics {
     private final LongAdder backpressureNanos = new LongAdder();
     private final LongAdder droppedLatest = new LongAdder();
     private final LongAdder droppedOldest = new LongAdder();
+    private final AtomicLong droppedOldestCount = new AtomicLong();
     private final LongAdder coalescedOffers = new LongAdder();
     private final LongAdder redirectedOffers = new LongAdder();
     private final LongAdder branchIsolationActions = new LongAdder();
@@ -165,7 +166,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     public void recordEmit() {
         final long emitted = emittedCount.incrementAndGet();
-        final long depth = emitted - consumedCount.get() - droppedOldest.sum();
+        final long depth = emitted - consumedCount.get() - droppedOldestCount.get();
         recordDepth(depth);
     }
 
@@ -199,6 +200,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     public void recordDroppedOldest() {
         droppedOldest.increment();
+        droppedOldestCount.incrementAndGet();
     }
 
     public void recordCoalescedOffer() {
@@ -267,7 +269,7 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     private long currentDepth() {
-        return emittedCount.get() - consumedCount.get() - droppedOldest.sum();
+        return emittedCount.get() - consumedCount.get() - droppedOldestCount.get();
     }
 
     private static long clampToHistogram(final Histogram histogram, final long value) {

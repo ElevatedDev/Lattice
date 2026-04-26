@@ -4,6 +4,7 @@ import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.WorkerState;
 import com.lattice.stage.BatchPolicy;
@@ -24,6 +25,28 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase2RuntimeTest {
+
+    @Test
+    void singleProducerSourceRunsOverSpscIngress() throws Exception {
+        final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
+        final StaticGraph graph = StaticGraph.builder("single-producer-ingress")
+            .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+            .sink("egress", Integer.class, consumed::add, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(32))
+            .build();
+
+        graph.start();
+        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+        for (int i = 0; i < 16; i++) {
+            ingress.emit(i);
+        }
+        ingress.close();
+
+        assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+        assertEquals(16, consumed.size());
+        assertEquals(EdgeSpec.EdgeKind.SPSC_RING, graph.plan().edge("ingress", "egress").orElseThrow().spec().kind());
+        assertEquals(16, graph.metrics().edge("ingress", "egress").consumedCount());
+    }
 
     @Test
     void batchAndSingleMessageStagesCoexistInOneGraph() throws Exception {

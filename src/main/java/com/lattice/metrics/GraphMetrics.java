@@ -160,7 +160,9 @@ public final class GraphMetrics {
     }
 
     public void clearOverload() {
-        overloaded.set(false);
+        if (overloaded.get()) {
+            overloaded.set(false);
+        }
     }
 
     public void recordStageException() {

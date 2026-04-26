@@ -56,6 +56,10 @@ public final class EdgeSpec {
         return new EdgeSpec(kind, capacity, waitSpec, overflowPolicy, memoryMode, batchPolicy);
     }
 
+    public EdgeSpec withKind(final EdgeKind kind) {
+        return new EdgeSpec(kind, capacity, waitSpec, overflowPolicy, memoryMode, batchPolicy);
+    }
+
     public EdgeKind kind() {
         return kind;
     }

@@ -1,6 +1,7 @@
 package com.lattice.internal.graph;
 
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.SourceMode;
 import com.lattice.routing.BroadcastSpec;
 import com.lattice.routing.DispatchSpec;
 import com.lattice.routing.JoinSpec;
@@ -20,6 +21,7 @@ public record NodeDefinition(
     Consumer<?> sink,
     StageSpec spec,
     int declarationOrder,
+    SourceMode sourceMode,
     boolean stampedSource,
     Class<?> sourcePayloadType,
     DispatchSpec<?> dispatchSpec,

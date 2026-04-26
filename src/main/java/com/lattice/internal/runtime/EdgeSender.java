@@ -31,6 +31,7 @@ final class EdgeSender {
     private final WaitMetrics waitMetrics;
     private final OverflowPolicy overflowPolicy;
     private final OverflowPolicy.OverflowKind overflowKind;
+    private final boolean lossyOverflow;
     private final long policyTimeoutNanos;
     private EdgeSender redirectSender;
     private final String graphName;
@@ -61,6 +62,10 @@ final class EdgeSender {
         this.waitMetrics = new CombinedWaitMetrics(ownerMetrics, edgeMetrics);
         this.overflowPolicy = spec.overflowPolicy();
         this.overflowKind = overflowPolicy.kind();
+        this.lossyOverflow = overflowKind == OverflowPolicy.OverflowKind.DROP_LATEST
+            || overflowKind == OverflowPolicy.OverflowKind.DROP_OLDEST
+            || overflowKind == OverflowPolicy.OverflowKind.COALESCE
+            || overflowKind == OverflowPolicy.OverflowKind.REDIRECT;
         this.policyTimeoutNanos = overflowKind == OverflowPolicy.OverflowKind.BLOCK_FOR
             ? spec.overflowPolicy().timeout().toNanos()
             : 0L;
@@ -97,7 +102,7 @@ final class EdgeSender {
             }
             return;
         }
-        if (emitLossy(item)) {
+        if (lossyOverflow && emitLossy(item)) {
             return;
         }
         if (!emitValidated(item, policyTimeoutNanos, policyTimeoutNanos > 0L)) {
@@ -126,7 +131,7 @@ final class EdgeSender {
             }
             return true;
         }
-        if (emitLossy(item)) {
+        if (lossyOverflow && emitLossy(item)) {
             return true;
         }
         return emitValidated(item, Math.max(0L, timeoutNanos), true);
@@ -194,7 +199,7 @@ final class EdgeSender {
         validateItem(outbound);
         boolean handled = false;
         try {
-            if (emitLossy(outbound)) {
+            if (lossyOverflow && emitLossy(outbound)) {
                 handled = true;
                 return true;
             }

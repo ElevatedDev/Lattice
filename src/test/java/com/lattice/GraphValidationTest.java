@@ -2,6 +2,7 @@ package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphBuildException;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
@@ -60,6 +61,30 @@ class GraphValidationTest {
             .edge("ingress", "egress", EdgeSpec.mpscRing(8).memory(MemoryMode.offHeapSlots()))
             .build());
 
+    }
+
+    @Test
+    void specializesSingleProducerSourceIngressToSpsc() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("default-source")
+            .source("ingress", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.spscRing(8))
+            .build());
+
+        final StaticGraph explicitSpsc = StaticGraph.builder("single-source-spsc")
+            .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.spscRing(8))
+            .build();
+        assertEquals(SourceMode.SINGLE_PRODUCER, explicitSpsc.plan().node("ingress").orElseThrow().sourceMode());
+        assertEquals(EdgeSpec.EdgeKind.SPSC_RING, explicitSpsc.plan().edge("ingress", "egress").orElseThrow().spec().kind());
+
+        final StaticGraph rewrittenMpsc = StaticGraph.builder("single-source-mpsc")
+            .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(8))
+            .build();
+        assertEquals(EdgeSpec.EdgeKind.SPSC_RING, rewrittenMpsc.plan().edge("ingress", "egress").orElseThrow().spec().kind());
     }
 
     @Test

@@ -23,7 +23,8 @@ public final class EdgeFactory {
                 definition.spec().capacity(),
                 definition.spec().memoryMode(),
                 metrics,
-                graphMetrics
+                graphMetrics,
+                plainClaim(definition.spec())
             );
         } else {
             edge = new MpscRingEdge(
@@ -43,5 +44,12 @@ public final class EdgeFactory {
 
     private static boolean firstTouchEnabled() {
         return Boolean.parseBoolean(System.getProperty("lattice.firstTouch.enabled", "true"));
+    }
+
+    private static boolean plainClaim(final EdgeSpec spec) {
+        return switch (spec.overflowPolicy().kind()) {
+            case DROP_LATEST, DROP_OLDEST, COALESCE, REDIRECT -> false;
+            default -> true;
+        };
     }
 }

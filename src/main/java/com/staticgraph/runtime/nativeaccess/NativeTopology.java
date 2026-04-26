@@ -54,6 +54,18 @@ public final class NativeTopology {
         return requireNonNegative(NativeTopologyNatives.numaNodeOfCpu0(cpu), "NUMA node of CPU " + cpu);
     }
 
+    public static boolean isCpuAllowed(final int cpu) {
+        NativeTopologyNatives.ensureLoaded();
+        if (cpu < 0) {
+            throw new IllegalArgumentException("cpu must not be negative");
+        }
+        final int rc = NativeTopologyNatives.isCpuAllowed0(cpu);
+        if (rc == 0 || rc == 1) {
+            return rc == 1;
+        }
+        throw failure("query allowed CPU " + cpu, rc);
+    }
+
     public static void pinCurrentThreadToCpu(final int cpu) {
         NativeTopologyNatives.ensureLoaded();
         requireZero(NativeTopologyNatives.pinCurrentThreadToCpu0(cpu), "pin current thread to CPU " + cpu);
