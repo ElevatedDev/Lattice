@@ -83,7 +83,7 @@ interface LongAccess {
         }
 
         private static int offset(final int index) {
-            return Math.multiplyExact(index, Long.BYTES);
+            return index << 3;
         }
     }
 }

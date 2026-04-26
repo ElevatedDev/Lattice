@@ -5,6 +5,7 @@ import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.internal.edge.MessageEdge;
+import com.lattice.internal.edge.SpscRingEdge;
 import com.lattice.internal.graph.NodeDefinition;
 import com.lattice.internal.jfr.JfrEvents;
 import com.lattice.internal.placement.PlacementBootstrap;
@@ -31,9 +32,12 @@ import com.lattice.stage.StageExceptionHandler;
 import com.lattice.stage.StageLogic;
 import com.lattice.wait.WaitSpec;
 import java.time.Duration;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.Consumer;
 
 final class StageWorker implements Runnable {
@@ -45,6 +49,10 @@ final class StageWorker implements Runnable {
     private static final int PROCESS_BROADCAST = 4;
     private static final int PROCESS_PARTITION = 5;
     private static final int PROCESS_JOIN = 6;
+    private static final int DEFAULT_SINGLE_MESSAGE_BATCH_SIZE = Math.max(
+        1,
+        Integer.getInteger("lattice.runtime.singleMessageBatchSize", 64)
+    );
 
     private static final MessageEdge[] NO_EDGES = new MessageEdge[0];
 
@@ -57,6 +65,7 @@ final class StageWorker implements Runnable {
     private final EdgeSender[] outputSenders;
     private final MessageEdge[] ownedEdges;
     private final Output<Object> output;
+    private final MessageEdge.ItemProcessor sinkProcessor;
     private final FusedSink fusedSink;
     private final FusedStage fusedStage;
     private final StageMetrics metrics;
@@ -78,6 +87,8 @@ final class StageWorker implements Runnable {
     private final int parkIdleThreshold;
     private final boolean jfrEnabled;
     private final boolean timeBatches;
+    private final boolean messageMayCarryOwnedHandle;
+    private final boolean directSinkDrain;
     private final int[] weightedSchedule;
     private final long[] partitionLaneCounts;
     private final int outputMask;
@@ -88,7 +99,9 @@ final class StageWorker implements Runnable {
     private volatile boolean active;
     private Thread thread;
     private long routeSequence;
-    private LinkedHashMap<Object, JoinState> joinStates;
+    private JoinStateTable joinStates;
+    private JoinValuesMap joinValuesMap;
+    private JoinGroup reusableJoinGroup;
 
     @SuppressWarnings("unchecked")
     StageWorker(
@@ -122,6 +135,7 @@ final class StageWorker implements Runnable {
         this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
             : fusedStage != null ? new DirectStageOutput(fusedStage)
             : fusedSink == null ? output : new DirectSinkOutput(fusedSink);
+        this.sinkProcessor = this::processSinkItem;
         this.fusedSink = fusedSink;
         this.fusedStage = fusedStage;
         this.metrics = metrics;
@@ -130,6 +144,7 @@ final class StageWorker implements Runnable {
         final WaitSpec waitSpec = node.spec().waitSpec();
         this.waitStrategy = WaitStrategies.from(waitSpec);
         this.parkIdleThreshold = parkIdleThreshold(waitSpec);
+        this.messageMayCarryOwnedHandle = mayCarryOwnedHandle(node.inputType());
         this.exceptionHandler = exceptionHandler;
         this.pinPolicy = ObjectsRequireNonNull(effectivePinPolicy, "effectivePinPolicy");
         final BatchPolicy activeBatchPolicy = activeBatchPolicy(node, inputSpecs);
@@ -146,6 +161,7 @@ final class StageWorker implements Runnable {
         this.partitionSpec = (PartitionSpec<Object, ?>) node.partitionSpec();
         this.joinSpec = node.joinSpec();
         this.processingMode = processingMode(node);
+        this.directSinkDrain = processingMode == PROCESS_SINK && inputs.length == 1 && inputs[0] instanceof SpscRingEdge;
         this.weightedSchedule = dispatchSpec == null ? new int[0] : weightedSchedule(dispatchSpec, outputSenders.length);
         this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
         this.jfrEnabled = JfrEvents.enabled();
@@ -229,7 +245,11 @@ final class StageWorker implements Runnable {
             this.batchItems = batch.items();
             this.batchSources = new int[batchLimit];
             if (processingMode == PROCESS_JOIN) {
-                this.joinStates = new LinkedHashMap<>(Math.min(joinSpec.capacity(), 1024));
+                this.joinStates = joinSpec.longStamp()
+                    ? new LongJoinStateTable(joinSpec.capacity(), inputs.length)
+                    : new ObjectJoinStateTable(joinSpec.capacity(), inputs.length);
+                this.joinValuesMap = new JoinValuesMap(inputSources);
+                this.reusableJoinGroup = JoinGroup.reusableRuntimeGroup(joinValuesMap);
             }
             recordPlacement(placement);
             bootstrapped = true;
@@ -247,7 +267,8 @@ final class StageWorker implements Runnable {
                 try {
                     active = true;
                     activeNow = true;
-                    received = receive();
+                    final long started = directSinkDrain && timeBatches ? System.nanoTime() : 0L;
+                    received = directSinkDrain ? receiveAndProcessSink() : receive();
                     if (received == 0) {
                         active = false;
                         activeNow = false;
@@ -272,24 +293,30 @@ final class StageWorker implements Runnable {
 
                     idle = 0;
                     workerState(WorkerState.RUNNING);
-                    metrics.recordConsume(received);
-                    final long started = timeBatches ? System.nanoTime() : 0L;
+                    if (StageMetrics.hotCountersEnabled()) {
+                        metrics.recordConsume(received);
+                    }
+                    final long processStarted = directSinkDrain ? started : timeBatches ? System.nanoTime() : 0L;
                     try {
-                        processReceived(received);
-                        final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-                        metrics.recordBatch(received, serviceNanos);
+                        if (!directSinkDrain) {
+                            processReceived(received);
+                        }
+                        final long serviceNanos = timeBatches ? System.nanoTime() - processStarted : 0L;
+                        if (StageMetrics.hotCountersEnabled()) {
+                            metrics.recordBatch(received, serviceNanos);
+                        }
                         if (jfrEnabled) {
                             JfrEvents.batchProcessed(graphName, stageName, received, serviceNanos);
                         }
                     } catch (final Throwable ex) {
                         releaseBatchItems(received);
+                        batch.clear();
                         throw ex;
                     }
                 } finally {
                     if (activeNow) {
                         active = false;
                     }
-                    batch.clear();
                 }
             }
             if (coordinator.isAbortRequested()) {
@@ -320,9 +347,6 @@ final class StageWorker implements Runnable {
             stopFusedSink();
             workerState(coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : terminalState);
             metrics.markStopped();
-            if (batch != null) {
-                batch.clear();
-            }
             coordinator.workerStopped();
         }
     }
@@ -440,6 +464,35 @@ final class StageWorker implements Runnable {
         return received;
     }
 
+    private int receiveAndProcessSink() throws Exception {
+        final MessageEdge input = inputs[0];
+        int received = input.drainToProcessor(sinkProcessor, batchLimit);
+        if (received == 0 || received == batchLimit || lingerNanos == 0L) {
+            return received;
+        }
+
+        final long deadline = System.nanoTime() + lingerNanos;
+        while (received < batchLimit && System.nanoTime() < deadline) {
+            final int more = input.drainToProcessor(sinkProcessor, batchLimit - received);
+            if (more == 0) {
+                Thread.onSpinWait();
+            } else {
+                received += more;
+            }
+        }
+        return received;
+    }
+
+    private void processSinkItem(final Object item) {
+        try {
+            sink.accept(item);
+        } finally {
+            if (messageMayCarryOwnedHandle) {
+                releaseIfHandle(item);
+            }
+        }
+    }
+
     private int receiveJoinInputs() {
         int received = 0;
         while (received < batchLimit) {
@@ -480,7 +533,9 @@ final class StageWorker implements Runnable {
             try {
                 sink.accept(item);
             } finally {
-                releaseIfHandle(item);
+                if (messageMayCarryOwnedHandle) {
+                    releaseIfHandle(item);
+                }
                 batchItems[i] = null;
             }
         }
@@ -492,7 +547,9 @@ final class StageWorker implements Runnable {
             batchLogic.onBatch(batch, output, context);
         } finally {
             for (int i = 0; i < received; i++) {
-                releaseIfHandle(batch.itemAt(i));
+                if (messageMayCarryOwnedHandle) {
+                    releaseIfHandle(batch.itemAt(i));
+                }
                 batchItems[i] = null;
             }
             batch.size(0);
@@ -502,10 +559,18 @@ final class StageWorker implements Runnable {
     private void processMessages(final int received) throws Exception {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
-            try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
-                logic.onMessage(item, output, context);
+            try {
+                if (messageMayCarryOwnedHandle) {
+                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
+                        logic.onMessage(item, output, context);
+                    }
+                } else {
+                    logic.onMessage(item, output, context);
+                }
             } finally {
-                releaseIfHandle(item);
+                if (messageMayCarryOwnedHandle) {
+                    releaseIfHandle(item);
+                }
                 batchItems[i] = null;
             }
         }
@@ -523,7 +588,7 @@ final class StageWorker implements Runnable {
                 outputSenders[branch].emit(item);
                 transferred = true;
             } finally {
-                if (!transferred) {
+                if (!transferred && messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
                 batchItems[i] = null;
@@ -535,13 +600,18 @@ final class StageWorker implements Runnable {
     private void processBroadcast(final int received) {
         for (int i = 0; i < received; i++) {
             final Object item = batch.itemAt(i);
-            if (broadcastSpec.kind() == BroadcastSpec.BroadcastKind.SLAB_HANDLE) {
-                broadcastHandle(item);
-            } else {
-                broadcastCopy(item);
+            try {
+                if (broadcastSpec.kind() == BroadcastSpec.BroadcastKind.SLAB_HANDLE) {
+                    broadcastHandle(item);
+                } else {
+                    broadcastCopy(item);
+                }
+                metrics.recordRoutingDecision();
+            } finally {
+                batchItems[i] = null;
             }
-            metrics.recordRoutingDecision();
         }
+        batch.size(0);
     }
 
     private void broadcastCopy(final Object item) {
@@ -617,7 +687,7 @@ final class StageWorker implements Runnable {
                 outputSenders[lane].emit(item);
                 transferred = true;
             } finally {
-                if (!transferred) {
+                if (!transferred && messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
                 batchItems[i] = null;
@@ -628,8 +698,13 @@ final class StageWorker implements Runnable {
 
     private void processJoin(final int received) {
         for (int i = 0; i < received; i++) {
-            processJoinItem(batchSources[i], batch.itemAt(i));
+            try {
+                processJoinItem(batchSources[i], batch.itemAt(i));
+            } finally {
+                batchItems[i] = null;
+            }
         }
+        batch.size(0);
         expireJoinGroups(false);
     }
 
@@ -653,40 +728,44 @@ final class StageWorker implements Runnable {
     }
 
     private void processJoinItem(final int sourceIndex, final Object item) {
-        final Object stamp = ObjectsRequireNonNull(joinSpec.stampExtractor().apply(item), "join stamp");
+        final boolean longStamp = joinSpec.longStamp();
+        final long stampLong = longStamp ? joinSpec.extractLongStamp(item) : 0L;
+        final Object stampObject = longStamp ? null
+            : ObjectsRequireNonNull(joinSpec.extractStamp(item), "join stamp");
         final String source = inputSources[sourceIndex];
-        JoinState state = joinStates.get(stamp);
+        JoinState state = longStamp ? joinStates.get(stampLong) : joinStates.get(stampObject);
         if (state == null) {
             ensureJoinCapacity();
-            state = new JoinState(System.nanoTime());
-            joinStates.put(stamp, state);
+            state = longStamp ? joinStates.create(stampLong, System.nanoTime())
+                : joinStates.create(stampObject, System.nanoTime());
             metrics.recordOpenJoinGroup();
         }
 
-        if (state.values.containsKey(source) || (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
-            handleDuplicateJoinStamp(stamp, source, item);
+        if (state.hasValue(sourceIndex) || (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
+            handleDuplicateJoinStamp(state.stamp(), source, item);
             return;
         }
 
-        state.values.put(source, item);
+        state.setValue(sourceIndex, item);
         if (item instanceof SlabHandle<?>) {
             metrics.recordRetainedHandle();
         }
 
         if (joinSpec.kind() == JoinSpec.JoinKind.ANY_OF) {
             if (!state.emitted) {
-                emitJoin(stamp, state, source, false, false);
+                emitJoin(state, source, false, false);
                 state.emitted = true;
             }
-            if (state.values.size() == inputs.length) {
-                joinStates.remove(stamp);
-                releaseJoinValues(state);
+            if (state.receivedCount == inputs.length) {
+                joinStates.remove(state);
+                releaseAndRecycleJoinState(state);
             }
             return;
         }
-        if (state.values.size() == inputs.length) {
-            emitJoin(stamp, state, source, false, true);
-            joinStates.remove(stamp);
+        if (state.receivedCount == inputs.length) {
+            emitJoin(state, source, false, true);
+            joinStates.remove(state);
+            joinStates.recycle(state);
         }
     }
 
@@ -710,14 +789,12 @@ final class StageWorker implements Runnable {
         if (joinStates.size() < joinSpec.capacity()) {
             return;
         }
-        final Iterator<Map.Entry<Object, JoinState>> iterator = joinStates.entrySet().iterator();
-        if (!iterator.hasNext()) {
+        final JoinState eldest = joinStates.removeEldest();
+        if (eldest == null) {
             return;
         }
-        final Map.Entry<Object, JoinState> eldest = iterator.next();
-        iterator.remove();
         metrics.recordTimedOutJoinGroup();
-        releaseJoinValues(eldest.getValue());
+        releaseAndRecycleJoinState(eldest);
     }
 
     private void expireJoinGroups(final boolean closing) {
@@ -726,76 +803,98 @@ final class StageWorker implements Runnable {
         }
         final long timeoutNanos = joinSpec.timeout().toNanos();
         final long now = System.nanoTime();
-        final Iterator<Map.Entry<Object, JoinState>> iterator = joinStates.entrySet().iterator();
-        while (iterator.hasNext()) {
-            final Map.Entry<Object, JoinState> entry = iterator.next();
-            final JoinState state = entry.getValue();
+        while (true) {
+            final JoinState state = joinStates.eldest();
+            if (state == null) {
+                return;
+            }
             final boolean timedOut = timeoutNanos > 0L && now - state.createdNanos >= timeoutNanos;
             if (!closing && !timedOut) {
                 break;
             }
-            if (state.values.size() < inputs.length) {
+            joinStates.remove(state);
+            if (state.receivedCount < inputs.length) {
                 metrics.recordMissingJoinBranch();
             }
             if ((timedOut || closing) && joinSpec.missingBranchPolicy() == JoinSpec.MissingBranchPolicy.EMIT_PARTIAL) {
                 if (joinSpec.kind() != JoinSpec.JoinKind.ANY_OF || !state.emitted) {
-                    emitJoin(entry.getKey(), state, "", timedOut, true);
+                    emitJoin(state, "", timedOut, true);
+                    joinStates.recycle(state);
                 } else {
-                    releaseJoinValues(state);
+                    releaseAndRecycleJoinState(state);
                 }
             } else {
-                releaseJoinValues(state);
+                releaseAndRecycleJoinState(state);
             }
             if (timedOut) {
                 metrics.recordTimedOutJoinGroup();
             }
-            iterator.remove();
         }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void emitJoin(
-        final Object stamp,
         final JoinState state,
         final String triggeringSource,
         final boolean timedOut,
         final boolean releaseValues
     ) {
-        final JoinGroup group = new JoinGroup(
-            stamp,
-            state.values,
-            state.values.size() == inputs.length,
-            timedOut,
-            triggeringSource
-        );
-        final Object outputItem = ((JoinSpec) joinSpec).combiner().apply(group);
-        try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values.values())) {
+        joinValuesMap.state(state);
+        if (state.longStamp) {
+            reusableJoinGroup.resetRuntime(
+                state.longStampValue,
+                state.receivedCount == inputs.length,
+                timedOut,
+                triggeringSource
+            );
+        } else {
+            reusableJoinGroup.resetRuntime(
+                state.objectStamp,
+                state.receivedCount == inputs.length,
+                timedOut,
+                triggeringSource
+            );
+        }
+        final Object outputItem = ((JoinSpec) joinSpec).combiner().apply(reusableJoinGroup);
+        try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values, state.values.length)) {
             outputSenders[0].emit(outputItem);
         }
         metrics.recordCompletedJoinGroup();
         if (releaseValues) {
             releaseJoinValues(state);
         }
+        joinValuesMap.clearState(state);
     }
 
     private void releaseJoinState() {
         if (joinStates == null) {
             return;
         }
-        for (final JoinState state : joinStates.values()) {
-            releaseJoinValues(state);
+        while (true) {
+            final JoinState state = joinStates.removeEldest();
+            if (state == null) {
+                return;
+            }
+            releaseAndRecycleJoinState(state);
         }
-        joinStates.clear();
     }
 
     private void releaseJoinValues(final JoinState state) {
-        for (final Object value : state.values.values()) {
+        final Object[] values = state.values;
+        for (int i = 0; i < values.length; i++) {
+            final Object value = values[i];
             if (value instanceof SlabHandle<?>) {
                 metrics.recordReleasedHandle();
             }
             releaseIfHandle(value);
+            values[i] = null;
         }
-        state.values.clear();
+        state.receivedCount = 0;
+    }
+
+    private void releaseAndRecycleJoinState(final JoinState state) {
+        releaseJoinValues(state);
+        joinStates.recycle(state);
     }
 
     private boolean allInputsClosedAndEmpty() {
@@ -814,7 +913,9 @@ final class StageWorker implements Runnable {
         for (int i = 0; i < received; i++) {
             final Object item = batchItems[i];
             if (item != null) {
-                releaseIfHandle(item);
+                if (messageMayCarryOwnedHandle) {
+                    releaseIfHandle(item);
+                }
                 batchItems[i] = null;
             }
         }
@@ -905,7 +1006,13 @@ final class StageWorker implements Runnable {
     }
 
     private static int batchLimit(final BatchPolicy policy) {
-        return policy.kind() == BatchPolicy.BatchKind.DISABLED ? 1 : Math.max(1, policy.maxItems());
+        return policy.kind() == BatchPolicy.BatchKind.DISABLED
+            ? DEFAULT_SINGLE_MESSAGE_BATCH_SIZE
+            : Math.max(1, policy.maxItems());
+    }
+
+    static int defaultSingleMessageBatchSize() {
+        return DEFAULT_SINGLE_MESSAGE_BATCH_SIZE;
     }
 
     private static int parkIdleThreshold(final WaitSpec spec) {
@@ -966,6 +1073,29 @@ final class StageWorker implements Runnable {
         } else if (item instanceof Stamped<?> stamped) {
             releaseIfHandle(stamped.value());
         }
+    }
+
+    private static boolean mayCarryOwnedHandle(final Class<?> inputType) {
+        return inputType == Object.class
+            || inputType.isAssignableFrom(SlabHandle.class)
+            || inputType.isAssignableFrom(Stamped.class);
+    }
+
+    private static void recordLogicalTransfer(
+        final StageMetrics ownerMetrics,
+        final EdgeMetrics logicalEdgeMetrics,
+        final GraphMetrics graphMetrics,
+        final StageMetrics consumerMetrics
+    ) {
+        if (!StageMetrics.hotCountersEnabled()) {
+            return;
+        }
+        logicalEdgeMetrics.recordEmit();
+        graphMetrics.recordEmit();
+        ownerMetrics.recordEmit();
+        logicalEdgeMetrics.recordConsume();
+        graphMetrics.recordConsume();
+        consumerMetrics.recordConsume();
     }
 
     private static <T> T ObjectsRequireNonNull(final T value, final String label) {
@@ -1100,9 +1230,11 @@ final class StageWorker implements Runnable {
 
     private final class DirectSinkOutput implements Output<Object> {
         private final FusedSink sink;
+        private final boolean retainForScope;
 
         private DirectSinkOutput(final FusedSink sink) {
             this.sink = sink;
+            this.retainForScope = mayCarryOwnedHandle(sink.inputType);
         }
 
         @Override
@@ -1123,21 +1255,20 @@ final class StageWorker implements Runnable {
         }
 
         private void emit(final Object item) {
-            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             validate(outbound);
-            sink.logicalEdgeMetrics.recordEmit();
-            sink.graphMetrics.recordEmit();
-            sink.ownerMetrics.recordEmit();
-            sink.logicalEdgeMetrics.recordConsume();
-            sink.graphMetrics.recordConsume();
-            sink.metrics.recordConsume();
+            recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                sink.metrics.recordBatch(1, 0L);
+                if (StageMetrics.hotCountersEnabled()) {
+                    sink.metrics.recordBatch(1, 0L);
+                }
             } catch (final Throwable ex) {
                 throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
             } finally {
-                releaseIfHandle(outbound);
+                if (retainForScope) {
+                    releaseIfHandle(outbound);
+                }
             }
         }
 
@@ -1145,7 +1276,7 @@ final class StageWorker implements Runnable {
             if (item == null) {
                 throw new NullPointerException(sink.name + " cannot consume null");
             }
-            if (!sink.acceptsAnyType && !sink.inputType.isInstance(item)) {
+            if (!sink.acceptsAnyType && item.getClass() != sink.inputType && !sink.inputType.isInstance(item)) {
                 throw new ClassCastException(sink.name + " received " + item.getClass().getName()
                     + ", expected " + sink.inputTypeName);
             }
@@ -1155,11 +1286,13 @@ final class StageWorker implements Runnable {
     private final class DirectStageOutput implements Output<Object> {
         private final FusedStage stage;
         private final Output<Object> output;
+        private final boolean retainForScope;
 
         private DirectStageOutput(final FusedStage stage) {
             this.stage = stage;
             this.output = stage.nextStage() != null ? new DirectStageOutput(stage.nextStage())
                 : stage.terminalSink() == null ? stage.output : new DirectSinkOutput(stage.terminalSink());
+            this.retainForScope = mayCarryOwnedHandle(stage.inputType);
         }
 
         @Override
@@ -1180,29 +1313,38 @@ final class StageWorker implements Runnable {
         }
 
         private void emit(final Object item) {
-            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             validate(outbound);
-            stage.logicalEdgeMetrics.recordEmit();
-            stage.graphMetrics.recordEmit();
-            stage.ownerMetrics.recordEmit();
-            stage.logicalEdgeMetrics.recordConsume();
-            stage.graphMetrics.recordConsume();
-            stage.metrics.recordConsume();
+            recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
             final long started = timeBatches ? System.nanoTime() : 0L;
-            try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
-                stage.logic.onMessage(outbound, output, stage.context);
-                final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-                stage.metrics.recordBatch(1, serviceNanos);
-                if (jfrEnabled) {
-                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+            try {
+                if (retainForScope) {
+                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                        processDirectStage(outbound, started);
+                    }
+                } else {
+                    processDirectStage(outbound, started);
                 }
             } catch (final FusedStageException ex) {
                 throw ex;
             } catch (final Throwable ex) {
                 throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
             } finally {
-                releaseIfHandle(outbound);
+                if (retainForScope) {
+                    releaseIfHandle(outbound);
+                }
+            }
+        }
+
+        private void processDirectStage(final Object outbound, final long started) throws Exception {
+            stage.logic.onMessage(outbound, output, stage.context);
+            final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
+            if (StageMetrics.hotCountersEnabled()) {
+                stage.metrics.recordBatch(1, serviceNanos);
+            }
+            if (jfrEnabled) {
+                JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
             }
         }
 
@@ -1210,7 +1352,7 @@ final class StageWorker implements Runnable {
             if (item == null) {
                 throw new NullPointerException(stage.name + " cannot consume null");
             }
-            if (!stage.acceptsAnyType && !stage.inputType.isInstance(item)) {
+            if (!stage.acceptsAnyType && item.getClass() != stage.inputType && !stage.inputType.isInstance(item)) {
                 throw new ClassCastException(stage.name + " received " + item.getClass().getName()
                     + ", expected " + stage.inputTypeName);
             }
@@ -1243,46 +1385,59 @@ final class StageWorker implements Runnable {
             final FusedStage stage = stages[index];
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             validate(stage, outbound);
-            stage.logicalEdgeMetrics.recordEmit();
-            stage.graphMetrics.recordEmit();
-            stage.ownerMetrics.recordEmit();
-            stage.logicalEdgeMetrics.recordConsume();
-            stage.graphMetrics.recordConsume();
-            stage.metrics.recordConsume();
+            recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
             final long started = timeBatches ? System.nanoTime() : 0L;
-            try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
-                stage.logic.onMessage(outbound, outputs[index + 1], stage.context);
-                final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-                stage.metrics.recordBatch(1, serviceNanos);
-                if (jfrEnabled) {
-                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+            try {
+                if (retainForScope) {
+                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                        processLinearStage(index, stage, outbound, started);
+                    }
+                } else {
+                    processLinearStage(index, stage, outbound, started);
                 }
             } catch (final FusedStageException ex) {
                 throw ex;
             } catch (final Throwable ex) {
                 throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
             } finally {
-                releaseIfHandle(outbound);
+                if (retainForScope) {
+                    releaseIfHandle(outbound);
+                }
+            }
+        }
+
+        private void processLinearStage(
+            final int index,
+            final FusedStage stage,
+            final Object outbound,
+            final long started
+        ) throws Exception {
+            stage.logic.onMessage(outbound, outputs[index + 1], stage.context);
+            final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
+            if (StageMetrics.hotCountersEnabled()) {
+                stage.metrics.recordBatch(1, serviceNanos);
+            }
+            if (jfrEnabled) {
+                JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
             }
         }
 
         private void emitSink(final Object item) {
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             validate(sink, outbound);
-            sink.logicalEdgeMetrics.recordEmit();
-            sink.graphMetrics.recordEmit();
-            sink.ownerMetrics.recordEmit();
-            sink.logicalEdgeMetrics.recordConsume();
-            sink.graphMetrics.recordConsume();
-            sink.metrics.recordConsume();
+            recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                sink.metrics.recordBatch(1, 0L);
+                if (StageMetrics.hotCountersEnabled()) {
+                    sink.metrics.recordBatch(1, 0L);
+                }
             } catch (final Throwable ex) {
                 throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
             } finally {
-                releaseIfHandle(outbound);
+                if (retainForScope) {
+                    releaseIfHandle(outbound);
+                }
             }
         }
 
@@ -1309,7 +1464,7 @@ final class StageWorker implements Runnable {
             if (item == null) {
                 throw new NullPointerException(stage.name + " cannot consume null");
             }
-            if (!stage.acceptsAnyType && !stage.inputType.isInstance(item)) {
+            if (!stage.acceptsAnyType && item.getClass() != stage.inputType && !stage.inputType.isInstance(item)) {
                 throw new ClassCastException(stage.name + " received " + item.getClass().getName()
                     + ", expected " + stage.inputTypeName);
             }
@@ -1319,7 +1474,7 @@ final class StageWorker implements Runnable {
             if (item == null) {
                 throw new NullPointerException(sink.name + " cannot consume null");
             }
-            if (!sink.acceptsAnyType && !sink.inputType.isInstance(item)) {
+            if (!sink.acceptsAnyType && item.getClass() != sink.inputType && !sink.inputType.isInstance(item)) {
                 throw new ClassCastException(sink.name + " received " + item.getClass().getName()
                     + ", expected " + sink.inputTypeName);
             }
@@ -1400,13 +1555,469 @@ final class StageWorker implements Runnable {
         }
     }
 
-    private static final class JoinState {
-        final long createdNanos;
-        final Map<String, Object> values = new LinkedHashMap<>();
-        boolean emitted;
+    private interface JoinStateTable {
+        int size();
 
-        JoinState(final long createdNanos) {
+        boolean isEmpty();
+
+        JoinState eldest();
+
+        JoinState get(Object stamp);
+
+        JoinState get(long stamp);
+
+        JoinState create(Object stamp, long createdNanos);
+
+        JoinState create(long stamp, long createdNanos);
+
+        void remove(JoinState state);
+
+        JoinState removeEldest();
+
+        void recycle(JoinState state);
+    }
+
+    private abstract static class AbstractJoinStateTable implements JoinStateTable {
+        final int capacity;
+        private JoinState freeHead;
+        private JoinState eldest;
+        private JoinState newest;
+        private int size;
+
+        AbstractJoinStateTable(final int capacity, final int sourceCount) {
+            this.capacity = capacity;
+            for (int i = 0; i < capacity; i++) {
+                final JoinState state = new JoinState(sourceCount);
+                state.nextFree = freeHead;
+                freeHead = state;
+            }
+        }
+
+        @Override
+        public final int size() {
+            return size;
+        }
+
+        @Override
+        public final boolean isEmpty() {
+            return size == 0;
+        }
+
+        @Override
+        public final JoinState eldest() {
+            return eldest;
+        }
+
+        @Override
+        public final JoinState removeEldest() {
+            final JoinState state = eldest;
+            if (state != null) {
+                remove(state);
+            }
+            return state;
+        }
+
+        @Override
+        public final void recycle(final JoinState state) {
+            state.clearForRecycle();
+            state.nextFree = freeHead;
+            freeHead = state;
+        }
+
+        final JoinState takeState() {
+            final JoinState state = freeHead;
+            if (state == null) {
+                throw new IllegalStateException("join state pool exhausted");
+            }
+            freeHead = state.nextFree;
+            state.nextFree = null;
+            return state;
+        }
+
+        final void linkNewest(final JoinState state) {
+            state.older = newest;
+            state.newer = null;
+            if (newest == null) {
+                eldest = state;
+            } else {
+                newest.newer = state;
+            }
+            newest = state;
+            size++;
+        }
+
+        final void unlink(final JoinState state) {
+            final JoinState older = state.older;
+            final JoinState newer = state.newer;
+            if (older == null) {
+                eldest = newer;
+            } else {
+                older.newer = newer;
+            }
+            if (newer == null) {
+                newest = older;
+            } else {
+                newer.older = older;
+            }
+            state.older = null;
+            state.newer = null;
+            size--;
+        }
+
+        static int tableSize(final int capacity) {
+            int size = 1;
+            final int target = Math.max(2, capacity << 1);
+            while (size < target) {
+                size <<= 1;
+            }
+            return size;
+        }
+    }
+
+    private static final class LongJoinStateTable extends AbstractJoinStateTable {
+        private final long[] keys;
+        private final boolean[] occupied;
+        private final JoinState[] states;
+        private final int mask;
+
+        LongJoinStateTable(final int capacity, final int sourceCount) {
+            super(capacity, sourceCount);
+            final int tableSize = tableSize(capacity);
+            this.keys = new long[tableSize];
+            this.occupied = new boolean[tableSize];
+            this.states = new JoinState[tableSize];
+            this.mask = tableSize - 1;
+        }
+
+        @Override
+        public JoinState get(final Object stamp) {
+            throw new IllegalStateException("long join state table requires long stamps");
+        }
+
+        @Override
+        public JoinState get(final long stamp) {
+            final int index = findIndex(stamp);
+            return index < 0 ? null : states[index];
+        }
+
+        @Override
+        public JoinState create(final Object stamp, final long createdNanos) {
+            throw new IllegalStateException("long join state table requires long stamps");
+        }
+
+        @Override
+        public JoinState create(final long stamp, final long createdNanos) {
+            final JoinState state = takeState();
+            state.resetLong(stamp, createdNanos);
+            insert(stamp, state);
+            linkNewest(state);
+            return state;
+        }
+
+        @Override
+        public void remove(final JoinState state) {
+            final int index = findIndex(state.longStampValue);
+            if (index >= 0) {
+                deleteIndex(index);
+                unlink(state);
+            }
+        }
+
+        private int findIndex(final long stamp) {
+            int index = spread(Long.hashCode(stamp)) & mask;
+            while (occupied[index]) {
+                if (keys[index] == stamp) {
+                    return index;
+                }
+                index = (index + 1) & mask;
+            }
+            return -1;
+        }
+
+        private void insert(final long stamp, final JoinState state) {
+            int index = spread(Long.hashCode(stamp)) & mask;
+            while (occupied[index]) {
+                index = (index + 1) & mask;
+            }
+            occupied[index] = true;
+            keys[index] = stamp;
+            states[index] = state;
+        }
+
+        private void deleteIndex(final int deleteIndex) {
+            occupied[deleteIndex] = false;
+            keys[deleteIndex] = 0L;
+            states[deleteIndex] = null;
+            int index = (deleteIndex + 1) & mask;
+            while (occupied[index]) {
+                final long key = keys[index];
+                final JoinState state = states[index];
+                occupied[index] = false;
+                keys[index] = 0L;
+                states[index] = null;
+                insert(key, state);
+                index = (index + 1) & mask;
+            }
+        }
+    }
+
+    private static final class ObjectJoinStateTable extends AbstractJoinStateTable {
+        private final Object[] keys;
+        private final JoinState[] states;
+        private final int mask;
+
+        ObjectJoinStateTable(final int capacity, final int sourceCount) {
+            super(capacity, sourceCount);
+            final int tableSize = tableSize(capacity);
+            this.keys = new Object[tableSize];
+            this.states = new JoinState[tableSize];
+            this.mask = tableSize - 1;
+        }
+
+        @Override
+        public JoinState get(final Object stamp) {
+            final int index = findIndex(stamp);
+            return index < 0 ? null : states[index];
+        }
+
+        @Override
+        public JoinState get(final long stamp) {
+            throw new IllegalStateException("object join state table requires object stamps");
+        }
+
+        @Override
+        public JoinState create(final Object stamp, final long createdNanos) {
+            final JoinState state = takeState();
+            state.resetObject(stamp, createdNanos);
+            insert(stamp, state);
+            linkNewest(state);
+            return state;
+        }
+
+        @Override
+        public JoinState create(final long stamp, final long createdNanos) {
+            throw new IllegalStateException("object join state table requires object stamps");
+        }
+
+        @Override
+        public void remove(final JoinState state) {
+            final int index = findIndex(state.objectStamp);
+            if (index >= 0) {
+                deleteIndex(index);
+                unlink(state);
+            }
+        }
+
+        private int findIndex(final Object stamp) {
+            int index = spread(stamp.hashCode()) & mask;
+            while (keys[index] != null) {
+                if (keys[index].equals(stamp)) {
+                    return index;
+                }
+                index = (index + 1) & mask;
+            }
+            return -1;
+        }
+
+        private void insert(final Object stamp, final JoinState state) {
+            int index = spread(stamp.hashCode()) & mask;
+            while (keys[index] != null) {
+                index = (index + 1) & mask;
+            }
+            keys[index] = stamp;
+            states[index] = state;
+        }
+
+        private void deleteIndex(final int deleteIndex) {
+            keys[deleteIndex] = null;
+            states[deleteIndex] = null;
+            int index = (deleteIndex + 1) & mask;
+            while (keys[index] != null) {
+                final Object key = keys[index];
+                final JoinState state = states[index];
+                keys[index] = null;
+                states[index] = null;
+                insert(key, state);
+                index = (index + 1) & mask;
+            }
+        }
+    }
+
+    private static final class JoinState {
+        final Object[] values;
+        long createdNanos;
+        Object objectStamp;
+        long longStampValue;
+        boolean longStamp;
+        int receivedCount;
+        boolean emitted;
+        JoinState older;
+        JoinState newer;
+        JoinState nextFree;
+
+        JoinState(final int sourceCount) {
+            this.values = new Object[sourceCount];
+        }
+
+        void resetObject(final Object stamp, final long createdNanos) {
+            this.objectStamp = stamp;
+            this.longStampValue = 0L;
+            this.longStamp = false;
             this.createdNanos = createdNanos;
+        }
+
+        void resetLong(final long stamp, final long createdNanos) {
+            this.objectStamp = null;
+            this.longStampValue = stamp;
+            this.longStamp = true;
+            this.createdNanos = createdNanos;
+        }
+
+        Object stamp() {
+            return longStamp ? longStampValue : objectStamp;
+        }
+
+        boolean hasValue(final int sourceIndex) {
+            return values[sourceIndex] != null;
+        }
+
+        void setValue(final int sourceIndex, final Object item) {
+            values[sourceIndex] = item;
+            receivedCount++;
+        }
+
+        void clearForRecycle() {
+            objectStamp = null;
+            longStampValue = 0L;
+            longStamp = false;
+            createdNanos = 0L;
+            receivedCount = 0;
+            emitted = false;
+            older = null;
+            newer = null;
+            nextFree = null;
+        }
+    }
+
+    private final class JoinValuesMap extends AbstractMap<String, Object> {
+        private final String[] sources;
+        private final JoinEntrySet entrySet = new JoinEntrySet();
+        private JoinState state;
+
+        JoinValuesMap(final String[] sources) {
+            this.sources = sources.clone();
+        }
+
+        void state(final JoinState state) {
+            this.state = state;
+        }
+
+        void clearState(final JoinState expected) {
+            if (state == expected) {
+                state = null;
+            }
+        }
+
+        @Override
+        public Object get(final Object key) {
+            final JoinState current = state;
+            if (current == null) {
+                return null;
+            }
+            for (int i = 0; i < sources.length; i++) {
+                if (sources[i].equals(key)) {
+                    return current.values[i];
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public boolean containsKey(final Object key) {
+            return get(key) != null;
+        }
+
+        @Override
+        public int size() {
+            final JoinState current = state;
+            return current == null ? 0 : current.receivedCount;
+        }
+
+        @Override
+        public Set<Map.Entry<String, Object>> entrySet() {
+            return entrySet;
+        }
+
+        private final class JoinEntrySet extends AbstractSet<Map.Entry<String, Object>> {
+            private final JoinEntryIterator iterator = new JoinEntryIterator();
+
+            @Override
+            public Iterator<Map.Entry<String, Object>> iterator() {
+                iterator.reset();
+                return iterator;
+            }
+
+            @Override
+            public int size() {
+                return JoinValuesMap.this.size();
+            }
+        }
+
+        private final class JoinEntryIterator implements Iterator<Map.Entry<String, Object>> {
+            private final JoinEntry entry = new JoinEntry();
+            private int nextIndex;
+
+            void reset() {
+                nextIndex = nextPresentIndex(0);
+            }
+
+            @Override
+            public boolean hasNext() {
+                return nextIndex < sources.length;
+            }
+
+            @Override
+            public Map.Entry<String, Object> next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                entry.index = nextIndex;
+                nextIndex = nextPresentIndex(nextIndex + 1);
+                return entry;
+            }
+
+            private int nextPresentIndex(final int startIndex) {
+                final JoinState current = state;
+                if (current == null) {
+                    return sources.length;
+                }
+                for (int i = startIndex; i < sources.length; i++) {
+                    if (current.values[i] != null) {
+                        return i;
+                    }
+                }
+                return sources.length;
+            }
+        }
+
+        private final class JoinEntry implements Map.Entry<String, Object> {
+            private int index;
+
+            @Override
+            public String getKey() {
+                return sources[index];
+            }
+
+            @Override
+            public Object getValue() {
+                final JoinState current = state;
+                return current == null ? null : current.values[index];
+            }
+
+            @Override
+            public Object setValue(final Object value) {
+                throw new UnsupportedOperationException("join values are read-only");
+            }
         }
     }
 }

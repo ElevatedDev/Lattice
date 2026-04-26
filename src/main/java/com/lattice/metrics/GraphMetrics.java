@@ -10,6 +10,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
 public final class GraphMetrics {
+    private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
+        System.getProperty("lattice.metrics.hotCounters", "true")
+    );
+
     private final String graphName;
     private final LongAdder emittedCount = new LongAdder();
     private final LongAdder consumedCount = new LongAdder();
@@ -126,14 +130,23 @@ public final class GraphMetrics {
     }
 
     public void recordEmit() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         emittedCount.increment();
     }
 
     public void recordConsume() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         if (count > 0) {
             consumedCount.add(count);
         }

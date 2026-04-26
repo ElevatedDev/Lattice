@@ -103,6 +103,7 @@ public final class GraphPlan {
         private final Class<?> outputType;
         private final StageSpec spec;
         private final SourceMode sourceMode;
+        private final boolean preallocatedSource;
 
         public Node(
             final String name,
@@ -122,12 +123,25 @@ public final class GraphPlan {
             final StageSpec spec,
             final SourceMode sourceMode
         ) {
+            this(name, kind, inputType, outputType, spec, sourceMode, false);
+        }
+
+        public Node(
+            final String name,
+            final NodeKind kind,
+            final Class<?> inputType,
+            final Class<?> outputType,
+            final StageSpec spec,
+            final SourceMode sourceMode,
+            final boolean preallocatedSource
+        ) {
             this.name = requireName(name, "node");
             this.kind = Objects.requireNonNull(kind, "kind");
             this.inputType = inputType;
             this.outputType = outputType;
             this.spec = spec;
             this.sourceMode = sourceMode == null ? SourceMode.MULTI_PRODUCER : sourceMode;
+            this.preallocatedSource = preallocatedSource;
         }
 
         public String name() {
@@ -152,6 +166,10 @@ public final class GraphPlan {
 
         public SourceMode sourceMode() {
             return sourceMode;
+        }
+
+        public boolean preallocatedSource() {
+            return preallocatedSource;
         }
     }
 

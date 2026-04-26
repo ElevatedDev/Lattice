@@ -30,6 +30,11 @@ final class HandleOwnership {
         return context.retainIfActive(item);
     }
 
+    static boolean active() {
+        final OwnershipContext context = CONTEXT.get();
+        return context != null && context.active;
+    }
+
     static void releaseIfHandle(final Object item) {
         if (item instanceof SlabHandle<?> handle) {
             handle.release();

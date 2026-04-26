@@ -2,9 +2,11 @@ package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
+import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.EdgeFactory;
 import com.lattice.internal.edge.MessageEdge;
@@ -20,6 +22,7 @@ import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
 import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.PreallocatedEmitter;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,6 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntFunction;
 
 public final class DefaultStaticGraph implements StaticGraph {
 
@@ -43,6 +47,7 @@ public final class DefaultStaticGraph implements StaticGraph {
     private final GraphMetrics metrics;
     private final Map<String, MessageEdge> edgesByKey = new LinkedHashMap<>();
     private final Map<String, SourceEmitter<?>> emitters = new LinkedHashMap<>();
+    private final Map<String, PreallocatedSourceEmitter<?>> preallocatedEmitters = new LinkedHashMap<>();
     private final List<StageWorker> workers = new ArrayList<>();
     private final RuntimePlan runtimePlan;
     private final Map<String, PinPolicy> topologyAwarePins;
@@ -109,12 +114,37 @@ public final class DefaultStaticGraph implements StaticGraph {
         }
 
         final NodeDefinition source = compiled.nodes().get(sourceName);
+        if (source.preallocationSpec() != null) {
+            throw new GraphRuntimeException("source " + sourceName
+                + " is preallocated; use preallocatedEmitter(...)");
+        }
         final Class<?> exposedType = source.stampedSource() ? source.sourcePayloadType() : source.outputType();
         if (!type.isAssignableFrom(exposedType)) {
-            throw new GraphRuntimeException("source " + sourceName + " emits " + source.outputType().getName()
+            throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
                 + ", not " + type.getName());
         }
         return (Emitter<T>) emitter;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> PreallocatedEmitter<T> preallocatedEmitter(final String sourceName, final Class<T> type) {
+        final PreallocatedSourceEmitter<?> emitter = preallocatedEmitters.get(sourceName);
+        if (emitter == null) {
+            final NodeDefinition source = compiled.nodes().get(sourceName);
+            if (source == null || source.kind() != GraphPlan.NodeKind.SOURCE) {
+                throw new GraphRuntimeException("unknown source: " + sourceName);
+            }
+            throw new GraphRuntimeException("source " + sourceName + " is not preallocated");
+        }
+
+        final NodeDefinition source = compiled.nodes().get(sourceName);
+        final Class<?> exposedType = source.outputType();
+        if (!type.isAssignableFrom(exposedType)) {
+            throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
+                + ", not " + type.getName());
+        }
+        return (PreallocatedEmitter<T>) emitter;
     }
 
     @Override
@@ -337,16 +367,125 @@ public final class DefaultStaticGraph implements StaticGraph {
                 coordinator
             );
             wireRedirect(node.name(), sender, outgoing, stageMetrics.get(node.name()));
-            emitters.put(node.name(), new SourceEmitter<>(
+            final SourceEmitter<?> emitter = new SourceEmitter<>(
                 node.name(),
                 sender,
                 stageMetrics.get(node.name()),
                 state,
                 node.stampedSource(),
                 node.sourceMode()
-            ));
+            );
+            emitters.put(node.name(), emitter);
+            if (node.preallocationSpec() != null) {
+                preallocatedEmitters.put(node.name(), buildPreallocatedEmitter(node, emitter));
+            }
         }
         sourceEmitterArray = emitters.values().toArray(new SourceEmitter<?>[0]);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> PreallocatedSourceEmitter<T> buildPreallocatedEmitter(
+        final NodeDefinition node,
+        final SourceEmitter<?> sourceEmitter
+    ) {
+        final Class<T> type = (Class<T>) node.outputType();
+        final PreallocationSpec<T> spec = (PreallocationSpec<T>) node.preallocationSpec();
+        final int reuseBound = preallocationReuseBound(node.name());
+        final Object[] pool = preallocationPool(node.name(), type, spec, reuseBound);
+        return new PreallocatedSourceEmitter<>((SourceEmitter<T>) sourceEmitter, pool, reuseBound);
+    }
+
+    private <T> Object[] preallocationPool(
+        final String sourceName,
+        final Class<T> type,
+        final PreallocationSpec<T> spec,
+        final int reuseBound
+    ) {
+        if (spec.fixed()) {
+            final T[] pool = spec.fixedPool();
+            validatePreallocationPoolSize(sourceName, pool.length, reuseBound);
+            for (int i = 0; i < pool.length; i++) {
+                if (!type.isInstance(pool[i])) {
+                    throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
+                        + " is " + pool[i].getClass().getName() + ", expected " + type.getName());
+                }
+            }
+            return pool;
+        }
+
+        final int requestedPoolSize = spec.requestedPoolSize();
+        final int poolSize = requestedPoolSize == 0 ? nextPowerOfTwo(reuseBound + 1) : requestedPoolSize;
+        validatePreallocationPoolSize(sourceName, poolSize, reuseBound);
+
+        final IntFunction<? extends T> factory = spec.factory();
+        final Object[] pool = new Object[poolSize];
+        for (int i = 0; i < pool.length; i++) {
+            final T item = factory.apply(i);
+            if (item == null) {
+                throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
+                    + " must not be null");
+            }
+            if (!type.isInstance(item)) {
+                throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
+                    + " is " + item.getClass().getName() + ", expected " + type.getName());
+            }
+            pool[i] = item;
+        }
+        return pool;
+    }
+
+    private int preallocationReuseBound(final String sourceName) {
+        long bound = 1L;
+        String currentName = sourceName;
+        while (true) {
+            final List<EdgeDefinition> outgoing = compiled.normalOutgoingBySource()
+                .getOrDefault(currentName, List.of());
+            if (outgoing.isEmpty()) {
+                break;
+            }
+            final EdgeDefinition edge = outgoing.get(0);
+            if (!runtimePlan.elidedEdgeKeys().contains(edge.key())) {
+                bound += edge.spec().capacity();
+            }
+            final NodeDefinition target = compiled.nodes().get(edge.to());
+            if (runtimePlan.workerOrder().contains(target.name())) {
+                bound += StageWorker.defaultSingleMessageBatchSize();
+            }
+            if (bound > Integer.MAX_VALUE) {
+                throw new GraphBuildException("preallocated source " + sourceName
+                    + " reuse bound exceeds supported pool size");
+            }
+            if (target.kind() == GraphPlan.NodeKind.SINK) {
+                break;
+            }
+            currentName = target.name();
+        }
+        return (int) bound;
+    }
+
+    private static void validatePreallocationPoolSize(
+        final String sourceName,
+        final int poolSize,
+        final int reuseBound
+    ) {
+        if (Integer.bitCount(poolSize) != 1) {
+            throw new GraphBuildException("preallocated pool size for source " + sourceName
+                + " must be a power of two: " + poolSize);
+        }
+        if (poolSize <= reuseBound) {
+            throw new GraphBuildException("preallocated pool size for source " + sourceName
+                + " must be greater than reuse bound " + reuseBound + ": " + poolSize);
+        }
+    }
+
+    private static int nextPowerOfTwo(final int value) {
+        if (value <= 1) {
+            return 1;
+        }
+        if (value > (1 << 30)) {
+            throw new GraphBuildException("preallocated pool size exceeds maximum supported capacity: " + value);
+        }
+        return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(value - 1));
     }
 
     private void buildWorkers(final Map<String, StageMetrics> stageMetrics) {

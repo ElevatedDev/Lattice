@@ -93,16 +93,33 @@ java -Djava.library.path=native/static-topology-native/target/release ...
 The Java wrapper name is already fixed to `static_topology_native`, so the
 shared library basename must stay aligned with that.
 
+For packaging or local validation where `java.library.path` is inconvenient,
+the Java loader can be pointed at an exact shared-library file:
+
+```bash
+java -Dlattice.native.library.path=/opt/lattice/libstatic_topology_native.so ...
+```
+
+Native loading can also be disabled explicitly:
+
+```bash
+java -Dlattice.native.enabled=false ...
+```
+
+Both settings must be present before `NativeTopology` is first initialized.
+
 ## Runtime Notes
 
 - Default behavior is fallback: placement failures degrade to metrics and
   diagnostics instead of crashing startup.
+- If `-Dlattice.native.enabled=false` is set, native placement is treated as
+  unavailable and no JNI library load is attempted.
 - `-Dlattice.placement.strict=true` changes that behavior and fails graph
   startup when requested placement or local memory policy setup cannot be
   applied.
-- When the library is missing, placement diagnostics include the JVM linker
-  failure from `System.loadLibrary(...)` so packaging and `java.library.path`
-  mistakes are visible in `GraphMetrics.placementReport()`.
+- When the library is missing, placement diagnostics include the attempted load
+  source, host OS/architecture, and JVM linker failure so packaging and
+  `java.library.path` mistakes are visible in `GraphMetrics.placementReport()`.
 - `PinPolicy.inheritCpuset()` is reported as applied only when the loaded
   backend identifies Linux support. With no native library or a non-Linux stub
   backend, it degrades because the runtime cannot validate Linux cpuset

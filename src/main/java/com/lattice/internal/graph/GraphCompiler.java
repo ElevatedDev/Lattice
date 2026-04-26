@@ -56,6 +56,7 @@ final class GraphCompiler {
 
         validateShape(nodes, incomingByTarget, normalOutgoingBySource);
         validateRedirects(nodes, edges, redirectBySourceAndTarget);
+        validatePreallocatedSources(nodes, outgoingBySource, normalOutgoingBySource);
 
         final List<String> topologicalOrder = topologicalOrder(nodes, edges);
         final List<String> workerOrder = topologicalOrder.stream()
@@ -396,6 +397,66 @@ final class GraphCompiler {
         }
     }
 
+    private void validatePreallocatedSources(
+        final Map<String, NodeDefinition> nodes,
+        final Map<String, List<EdgeDefinition>> outgoingBySource,
+        final Map<String, List<EdgeDefinition>> normalOutgoingBySource
+    ) {
+        for (final NodeDefinition source : nodes.values()) {
+            if (source.preallocationSpec() == null) {
+                continue;
+            }
+            if (source.stampedSource()) {
+                throw new GraphBuildException("preallocated source cannot be stamped: " + source.name());
+            }
+            if (source.sourceMode() != SourceMode.SINGLE_PRODUCER) {
+                throw new GraphBuildException("preallocated source must be single-producer: " + source.name());
+            }
+
+            String currentName = source.name();
+            while (true) {
+                final List<EdgeDefinition> allOutgoing = outgoingBySource.getOrDefault(currentName, List.of());
+                final List<EdgeDefinition> normalOutgoing = normalOutgoingBySource.getOrDefault(currentName, List.of());
+                if (allOutgoing.size() != normalOutgoing.size()) {
+                    throw new GraphBuildException("preallocated source " + source.name()
+                        + " does not support redirect edges in its reuse domain");
+                }
+                if (normalOutgoing.isEmpty()) {
+                    break;
+                }
+                if (normalOutgoing.size() != 1) {
+                    throw new GraphBuildException("preallocated source " + source.name()
+                        + " requires a linear single-output topology");
+                }
+
+                final EdgeDefinition edge = normalOutgoing.get(0);
+                validatePreallocatedEdge(source.name(), edge);
+                final NodeDefinition target = nodes.get(edge.to());
+                if (target.kind() == GraphPlan.NodeKind.SINK) {
+                    break;
+                }
+                if (target.kind() != GraphPlan.NodeKind.STAGE
+                    || target.batchLogic() != null
+                    || target.spec().batchPolicy().kind() != BatchPolicy.BatchKind.DISABLED) {
+                    throw new GraphBuildException("preallocated source " + source.name()
+                        + " supports only linear single-message stages and a terminal sink");
+                }
+                currentName = target.name();
+            }
+        }
+    }
+
+    private void validatePreallocatedEdge(final String sourceName, final EdgeDefinition edge) {
+        final EdgeSpec spec = edge.spec();
+        if (spec.kind() != EdgeSpec.EdgeKind.SPSC_RING
+            || spec.overflowPolicy().kind() != OverflowPolicy.OverflowKind.BLOCK
+            || spec.memoryMode().kind() != MemoryMode.MemoryKind.ON_HEAP_SLOTS
+            || spec.batchPolicy().kind() != BatchPolicy.BatchKind.DISABLED) {
+            throw new GraphBuildException("preallocated source " + sourceName
+                + " requires blocking on-heap SPSC edges without edge batching");
+        }
+    }
+
     private List<String> topologicalOrder(final Map<String, NodeDefinition> nodes, final List<EdgeDefinition> edges) {
         final Map<String, List<String>> adjacency = new LinkedHashMap<>();
         final Map<String, Integer> indegree = new LinkedHashMap<>();
@@ -442,7 +503,8 @@ final class GraphCompiler {
                 node.inputType(),
                 node.outputType(),
                 node.spec(),
-                node.sourceMode()
+                node.sourceMode(),
+                node.preallocationSpec() != null
             ))
             .toList();
     }

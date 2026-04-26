@@ -8,7 +8,6 @@ import com.lattice.metrics.WorkerState;
 import com.lattice.routing.Stamped;
 import com.lattice.stage.Emitter;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class SourceEmitter<T> implements Emitter<T> {
@@ -17,9 +16,9 @@ final class SourceEmitter<T> implements Emitter<T> {
     private final EdgeSender sender;
     private final StageMetrics metrics;
     private final AtomicReference<GraphState> graphState;
-    private final AtomicBoolean closed = new AtomicBoolean();
     private final boolean stampItems;
     private final boolean singleProducer;
+    private volatile boolean closed;
     private long nextStamp;
 
     SourceEmitter(
@@ -53,7 +52,7 @@ final class SourceEmitter<T> implements Emitter<T> {
                 emitStamped(item);
             }
         } else {
-            sender.emit(item);
+            sender.emitFromSource(item);
         }
     }
 
@@ -70,27 +69,53 @@ final class SourceEmitter<T> implements Emitter<T> {
 
     @Override
     public boolean tryEmit(final T item) {
-        if (closed.get() || graphState.get() != GraphState.RUNNING) {
+        if (closed || graphState.get() != GraphState.RUNNING) {
             return false;
         }
         if (stampItems) {
             return singleProducer ? tryEmitStampedSingleProducer(item) : tryEmitStamped(item);
         }
-        return sender.tryEmit(item);
+        return sender.tryEmitFromSource(item);
     }
 
     @Override
     public boolean isClosed() {
-        return closed.get();
+        return closed;
+    }
+
+    void emitPlain(final T item) {
+        ensureOpenAndRunning();
+        sender.emitFromSource(item);
+    }
+
+    void emitPreallocatedTrusted(final T item) {
+        ensureOpenAndRunning();
+        sender.emitTrustedFromSource(item);
+    }
+
+    boolean emitPlain(final T item, final Duration timeout) {
+        ensureOpenAndRunning();
+        return sender.emit(item, timeout.toNanos());
+    }
+
+    boolean tryEmitPlain(final T item) {
+        if (closed || graphState.get() != GraphState.RUNNING) {
+            return false;
+        }
+        return sender.tryEmitFromSource(item);
     }
 
     @Override
     public void close() {
-        if (closed.compareAndSet(false, true)) {
-            sender.close();
-            metrics.workerState(WorkerState.STOPPED);
-            metrics.markStopped();
+        synchronized (this) {
+            if (closed) {
+                return;
+            }
+            closed = true;
         }
+        sender.close();
+        metrics.workerState(WorkerState.STOPPED);
+        metrics.markStopped();
     }
 
     void markStarted() {
@@ -99,7 +124,7 @@ final class SourceEmitter<T> implements Emitter<T> {
     }
 
     private void ensureOpenAndRunning() {
-        if (closed.get()) {
+        if (closed) {
             throw new GraphRuntimeException("source is closed: " + name);
         }
         if (graphState.get() != GraphState.RUNNING) {

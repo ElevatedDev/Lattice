@@ -8,12 +8,14 @@ import com.lattice.routing.JoinSpec;
 import com.lattice.routing.PartitionSpec;
 import com.lattice.stage.BatchStageLogic;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.PreallocatedEmitter;
 import com.lattice.stage.StageExceptionHandler;
 import com.lattice.stage.StageLogic;
 import com.lattice.stage.StageSpec;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
 
 public interface StaticGraph extends AutoCloseable {
     static Builder builder(final String name) {
@@ -25,6 +27,16 @@ public interface StaticGraph extends AutoCloseable {
     GraphMetrics metrics();
 
     <T> Emitter<T> emitter(String sourceName, Class<T> type);
+
+    /**
+     * Returns the claim/emit API for a preallocated source.
+     * <p>
+     * Sources declared with {@link Builder#preallocatedSource(String, Class, PreallocationSpec)}
+     * must be emitted through this method. Calling {@link #emitter(String, Class)}
+     * for a preallocated source is rejected so callers do not accidentally bypass
+     * the source pool.
+     */
+    <T> PreallocatedEmitter<T> preallocatedEmitter(String sourceName, Class<T> type);
 
     void start();
 
@@ -58,6 +70,25 @@ public interface StaticGraph extends AutoCloseable {
         }
 
         <T> Builder source(String name, Class<T> type, SourceMode mode);
+
+        <T> Builder preallocatedSource(String name, Class<T> type, PreallocationSpec<T> spec);
+
+        default <T> Builder preallocatedSource(
+            final String name,
+            final Class<T> type,
+            final IntFunction<? extends T> factory
+        ) {
+            return preallocatedSource(name, type, PreallocationSpec.pool(factory));
+        }
+
+        default <T> Builder preallocatedSource(
+            final String name,
+            final Class<T> type,
+            final IntFunction<? extends T> factory,
+            final int poolSize
+        ) {
+            return preallocatedSource(name, type, PreallocationSpec.pool(factory, poolSize));
+        }
 
         default <T> Builder stampedSource(final String name, final Class<T> payloadType) {
             return stampedSource(name, payloadType, SourceMode.MULTI_PRODUCER);

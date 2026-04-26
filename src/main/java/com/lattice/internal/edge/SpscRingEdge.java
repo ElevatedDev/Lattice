@@ -129,8 +129,10 @@ public final class SpscRingEdge implements MessageEdge {
         }
         localBuffer[index] = item;
         CURSOR.setRelease(tail, currentTail + 1L);
-        metrics.recordEmit();
-        graphMetrics.recordEmit();
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordEmit();
+            graphMetrics.recordEmit();
+        }
         return true;
     }
 
@@ -164,8 +166,10 @@ public final class SpscRingEdge implements MessageEdge {
             localPublishTimes.setPlain(index, 0L);
         }
         CURSOR.setRelease(head, currentHead + 1L);
-        metrics.recordConsume();
-        graphMetrics.recordConsume();
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordConsume();
+            graphMetrics.recordConsume();
+        }
         return item;
     }
 
@@ -235,9 +239,60 @@ public final class SpscRingEdge implements MessageEdge {
         return consumed;
     }
 
+    @Override
+    public int drainToProcessor(final ItemProcessor processor, final int limit) throws Exception {
+        if (limit <= 0) {
+            return 0;
+        }
+
+        final long currentHead = (long) CURSOR.get(head);
+        long currentTail = consumerTailCache;
+        if (currentHead >= currentTail) {
+            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            consumerTailCache = currentTail;
+        }
+        if (currentHead >= currentTail) {
+            return 0;
+        }
+
+        long nextHead = currentHead;
+        int processed = 0;
+        final Object[] localBuffer = buffer;
+        final int localMask = mask;
+        final LongAccess localPublishTimes = publishTimes;
+        try {
+            while (processed < limit && nextHead < currentTail) {
+                final int index = (int) nextHead & localMask;
+                final Object item = claimReadyItem(localBuffer, index);
+                if (item == null) {
+                    break;
+                }
+                if (localPublishTimes != null) {
+                    if (item != DROPPED) {
+                        metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
+                    }
+                    localPublishTimes.setPlain(index, 0L);
+                }
+                nextHead++;
+                if (item != DROPPED) {
+                    processed++;
+                    processor.process(item);
+                }
+            }
+        } finally {
+            if (nextHead > currentHead) {
+                CURSOR.setRelease(head, nextHead);
+            }
+            recordConsumed(processed);
+        }
+        return processed;
+    }
+
     private void recordConsumed(final int count) {
-        metrics.recordConsume(count);
-        graphMetrics.recordConsume(count);
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordConsume(count);
+            graphMetrics.recordConsume(count);
+        }
     }
 
     @Override
@@ -345,9 +400,9 @@ public final class SpscRingEdge implements MessageEdge {
 
     private Object claimReadyItem(final Object[] localBuffer, final int index) {
         if (plainClaim) {
-            final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
+            final Object item = localBuffer[index];
             if (item != null) {
-                ELEMENT.setRelease(localBuffer, index, null);
+                localBuffer[index] = null;
             }
             return item;
         }

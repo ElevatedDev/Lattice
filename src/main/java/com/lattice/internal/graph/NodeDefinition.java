@@ -1,6 +1,7 @@
 package com.lattice.internal.graph;
 
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.routing.BroadcastSpec;
 import com.lattice.routing.DispatchSpec;
@@ -24,6 +25,7 @@ public record NodeDefinition(
     SourceMode sourceMode,
     boolean stampedSource,
     Class<?> sourcePayloadType,
+    PreallocationSpec<?> preallocationSpec,
     DispatchSpec<?> dispatchSpec,
     BroadcastSpec<?> broadcastSpec,
     PartitionSpec<?, ?> partitionSpec,

@@ -5,6 +5,9 @@ import org.HdrHistogram.Histogram;
 
 final class LatencyRecorder {
 
+    private static final boolean ENABLED = Boolean.parseBoolean(
+        System.getProperty("lattice.benchmark.latency", "true")
+    );
     private static final long MAX_LATENCY_NANOS = 60_000_000_000L;
     private static final int SIGNIFICANT_DIGITS = 3;
 
@@ -16,14 +19,23 @@ final class LatencyRecorder {
     });
 
     void recordElapsedSince(final long startedAtNanos) {
+        if (!ENABLED) {
+            return;
+        }
         recordDurationNanos(System.nanoTime() - startedAtNanos);
     }
 
     void recordDurationNanos(final long durationNanos) {
+        if (!ENABLED) {
+            return;
+        }
         threadHistogram.get().recordValue(Math.max(1L, durationNanos));
     }
 
     void print(final String benchmarkName, final String latencyKind) {
+        if (!ENABLED) {
+            return;
+        }
         final Histogram snapshot = new Histogram(1, MAX_LATENCY_NANOS, SIGNIFICANT_DIGITS);
         for (final Histogram histogram : histograms) {
             snapshot.add(histogram);

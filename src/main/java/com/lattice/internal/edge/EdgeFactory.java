@@ -33,7 +33,8 @@ public final class EdgeFactory {
                 definition.spec().capacity(),
                 definition.spec().memoryMode(),
                 metrics,
-                graphMetrics
+                graphMetrics,
+                plainClaim(definition.spec())
             );
         }
         if (!firstTouchEnabled()) {
@@ -48,7 +49,7 @@ public final class EdgeFactory {
 
     private static boolean plainClaim(final EdgeSpec spec) {
         return switch (spec.overflowPolicy().kind()) {
-            case DROP_LATEST, DROP_OLDEST, COALESCE, REDIRECT -> false;
+            case DROP_OLDEST, COALESCE -> false;
             default -> true;
         };
     }

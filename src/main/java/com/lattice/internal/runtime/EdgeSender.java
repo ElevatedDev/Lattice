@@ -32,6 +32,8 @@ final class EdgeSender {
     private final OverflowPolicy overflowPolicy;
     private final OverflowPolicy.OverflowKind overflowKind;
     private final boolean lossyOverflow;
+    private final boolean blockingFastPath;
+    private final boolean mayCarryOwnedHandle;
     private final long policyTimeoutNanos;
     private EdgeSender redirectSender;
     private final String graphName;
@@ -39,6 +41,7 @@ final class EdgeSender {
     private final String edgeTo;
     private final String edgeName;
     private final boolean jfrEnabled;
+    private boolean overloadClearPending;
 
     EdgeSender(
         final String ownerName,
@@ -66,6 +69,10 @@ final class EdgeSender {
             || overflowKind == OverflowPolicy.OverflowKind.DROP_OLDEST
             || overflowKind == OverflowPolicy.OverflowKind.COALESCE
             || overflowKind == OverflowPolicy.OverflowKind.REDIRECT;
+        this.blockingFastPath = overflowKind == OverflowPolicy.OverflowKind.BLOCK;
+        this.mayCarryOwnedHandle = messageType == Object.class
+            || messageType.isAssignableFrom(SlabHandle.class)
+            || messageType.isAssignableFrom(Stamped.class);
         this.policyTimeoutNanos = overflowKind == OverflowPolicy.OverflowKind.BLOCK_FOR
             ? spec.overflowPolicy().timeout().toNanos()
             : 0L;
@@ -93,6 +100,39 @@ final class EdgeSender {
                 releaseIfHandle(outbound);
             }
         }
+    }
+
+    void emitFromSource(final Object item) {
+        if (!canUseSourceFastPath()) {
+            emit(item);
+            return;
+        }
+        validateItem(item);
+        emitBlockingFastPath(item);
+    }
+
+    boolean tryEmitFromSource(final Object item) {
+        if (!canUseSourceFastPath()) {
+            return tryEmit(item);
+        }
+        validateItem(item);
+        return tryEmitValidated(item);
+    }
+
+    void emitTrustedFromSource(final Object item) {
+        if (!canUseTrustedSourceFastPath()) {
+            emitFromSource(item);
+            return;
+        }
+        emitBlockingFastPathTrusted(item);
+    }
+
+    private boolean canUseSourceFastPath() {
+        return blockingFastPath && (!mayCarryOwnedHandle || !HandleOwnership.active());
+    }
+
+    private boolean canUseTrustedSourceFastPath() {
+        return blockingFastPath && !mayCarryOwnedHandle;
     }
 
     private void emitPrepared(final Object item) {
@@ -153,9 +193,11 @@ final class EdgeSender {
                     if (blockedRecorded) {
                         recordBackpressureDuration(System.nanoTime() - blockedStart);
                         blockedDurationRecorded = true;
+                        clearOverload();
+                    } else {
+                        clearOverloadIfPending();
                     }
-                    graphMetrics.clearOverload();
-                    ownerMetrics.recordEmit();
+                    recordOwnerEmit();
                     return true;
                 }
                 if (edge.isClosed()) {
@@ -168,7 +210,7 @@ final class EdgeSender {
                     blockedStart = System.nanoTime();
                     edgeMetrics.recordBlockedOffer();
                     graphMetrics.recordBlockedOffer();
-                    graphMetrics.activateOverload();
+                    activateOverload();
                     ownerMetrics.recordBlockedOutput();
 
                     if (jfrEnabled) {
@@ -192,6 +234,68 @@ final class EdgeSender {
                 recordBackpressureDuration(System.nanoTime() - blockedStart);
             }
         }
+    }
+
+    private void emitBlockingFastPath(final Object item) {
+        int idle = 0;
+        boolean blockedRecorded = false;
+        boolean blockedDurationRecorded = false;
+        long blockedStart = 0L;
+
+        try {
+            while (true) {
+                if (coordinator.isAbortRequested()) {
+                    throw new GraphRuntimeException("graph is stopping or failed: " + graphName);
+                }
+                if (edge.offer(item)) {
+                    if (blockedRecorded) {
+                        recordBackpressureDuration(System.nanoTime() - blockedStart);
+                        blockedDurationRecorded = true;
+                        clearOverload();
+                    } else {
+                        clearOverloadIfPending();
+                    }
+                    recordOwnerEmit();
+                    return;
+                }
+                if (edge.isClosed()) {
+                    throw new GraphRuntimeException("edge is closed: " + edgeName);
+                }
+                edgeMetrics.recordFailedOffer();
+                graphMetrics.recordFailedOffer();
+                ownerMetrics.recordFailedOutput();
+                if (!blockedRecorded) {
+                    blockedStart = System.nanoTime();
+                    edgeMetrics.recordBlockedOffer();
+                    graphMetrics.recordBlockedOffer();
+                    activateOverload();
+                    ownerMetrics.recordBlockedOutput();
+
+                    if (jfrEnabled) {
+                        JfrEvents.edgeBackpressure(graphName, edgeFrom, edgeTo);
+                    }
+
+                    blockedRecorded = true;
+                }
+                idle = waitStrategy.idle(idle, waitMetrics);
+            }
+        } finally {
+            if (blockedRecorded && !blockedDurationRecorded) {
+                recordBackpressureDuration(System.nanoTime() - blockedStart);
+            }
+        }
+    }
+
+    private void emitBlockingFastPathTrusted(final Object item) {
+        if (coordinator.isAbortRequested()) {
+            throw new GraphRuntimeException("graph is stopping or failed: " + graphName);
+        }
+        if (edge.offer(item)) {
+            clearOverloadIfPending();
+            recordOwnerEmit();
+            return;
+        }
+        emitBlockingFastPath(item);
     }
 
     boolean tryEmit(final Object item) {
@@ -218,8 +322,8 @@ final class EdgeSender {
         }
         final boolean offered = edge.offer(item);
         if (offered) {
-            graphMetrics.clearOverload();
-            ownerMetrics.recordEmit();
+            clearOverloadIfPending();
+            recordOwnerEmit();
         } else if (!edge.isClosed()) {
             edgeMetrics.recordFailedOffer();
             graphMetrics.recordFailedOffer();
@@ -309,7 +413,7 @@ final class EdgeSender {
         if (item == null) {
             throw new NullPointerException(nullItemMessage);
         }
-        if (!acceptsAnyType && !messageType.isInstance(item)) {
+        if (!acceptsAnyType && item.getClass() != messageType && !messageType.isInstance(item)) {
             throw new ClassCastException(ownerName + " emitted " + item.getClass().getName()
                 + ", expected " + messageTypeName);
         }
@@ -321,6 +425,28 @@ final class EdgeSender {
         ownerMetrics.recordBlockedNanos(nanos);
         if (jfrEnabled) {
             JfrEvents.edgeStall(graphName, edgeFrom, edgeTo, nanos);
+        }
+    }
+
+    private void activateOverload() {
+        overloadClearPending = true;
+        graphMetrics.activateOverload();
+    }
+
+    private void clearOverload() {
+        overloadClearPending = false;
+        graphMetrics.clearOverload();
+    }
+
+    private void clearOverloadIfPending() {
+        if (overloadClearPending) {
+            clearOverload();
+        }
+    }
+
+    private void recordOwnerEmit() {
+        if (StageMetrics.hotCountersEnabled()) {
+            ownerMetrics.recordEmit();
         }
     }
 

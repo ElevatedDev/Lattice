@@ -2,6 +2,7 @@ package com.lattice.internal.graph;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.runtime.DefaultStaticGraph;
@@ -49,6 +50,36 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             null,
             null,
             null,
+            null,
+            null
+        ));
+
+        return this;
+    }
+
+    @Override
+    public <T> StaticGraph.Builder preallocatedSource(
+        final String name,
+        final Class<T> type,
+        final PreallocationSpec<T> spec
+    ) {
+        nodes.add(new NodeDefinition(
+            requireName(name, "source"),
+            GraphPlan.NodeKind.SOURCE,
+            null,
+            Objects.requireNonNull(type, "type"),
+            null,
+            null,
+            null,
+            null,
+            nodes.size(),
+            SourceMode.SINGLE_PRODUCER,
+            false,
+            null,
+            Objects.requireNonNull(spec, "spec"),
+            null,
+            null,
+            null,
             null
         ));
 
@@ -74,6 +105,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             Objects.requireNonNull(mode, "mode"),
             true,
             Objects.requireNonNull(payloadType, "payloadType"),
+            null,
             null,
             null,
             null,
@@ -103,6 +135,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             nodes.size(),
             null,
             false,
+            null,
             null,
             null,
             null,
@@ -140,6 +173,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             null,
             null,
             null,
+            null,
             null
         ));
         return this;
@@ -164,6 +198,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             nodes.size(),
             null,
             false,
+            null,
             null,
             null,
             null,
@@ -193,6 +228,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             null,
             false,
             null,
+            null,
             Objects.requireNonNull(spec, "spec"),
             null,
             null,
@@ -220,6 +256,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             nodes.size(),
             null,
             false,
+            null,
             null,
             null,
             Objects.requireNonNull(spec, "spec"),
@@ -251,6 +288,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             null,
             null,
             null,
+            null,
             Objects.requireNonNull(spec, "spec"),
             null
         ));
@@ -276,6 +314,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             nodes.size(),
             null,
             false,
+            null,
             null,
             null,
             null,

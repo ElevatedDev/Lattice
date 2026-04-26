@@ -9,6 +9,9 @@ import java.util.concurrent.atomic.LongAdder;
 public final class StageMetrics implements WaitMetrics {
 
     private static final boolean HISTOGRAMS_ENABLED = Boolean.getBoolean("lattice.metrics.stageHistograms");
+    private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
+        System.getProperty("lattice.metrics.hotCounters", "true")
+    );
 
     private final String name;
     private final LongAdder emittedCount = new LongAdder();
@@ -33,8 +36,10 @@ public final class StageMetrics implements WaitMetrics {
     private final LongAdder missingJoinBranches = new LongAdder();
     private final LongAdder retainedHandles = new LongAdder();
     private final LongAdder releasedHandles = new LongAdder();
-    private final Histogram batchSizeHistogram = new Histogram(1, 1_000_000, 3);
-    private final Histogram serviceTimeNanosHistogram = new Histogram(1, 60_000_000_000L, 3);
+    private final Histogram batchSizeHistogram = HISTOGRAMS_ENABLED ? new Histogram(1, 1_000_000, 3) : null;
+    private final Histogram serviceTimeNanosHistogram = HISTOGRAMS_ENABLED
+        ? new Histogram(1, 60_000_000_000L, 3)
+        : null;
     private volatile WorkerState workerState = WorkerState.NEW;
     private volatile PlacementStatus placementStatus = PlacementStatus.NOT_REQUESTED;
     private volatile String placementMessage = "";
@@ -50,6 +55,10 @@ public final class StageMetrics implements WaitMetrics {
 
     public StageMetrics(final String name) {
         this.name = name;
+    }
+
+    public static boolean hotCountersEnabled() {
+        return HOT_COUNTERS_ENABLED;
     }
 
     public String name() {
@@ -157,11 +166,13 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public Histogram batchSizeHistogram() {
-        return batchSizeHistogram.copy();
+        return batchSizeHistogram == null ? new Histogram(1, 1_000_000, 3) : batchSizeHistogram.copy();
     }
 
     public Histogram serviceTimeNanosHistogram() {
-        return serviceTimeNanosHistogram.copy();
+        return serviceTimeNanosHistogram == null
+            ? new Histogram(1, 60_000_000_000L, 3)
+            : serviceTimeNanosHistogram.copy();
     }
 
     public static boolean histogramsEnabled() {
@@ -209,14 +220,23 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public void recordEmit() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         emittedCount.increment();
     }
 
     public void recordConsume() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         if (count > 0) {
             consumedCount.add(count);
         }
@@ -242,26 +262,38 @@ public final class StageMetrics implements WaitMetrics {
 
     @Override
     public void recordSpin() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         spinCount.increment();
     }
 
     @Override
     public void recordYield() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         yieldCount.increment();
     }
 
     @Override
     public void recordPark() {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         parkCount.increment();
     }
 
     public void recordBatch(final int size, final long serviceTimeNanos) {
+        if (!HOT_COUNTERS_ENABLED) {
+            return;
+        }
         batchesProcessed.increment();
         processedMessages.add(size);
-        if (HISTOGRAMS_ENABLED && size > 0) {
+        if (batchSizeHistogram != null && size > 0) {
             batchSizeHistogram.recordValue(clampToHistogram(batchSizeHistogram, size));
         }
-        if (HISTOGRAMS_ENABLED && serviceTimeNanos > 0L) {
+        if (serviceTimeNanosHistogram != null && serviceTimeNanos > 0L) {
             serviceTimeNanosHistogram.recordValue(clampToHistogram(serviceTimeNanosHistogram, serviceTimeNanos));
         }
     }

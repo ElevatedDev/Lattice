@@ -36,6 +36,7 @@ public final class MpscRingEdge implements MessageEdge {
     private final MemoryMode.MemoryKind memoryKind;
     private final EdgeMetrics metrics;
     private final GraphMetrics graphMetrics;
+    private final boolean plainClaim;
     private Object[] buffer;
     private LongAccess sequences;
     private LongAccess publishTimes;
@@ -62,6 +63,18 @@ public final class MpscRingEdge implements MessageEdge {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics
     ) {
+        this(from, to, capacity, memoryMode, metrics, graphMetrics, true);
+    }
+
+    public MpscRingEdge(
+        final String from,
+        final String to,
+        final int capacity,
+        final MemoryMode memoryMode,
+        final EdgeMetrics metrics,
+        final GraphMetrics graphMetrics,
+        final boolean plainClaim
+    ) {
         this.from = from;
         this.to = to;
         this.capacity = capacity;
@@ -69,6 +82,7 @@ public final class MpscRingEdge implements MessageEdge {
         this.memoryKind = memoryMode.kind();
         this.metrics = metrics;
         this.graphMetrics = graphMetrics;
+        this.plainClaim = plainClaim;
     }
 
     @Override
@@ -93,7 +107,7 @@ public final class MpscRingEdge implements MessageEdge {
             if (closed()) {
                 return false;
             }
-            currentTailRaw = (long) CURSOR.getVolatile(tail);
+            currentTailRaw = (long) CURSOR.getAcquire(tail);
             if (tailClosed(currentTailRaw)) {
                 return false;
             }
@@ -131,8 +145,10 @@ public final class MpscRingEdge implements MessageEdge {
             return false;
         }
         localSequences.setRelease(index, currentTail + 1L);
-        metrics.recordEmit();
-        graphMetrics.recordEmit();
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordEmit();
+            graphMetrics.recordEmit();
+        }
         return true;
     }
 
@@ -167,8 +183,10 @@ public final class MpscRingEdge implements MessageEdge {
         }
         CURSOR.setRelease(head, currentHead + 1L);
         localSequences.setRelease(index, currentHead + capacity);
-        metrics.recordConsume();
-        graphMetrics.recordConsume();
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordConsume();
+            graphMetrics.recordConsume();
+        }
         return item;
     }
 
@@ -246,14 +264,16 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private void recordConsumed(final int count) {
-        metrics.recordConsume(count);
-        graphMetrics.recordConsume(count);
+        if (EdgeMetrics.hotCountersEnabled()) {
+            metrics.recordConsume(count);
+            graphMetrics.recordConsume(count);
+        }
     }
 
     @Override
     public Object dropOldest() {
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         final LongAccess localSequences = sequences;
@@ -281,7 +301,7 @@ public final class MpscRingEdge implements MessageEdge {
         }
         final Object key = keyExtractor.apply(item);
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         final LongAccess localSequences = sequences;
@@ -334,13 +354,13 @@ public final class MpscRingEdge implements MessageEdge {
 
     @Override
     public boolean isEmpty() {
-        return (long) CURSOR.getAcquire(head) >= tailSequence((long) CURSOR.getVolatile(tail));
+        return (long) CURSOR.getAcquire(head) >= tailSequence((long) CURSOR.getAcquire(tail));
     }
 
     @Override
     public int inFlight() {
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getVolatile(tail));
+        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final long depth = Math.max(0L, currentTail - currentHead);
         return depth > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) depth;
     }
@@ -372,6 +392,13 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private Object claimReadyItem(final Object[] localBuffer, final int index) {
+        if (plainClaim) {
+            final Object item = localBuffer[index];
+            if (item != null) {
+                localBuffer[index] = null;
+            }
+            return item;
+        }
         return (Object) ELEMENT.getAndSetAcquire(localBuffer, index, null);
     }
 

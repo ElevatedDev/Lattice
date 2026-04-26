@@ -1,9 +1,11 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.PreallocatedEmitter;
 import com.lattice.stage.StageSpec;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +23,8 @@ import org.openjdk.jmh.annotations.TearDown;
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class TopologyBenchmark {
+
+    private static final int RING_SIZE = 8192;
 
     @Benchmark
     public void oneSourceOneSink(final SourceSinkState state) {
@@ -87,6 +91,15 @@ public class TopologyBenchmark {
     }
 
     @Benchmark
+    public void oneSourceNormalizeValidateSinkSingleProducerFused(
+        final NormalizeValidateSingleProducerFusedState state
+    ) {
+        final long started = System.nanoTime();
+        state.emitter.emit(new Order(state.next++, true, started));
+        state.enqueueLatency.recordElapsedSince(started);
+    }
+
+    @Benchmark
     public void oneSourceThreeStageSink(final ThreeStageState state) {
         final long started = System.nanoTime();
         state.emitter.emit(new Order(state.next++, true, started));
@@ -95,6 +108,13 @@ public class TopologyBenchmark {
 
     @Benchmark
     public void oneSourceThreeStageSinkFused(final ThreeStageFusedState state) {
+        final long started = System.nanoTime();
+        state.emitter.emit(new Order(state.next++, true, started));
+        state.enqueueLatency.recordElapsedSince(started);
+    }
+
+    @Benchmark
+    public void oneSourceThreeStageSinkSingleProducerFused(final ThreeStageSingleProducerFusedState state) {
         final long started = System.nanoTime();
         state.emitter.emit(new Order(state.next++, true, started));
         state.enqueueLatency.recordElapsedSince(started);
@@ -125,7 +145,7 @@ public class TopologyBenchmark {
                     consumed.incrementAndGet();
                     endToEndLatency.recordElapsedSince(emittedAtNanos);
                 }, StageSpec.singleThreaded())
-                .edge("ingress", "egress", EdgeSpec.mpscRing(4096))
+                .edge("ingress", "egress", EdgeSpec.mpscRing(RING_SIZE))
                 .build();
             graph.start();
             emitter = graph.emitter("ingress", Long.class);
@@ -157,7 +177,7 @@ public class TopologyBenchmark {
                     consumed.incrementAndGet();
                     endToEndLatency.recordElapsedSince(emittedAtNanos);
                 }, StageSpec.singleThreaded())
-                .edge("ingress", "egress", EdgeSpec.mpscRing(4096))
+                .edge("ingress", "egress", EdgeSpec.mpscRing(RING_SIZE))
                 .build();
             graph.start();
             emitter = graph.emitter("ingress", Long.class);
@@ -175,38 +195,36 @@ public class TopologyBenchmark {
     @State(Scope.Benchmark)
     public static class SourceSinkPreallocatedSingleProducerState {
 
-        private static final int POOL_SIZE = 8192;
+        private static final int POOL_SIZE = RING_SIZE << 1;
 
         final AtomicLong consumed = new AtomicLong();
         final LatencyRecorder enqueueLatency = new LatencyRecorder();
         final LatencyRecorder endToEndLatency = new LatencyRecorder();
-        final PreallocatedSignal[] signals = preallocatedSignals();
         StaticGraph graph;
-        Emitter<PreallocatedSignal> emitter;
+        PreallocatedEmitter<PreallocatedSignal> emitter;
         long next;
 
         @Setup(Level.Trial)
         public void setup() {
             graph = StaticGraph.builder("source-sink-preallocated-single-producer")
-                .source("ingress", PreallocatedSignal.class, SourceMode.SINGLE_PRODUCER)
+                .preallocatedSource(
+                    "ingress",
+                    PreallocatedSignal.class,
+                    PreallocationSpec.pool(ignored -> new PreallocatedSignal()).poolSize(POOL_SIZE)
+                )
                 .sink("egress", PreallocatedSignal.class, signal -> {
                     consumed.incrementAndGet();
                     endToEndLatency.recordElapsedSince(signal.emittedAtNanos);
-                    signal.consumedSequence = signal.sequence;
                 }, StageSpec.singleThreaded())
-                .edge("ingress", "egress", EdgeSpec.mpscRing(POOL_SIZE))
+                .edge("ingress", "egress", EdgeSpec.mpscRing(RING_SIZE))
                 .build();
             graph.start();
-            emitter = graph.emitter("ingress", PreallocatedSignal.class);
+            emitter = graph.preallocatedEmitter("ingress", PreallocatedSignal.class);
         }
 
         PreallocatedSignal claim(final long emittedAtNanos) {
             final long sequence = next++;
-            final PreallocatedSignal signal = signals[(int) sequence & (POOL_SIZE - 1)];
-            final long requiredConsumedSequence = sequence - POOL_SIZE;
-            while (requiredConsumedSequence >= 0L && signal.consumedSequence < requiredConsumedSequence) {
-                Thread.onSpinWait();
-            }
+            final PreallocatedSignal signal = emitter.claim();
             signal.sequence = sequence;
             signal.emittedAtNanos = emittedAtNanos;
             return signal;
@@ -218,14 +236,6 @@ public class TopologyBenchmark {
             graph.stop(Duration.ofSeconds(10));
             enqueueLatency.print("oneSourceOneSinkPreallocatedSingleProducer", "enqueue");
             endToEndLatency.print("oneSourceOneSinkPreallocatedSingleProducer", "endToEnd");
-        }
-
-        private static PreallocatedSignal[] preallocatedSignals() {
-            final PreallocatedSignal[] signals = new PreallocatedSignal[POOL_SIZE];
-            for (int i = 0; i < signals.length; i++) {
-                signals[i] = new PreallocatedSignal();
-            }
-            return signals;
         }
     }
 
@@ -269,8 +279,8 @@ public class TopologyBenchmark {
                         consumed.incrementAndGet();
                         endToEndLatency.recordElapsedSince(order.emittedAtNanos());
                     }, StageSpec.singleThreaded())
-                    .edge("ingress", "validate", EdgeSpec.mpscRing(4096))
-                    .edge("validate", "egress", EdgeSpec.spscRing(4096))
+                    .edge("ingress", "validate", EdgeSpec.mpscRing(RING_SIZE))
+                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
                     .build();
             } finally {
                 restoreFusionProperty(previousFusion);
@@ -357,10 +367,10 @@ public class TopologyBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            setupGraph("normalize-validate-sink", false);
+            setupGraph("normalize-validate-sink", SourceMode.MULTI_PRODUCER, false);
         }
 
-        void setupGraph(final String graphName, final boolean fusionEnabled) {
+        void setupGraph(final String graphName, final SourceMode sourceMode, final boolean fusionEnabled) {
             final String previousFusion = System.getProperty("lattice.fusion.enabled");
             if (fusionEnabled) {
                 System.setProperty("lattice.fusion.enabled", "true");
@@ -369,7 +379,7 @@ public class TopologyBenchmark {
             }
             try {
                 graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class)
+                    .source("ingress", Order.class, sourceMode)
                     .stage(
                         "normalize",
                         Order.class,
@@ -392,9 +402,9 @@ public class TopologyBenchmark {
                         consumed.incrementAndGet();
                         endToEndLatency.recordElapsedSince(order.emittedAtNanos());
                     }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(4096))
-                    .edge("normalize", "validate", EdgeSpec.spscRing(4096))
-                    .edge("validate", "egress", EdgeSpec.spscRing(4096))
+                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                    .edge("normalize", "validate", EdgeSpec.spscRing(RING_SIZE))
+                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
                     .build();
             } finally {
                 restoreFusionProperty(previousFusion);
@@ -429,13 +439,28 @@ public class TopologyBenchmark {
         @Override
         @Setup(Level.Trial)
         public void setup() {
-            setupGraph("normalize-validate-sink-fused", true);
+            setupGraph("normalize-validate-sink-fused", SourceMode.MULTI_PRODUCER, true);
         }
 
         @Override
         @TearDown(Level.Trial)
         public void tearDown() {
             tearDownGraph("oneSourceNormalizeValidateSinkFused");
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class NormalizeValidateSingleProducerFusedState extends NormalizeValidateState {
+        @Override
+        @Setup(Level.Trial)
+        public void setup() {
+            setupGraph("normalize-validate-sink-single-producer-fused", SourceMode.SINGLE_PRODUCER, true);
+        }
+
+        @Override
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            tearDownGraph("oneSourceNormalizeValidateSinkSingleProducerFused");
         }
     }
 
@@ -451,10 +476,10 @@ public class TopologyBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            setupGraph("three-stage-sink", false);
+            setupGraph("three-stage-sink", SourceMode.MULTI_PRODUCER, false);
         }
 
-        void setupGraph(final String graphName, final boolean fusionEnabled) {
+        void setupGraph(final String graphName, final SourceMode sourceMode, final boolean fusionEnabled) {
             final String previousFusion = System.getProperty("lattice.fusion.enabled");
             if (fusionEnabled) {
                 System.setProperty("lattice.fusion.enabled", "true");
@@ -463,7 +488,7 @@ public class TopologyBenchmark {
             }
             try {
                 graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class)
+                    .source("ingress", Order.class, sourceMode)
                     .stage(
                         "normalize",
                         Order.class,
@@ -493,10 +518,10 @@ public class TopologyBenchmark {
                         consumed.incrementAndGet();
                         endToEndLatency.recordElapsedSince(order.emittedAtNanos());
                     }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(4096))
-                    .edge("normalize", "risk", EdgeSpec.spscRing(4096))
-                    .edge("risk", "validate", EdgeSpec.spscRing(4096))
-                    .edge("validate", "egress", EdgeSpec.spscRing(4096))
+                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                    .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
+                    .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
+                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
                     .build();
             } finally {
                 restoreFusionProperty(previousFusion);
@@ -531,7 +556,7 @@ public class TopologyBenchmark {
         @Override
         @Setup(Level.Trial)
         public void setup() {
-            setupGraph("three-stage-sink-fused", true);
+            setupGraph("three-stage-sink-fused", SourceMode.MULTI_PRODUCER, true);
         }
 
         @Override
@@ -542,16 +567,30 @@ public class TopologyBenchmark {
     }
 
     @State(Scope.Benchmark)
+    public static class ThreeStageSingleProducerFusedState extends ThreeStageState {
+        @Override
+        @Setup(Level.Trial)
+        public void setup() {
+            setupGraph("three-stage-sink-single-producer-fused", SourceMode.SINGLE_PRODUCER, true);
+        }
+
+        @Override
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            tearDownGraph("oneSourceThreeStageSinkSingleProducerFused");
+        }
+    }
+
+    @State(Scope.Benchmark)
     public static class ThreeStagePreallocatedFusedState {
 
-        private static final int POOL_SIZE = 8192;
+        private static final int POOL_SIZE = RING_SIZE << 1;
 
         final AtomicLong consumed = new AtomicLong();
         final LatencyRecorder enqueueLatency = new LatencyRecorder();
         final LatencyRecorder endToEndLatency = new LatencyRecorder();
-        final ReusableOrder[] orders = preallocatedOrders();
         StaticGraph graph;
-        Emitter<ReusableOrder> emitter;
+        PreallocatedEmitter<ReusableOrder> emitter;
         long next;
 
         @Setup(Level.Trial)
@@ -560,7 +599,11 @@ public class TopologyBenchmark {
             System.setProperty("lattice.fusion.enabled", "true");
             try {
                 graph = StaticGraph.builder("three-stage-sink-preallocated-fused")
-                    .source("ingress", ReusableOrder.class, SourceMode.SINGLE_PRODUCER)
+                    .preallocatedSource(
+                        "ingress",
+                        ReusableOrder.class,
+                        PreallocationSpec.pool(ignored -> new ReusableOrder()).poolSize(POOL_SIZE)
+                    )
                     .stage(
                         "normalize",
                         ReusableOrder.class,
@@ -589,12 +632,11 @@ public class TopologyBenchmark {
                     .sink("egress", ReusableOrder.class, order -> {
                         consumed.incrementAndGet();
                         endToEndLatency.recordElapsedSince(order.emittedAtNanos);
-                        order.consumedSequence = order.sequence;
                     }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(POOL_SIZE))
-                    .edge("normalize", "risk", EdgeSpec.spscRing(POOL_SIZE))
-                    .edge("risk", "validate", EdgeSpec.spscRing(POOL_SIZE))
-                    .edge("validate", "egress", EdgeSpec.spscRing(POOL_SIZE))
+                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                    .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
+                    .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
+                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
                     .build();
             } finally {
                 if (previousFusion == null) {
@@ -604,16 +646,12 @@ public class TopologyBenchmark {
                 }
             }
             graph.start();
-            emitter = graph.emitter("ingress", ReusableOrder.class);
+            emitter = graph.preallocatedEmitter("ingress", ReusableOrder.class);
         }
 
         ReusableOrder claim(final long emittedAtNanos) {
             final long sequence = next++;
-            final ReusableOrder order = orders[(int) sequence & (POOL_SIZE - 1)];
-            final long requiredConsumedSequence = sequence - POOL_SIZE;
-            while (requiredConsumedSequence >= 0L && order.consumedSequence < requiredConsumedSequence) {
-                Thread.onSpinWait();
-            }
+            final ReusableOrder order = emitter.claim();
             order.sequence = sequence;
             order.id = sequence;
             order.valid = true;
@@ -628,20 +666,11 @@ public class TopologyBenchmark {
             enqueueLatency.print("oneSourceThreeStageSinkPreallocatedFused", "enqueue");
             endToEndLatency.print("oneSourceThreeStageSinkPreallocatedFused", "endToEnd");
         }
-
-        private static ReusableOrder[] preallocatedOrders() {
-            final ReusableOrder[] orders = new ReusableOrder[POOL_SIZE];
-            for (int i = 0; i < orders.length; i++) {
-                orders[i] = new ReusableOrder();
-            }
-            return orders;
-        }
     }
 
     public static final class PreallocatedSignal {
         long sequence;
         long emittedAtNanos;
-        volatile long consumedSequence = Long.MIN_VALUE;
     }
 
     public static final class ReusableOrder {
@@ -649,7 +678,6 @@ public class TopologyBenchmark {
         long id;
         boolean valid;
         long emittedAtNanos;
-        volatile long consumedSequence = Long.MIN_VALUE;
     }
 
     public record Order(long id, boolean valid, long emittedAtNanos) {
