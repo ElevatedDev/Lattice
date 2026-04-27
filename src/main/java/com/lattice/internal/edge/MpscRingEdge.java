@@ -160,7 +160,7 @@ public final class MpscRingEdge implements MessageEdge {
 
     @Override
     public Object poll() {
-        final long currentHead = (long) CURSOR.get(head);
+        final long currentHead = (long) CURSOR.getOpaque(head);
         final int index = (int) currentHead & mask;
         final Object[] localBuffer = buffer;
         final long[] localPublishedSequences = publishedSequences;
@@ -203,7 +203,7 @@ public final class MpscRingEdge implements MessageEdge {
             return 0;
         }
 
-        final long currentHead = (long) CURSOR.get(head);
+        final long currentHead = (long) CURSOR.getOpaque(head);
         long nextHead = currentHead;
         int targetIndex = offset;
         final Object[] localBuffer = buffer;
@@ -273,7 +273,7 @@ public final class MpscRingEdge implements MessageEdge {
             return drainPlainToProcessor(processor, limit);
         }
 
-        final long currentHead = (long) CURSOR.get(head);
+        final long currentHead = (long) CURSOR.getOpaque(head);
         long nextHead = currentHead;
         int processed = 0;
         final Object[] localBuffer = buffer;
@@ -337,7 +337,7 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private int drainPlainToProcessor(final ItemProcessor processor, final int limit) throws Exception {
-        final long currentHead = (long) CURSOR.get(head);
+        final long currentHead = (long) CURSOR.getOpaque(head);
         long nextHead = currentHead;
         int processed = 0;
         final Object[] localBuffer = buffer;
@@ -403,7 +403,7 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private void releasePlainHeadAtLeast(final long nextHead) {
-        final long currentHead = (long) CURSOR.get(head);
+        final long currentHead = (long) CURSOR.getOpaque(head);
         if (currentHead < nextHead) {
             CURSOR.setRelease(head, nextHead);
         }
@@ -585,7 +585,7 @@ public final class MpscRingEdge implements MessageEdge {
         final LongAccess localPublishTimeAccess = publishTimeAccess;
         final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
         while (true) {
-            final long currentHead = (long) CURSOR.get(head);
+            final long currentHead = (long) CURSOR.getOpaque(head);
             if (currentHead >= targetTail) {
                 return;
             }

@@ -7,6 +7,7 @@ import com.lattice.metrics.StageMetrics;
 import com.lattice.metrics.WorkerState;
 import com.lattice.routing.Stamped;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.Output;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -20,6 +21,8 @@ final class SourceEmitter<T> implements Emitter<T> {
     private final boolean singleProducer;
     private volatile boolean closed;
     private long nextStamp;
+
+    private Output<Object> inlineOutput;
 
     SourceEmitter(
         final String name,
@@ -45,6 +48,18 @@ final class SourceEmitter<T> implements Emitter<T> {
     @Override
     public void emit(final T item) {
         ensureOpenAndRunning();
+        final Output<Object> inline = inlineOutput;
+        if (inline != null) {
+            // Inline source-side fusion: execute the entire downstream fused chain on the
+            // producer thread, bypassing the SPSC ring. Backpressure is impossible because
+            // the chain is fully synchronous; eligibility (single producer, no preallocation,
+            // no stamping, no handle-bearing types) is enforced at graph build time.
+            inline.push(item);
+            if (StageMetrics.hotCountersEnabled()) {
+                metrics.recordEmit();
+            }
+            return;
+        }
         if (stampItems) {
             if (singleProducer) {
                 emitStampedSingleProducer(item);
@@ -52,13 +67,21 @@ final class SourceEmitter<T> implements Emitter<T> {
                 emitStamped(item);
             }
         } else {
-            sender.emitFromSource(item);
+            sender.emitTrustedFromSource(item);
         }
+    }
+
+    void attachInlineOutput(final Output<Object> output) {
+        if (this.inlineOutput != null) {
+            throw new IllegalStateException("source " + name + " already has an inline-fused target");
+        }
+        this.inlineOutput = output;
     }
 
     @Override
     public boolean emit(final T item, final Duration timeout) {
         ensureOpenAndRunning();
+
         if (stampItems) {
             return singleProducer
                 ? emitStampedSingleProducer(item, timeout.toNanos())

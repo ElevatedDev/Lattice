@@ -99,6 +99,47 @@ on-heap, non-batch, non-redirect serial paths without conflicting explicit
 pins. Treat capacity, worker placement, and edge-depth visibility as observable
 behavior: turning fusion on is a topology decision, not a universal default.
 
+### Inline source-side fusion (default-on, eligibility-gated)
+
+For static topologies whose ingress is owned by a single producer (typically a
+benchmark or a hot-path application thread that is already the natural source),
+the runtime additionally elides the source -> fused-worker SPSC handoff and
+executes the entire fused chain on the producer thread. This is enabled by
+default and engages automatically when eligibility holds:
+
+```bash
+# Default. Disable explicitly only if the producer thread must remain isolated
+# from the stage and sink work.
+-Dlattice.fusion.inlineSource=true
+```
+
+Eligibility is strict and conservative:
+
+- `lattice.fusion.enabled=true` must be in effect (default).
+- The source declares `SourceMode.SINGLE_PRODUCER`.
+- The source is not preallocated and not stamped.
+- The source's payload type is not `Object`, `SlabHandle`, or `Stamped`
+  (i.e. cannot transitively carry a slab handle).
+- The source has exactly one outgoing edge, and that edge is fusible (SPSC,
+  BLOCK, on-heap slots, no batch policy).
+- The downstream worker has a fused stage chain or a fused stage->sink chain
+  and exactly one input edge.
+
+When all conditions hold, the consumer worker thread parks immediately after
+bootstrap; emit calls run the entire chain synchronously on the calling
+thread. **Backpressure is not available** in this mode because there is no
+ring to fill: each emit either runs the chain to completion or throws.
+
+Because eligibility requires `SourceMode.SINGLE_PRODUCER` (a correctness
+contract the application explicitly opted in to), turning this on by default
+does not change semantics for graphs that did not declare single-producer
+ingress. Disable it explicitly if your producer thread cannot tolerate doing
+the stage and sink work synchronously (for example because it must remain
+free for placement reasons).
+
+The benchmark `latticeThreeStagePipelineFused` improves materially with this
+default.
+
 ## Batch Size
 
 There are two batching knobs:

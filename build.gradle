@@ -82,6 +82,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    systemProperty 'lattice.fusion.inlineSource', System.getProperty('lattice.fusion.inlineSource', 'true')
     maxParallelForks = providers.gradleProperty('testMaxParallelForks')
         .map { value -> Integer.parseInt(value) }
         .orElse(Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)))
@@ -180,6 +181,18 @@ jmh {
     fork = 1
     warmupIterations = 3
     iterations = 5
+
+    jvmArgsAppend = [
+        '-Xms2g',
+        '-Xmx2g',
+        '-XX:+AlwaysPreTouch',
+        '-XX:+UnlockDiagnosticVMOptions',
+        '-XX:+UseParallelGC',
+        '-Dlattice.metrics.hotCounters=false',
+        '-Dlattice.metrics.residence=false',
+        '-Dlattice.metrics.stageHistograms=false',
+        '-Dlattice.runtime.fusedLogicalEdgeMetrics=false'
+    ]
 }
 
 tasks.register('nativeBuildRelease', Exec) {

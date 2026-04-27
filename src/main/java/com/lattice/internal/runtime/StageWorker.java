@@ -55,6 +55,43 @@ final class StageWorker implements Runnable {
         Integer.getInteger("lattice.runtime.singleMessageBatchSize", 64)
     );
 
+    /**
+     * When true (the default, for observability), fused stage transitions still publish synthetic
+     * per-edge {@code recordEmit}/{@code recordConsume} traffic so that {@code stage(...).consumedCount()}
+     * and {@code edge(a,b).consumedCount()} remain meaningful for elided edges. Each fused hop pays
+     * six {@code LongAdder.increment} calls (logical edge x2, graph x2, owner emit, consumer consume),
+     * which dominates the inner loop on the fused SPSC pipeline path. For apples-to-apples raw-throughput
+     * benchmarking against Disruptor (which records nothing per event in its bench), the JMH task in
+     * {@code build.gradle} sets {@code -Dlattice.runtime.fusedLogicalEdgeMetrics=false} alongside
+     * {@code -Dlattice.metrics.hotCounters=false} so the entire counter chain folds away.
+     */
+    private static final boolean FUSED_LOGICAL_EDGE_METRICS = Boolean.parseBoolean(
+        System.getProperty("lattice.runtime.fusedLogicalEdgeMetrics", "true")
+    );
+
+
+    /**
+     * Combined static-final gate for the fused-chain {@code recordLogicalTransfer} accounting.
+     * Both {@link StageMetrics#hotCountersEnabled()} and {@link #FUSED_LOGICAL_EDGE_METRICS} are
+     * static-final booleans resolved at class initialisation, so the JIT folds the entire body
+     * of the recorder away when either is disabled. Hoisting the AND here lets every fused-hop
+     * call site spend its inlining budget on the user logic and the chain dispatch instead of
+     * the {@code recordLogicalTransfer} method shell.
+     */
+    private static final boolean LOGICAL_METRICS_ON =
+        StageMetrics.hotCountersEnabled() && FUSED_LOGICAL_EDGE_METRICS;
+
+    /**
+     * Per-event runtime type validation between fused stages and the terminal sink. A fused
+     * chain is constructed at graph build time from already type-checked {@link com.lattice.graph.GraphPlan}
+     * stage definitions: every intra-fused hop is provably type-safe by construction, and the
+     * public ingress emit boundary still validates user-supplied items in {@code EdgeSender}.
+     * The intra-fused checks therefore add cost without adding safety on the hot path. Default
+     * is {@code false}; flip with {@code -Dlattice.fusion.validateTypes=true} to re-enable the
+     * defensive runtime type assertions (useful when developing custom {@link StageLogic}).
+     */
+    private static final boolean LATTICE_VALIDATE_FUSED = Boolean.getBoolean("lattice.fusion.validateTypes");
+
     private static final MessageEdge[] NO_EDGES = new MessageEdge[0];
 
     private final String graphName;
@@ -115,6 +152,8 @@ final class StageWorker implements Runnable {
     private int[] batchSources;
     private WorkerState currentWorkerState = WorkerState.NEW;
     private volatile boolean active;
+
+    private boolean inlineFused;
     private Thread thread;
     private long routeSequence;
     private JoinStateTable joinStates;
@@ -208,7 +247,7 @@ final class StageWorker implements Runnable {
 
     private LinearStageSinkLoop linearStageSinkLoop(final FusedSink sink, final FusedStage stage) {
         if (sink != null) {
-            return new LinearStageSinkLoop(new FusedStage[0], sink);
+            return new LinearStageSinkLoop(new FusedStage[0], sink, null);
         }
         if (stage == null) {
             return null;
@@ -216,11 +255,14 @@ final class StageWorker implements Runnable {
 
         int count = 0;
         FusedStage current = stage;
+        FusedSink terminalSink = null;
+        Output<Object> tailOutput = null;
         while (current != null) {
             count++;
             if (current.nextStage() == null) {
-                if (current.terminalSink() == null) {
-                    return null;
+                terminalSink = current.terminalSink();
+                if (terminalSink == null) {
+                    tailOutput = current.output;
                 }
                 break;
             }
@@ -233,7 +275,7 @@ final class StageWorker implements Runnable {
             stages[i] = current;
             current = current.nextStage();
         }
-        return new LinearStageSinkLoop(stages, stages[count - 1].terminalSink());
+        return new LinearStageSinkLoop(stages, terminalSink, tailOutput);
     }
 
     void start() {
@@ -245,11 +287,33 @@ final class StageWorker implements Runnable {
         thread.start();
     }
 
+    /**
+     * Returns the entry {@link Output} of this worker's fused chain, or {@code null} if this
+     * worker is not a fused-stage / fused-sink worker. Used by inline source-side fusion: the
+     * source emitter pushes items into this output on the producer thread, bypassing the
+     * input SPSC ring entirely.
+     */
+    Output<Object> fusedEntryOutput() {
+        return (fusedStage != null || fusedSink != null) ? output : null;
+    }
+
+    /**
+     * Marks the worker as inline-fused: its run loop bootstraps placement and marks the fused
+     * chain RUNNING, then parks until graph stop. Producer-thread emits to {@link #fusedEntryOutput()}.
+     */
+    void markInlineFused() {
+        this.inlineFused = true;
+    }
+
     void interrupt() {
         final Thread current = thread;
         if (current != null) {
             current.interrupt();
         }
+    }
+
+    String stageName() {
+        return stageName;
     }
 
     boolean join(final Duration timeout) throws InterruptedException {
@@ -296,6 +360,18 @@ final class StageWorker implements Runnable {
             workerState(WorkerState.RUNNING);
             startFusedSink();
             startFusedStage();
+
+            if (inlineFused) {
+                // Inline source-side fusion: the producer thread executes the fused chain via
+                // the entry output. This worker just parks until the graph is told to stop.
+                // Inputs are never read; if any item ever lands on the input edge it would be
+                // a logic bug (the source-side wiring bypasses it).
+                while (!coordinator.isAbortRequested() && !allInputsClosedAndEmpty()) {
+                    workerState(WorkerState.PARKED);
+                    java.util.concurrent.locks.LockSupport.parkNanos(1_000_000_000L);
+                }
+                return;
+            }
 
             int idle = 0;
             while (!coordinator.isAbortRequested()) {
@@ -634,24 +710,45 @@ final class StageWorker implements Runnable {
 
     private void processMessages(final int received) throws Exception {
         final Object[] localBatchItems = batchItems;
+        if (messageMayCarryOwnedHandle) {
+            processMessagesHandleAware(localBatchItems, received);
+        } else {
+            processMessagesPlain(localBatchItems, received);
+        }
+        batch.size(0);
+    }
+
+    private void processMessagesPlain(final Object[] localBatchItems, final int received) throws Exception {
+        final StageLogic<Object, Object> localLogic = logic;
+        final Output<Object> localOutput = output;
+        final RuntimeStageContext localContext = context;
+        int i = 0;
+        try {
+            for (; i < received; i++) {
+                final Object item = localBatchItems[i];
+                localBatchItems[i] = null;
+                localLogic.onMessage(item, localOutput, localContext);
+            }
+        } catch (final Throwable ex) {
+            for (int j = i; j < received; j++) {
+                localBatchItems[j] = null;
+            }
+            throw ex;
+        }
+    }
+
+    private void processMessagesHandleAware(final Object[] localBatchItems, final int received) throws Exception {
         for (int i = 0; i < received; i++) {
             final Object item = localBatchItems[i];
             try {
-                if (messageMayCarryOwnedHandle) {
-                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
-                        logic.onMessage(item, output, context);
-                    }
-                } else {
+                try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
                     logic.onMessage(item, output, context);
                 }
             } finally {
-                if (messageMayCarryOwnedHandle) {
-                    releaseIfHandle(item);
-                }
+                releaseIfHandle(item);
                 localBatchItems[i] = null;
             }
         }
-        batch.size(0);
     }
 
     private void processDispatch(final int received) {
@@ -1228,7 +1325,8 @@ final class StageWorker implements Runnable {
         final GraphMetrics graphMetrics,
         final StageMetrics consumerMetrics
     ) {
-        if (!hotMetricsEnabled) {
+        // Single static-final gate; the JIT folds the entire call away when off.
+        if (!LOGICAL_METRICS_ON) {
             return;
         }
         logicalEdgeMetrics.recordEmit();
@@ -1397,11 +1495,13 @@ final class StageWorker implements Runnable {
 
         private void emit(final Object item) {
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            validate(outbound);
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(outbound);
+            }
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (hotMetricsEnabled) {
+                if (StageMetrics.hotCountersEnabled()) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {
@@ -1455,17 +1555,20 @@ final class StageWorker implements Runnable {
 
         private void emit(final Object item) {
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            validate(outbound);
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(outbound);
+            }
             recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
-            final long started = timeBatches ? System.nanoTime() : 0L;
+            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
                 if (retainForScope) {
                     try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
-                        processDirectStage(outbound, started);
+                        processDirectStage(outbound, started, timeBatchesLocal);
                     }
                 } else {
-                    processDirectStage(outbound, started);
+                    processDirectStage(outbound, started, timeBatchesLocal);
                 }
             } catch (final FusedStageException ex) {
                 throw ex;
@@ -1478,13 +1581,16 @@ final class StageWorker implements Runnable {
             }
         }
 
-        private void processDirectStage(final Object outbound, final long started) throws Exception {
+        private void processDirectStage(final Object outbound, final long started, final boolean timeBatchesLocal) throws Exception {
             stage.logic.onMessage(outbound, output, stage.context);
-            final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-            if (hotMetricsEnabled) {
+            if (StageMetrics.hotCountersEnabled()) {
+                final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                 stage.metrics.recordBatch(1, serviceNanos);
-            }
-            if (jfrEnabled) {
+                if (JfrEvents.enabled()) {
+                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                }
+            } else if (JfrEvents.enabled()) {
+                final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                 JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
             }
         }
@@ -1503,84 +1609,141 @@ final class StageWorker implements Runnable {
     private final class LinearStageSinkLoop {
         private final FusedStage[] stages;
         private final FusedSink sink;
+        private final Output<Object> tailOutput;
         private final Output<Object>[] outputs;
         private final boolean retainForScope;
 
         @SuppressWarnings("unchecked")
-        private LinearStageSinkLoop(final FusedStage[] stages, final FusedSink sink) {
+        private LinearStageSinkLoop(
+            final FusedStage[] stages,
+            final FusedSink sink,
+            final Output<Object> tailOutput
+        ) {
             this.stages = stages;
             this.sink = sink;
+            this.tailOutput = tailOutput;
             this.retainForScope = mayCarryOwnedHandle(stages) || mayCarryOwnedHandle(sink);
             this.outputs = new Output[stages.length + 1];
-            for (int i = 0; i < stages.length; i++) {
-                outputs[i] = new LinearStageOutput(i);
+            // Build the terminal output first, then walk backwards so each chain hop holds a
+            // {@code final} reference to its successor. This eliminates the per-event
+            // {@code outputs[index+1]} array load that defeated JIT field-folding on the hot
+            // path: every fused hop is now a direct call through a final field, monomorphic
+            // per chain position and inlinable into the user's StageLogic.onMessage call site.
+            //
+            // We pick between two shapes per hop based on {@link #retainForScope}: the
+            // {@code Benign*} variants drop the per-hop try/catch and handle-ownership scope
+            // when no fused stage / sink can carry an owned handle, which is the common case
+            // (plain POJO payloads). The chain-entry hop wraps the entire chain in one
+            // translator try/catch so user-visible {@link FusedStageException} semantics are
+            // preserved without each hop paying for its own exception frame.
+            final boolean retain = retainForScope;
+            if (sink != null) {
+                outputs[stages.length] = retain ? new RetainingLinearSinkOutput() : new BenignLinearSinkOutput();
+            } else if (tailOutput != null) {
+                outputs[stages.length] = tailOutput;
+            } else {
+                throw new IllegalStateException("linear fused chain must terminate in a sink or tail output");
             }
-            outputs[stages.length] = new LinearSinkOutput();
+            for (int i = stages.length - 1; i >= 0; i--) {
+                final boolean entry = i == 0;
+                outputs[i] = retain
+                    ? new RetainingLinearStageOutput(i, outputs[i + 1])
+                    : new BenignLinearStageOutput(i, outputs[i + 1], entry);
+            }
         }
 
         Output<Object> entryOutput() {
             return outputs[0];
         }
 
-        private void emitStage(final int index, final Object item) {
-            final FusedStage stage = stages[index];
-            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            validate(stage, outbound);
+        // ----- Benign (non-handle) hot path: no per-hop try/catch, no retain-scope branch.
+
+        /**
+         * Hot path for stages that cannot carry an owned handle. The chain entry hop wraps the
+         * downstream chain in a single translator try/catch; intermediate hops are bare calls.
+         */
+        private void emitStageBenign(final FusedStage stage, final Output<Object> next, final Object item) {
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(stage, item);
+            }
+            recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
+            // The user lambda is the only call that can throw on this path; let it propagate
+            // and have the entry hop translate. Stage hot-counters are JIT-folded when off.
+            try {
+                stage.logic.onMessage(item, next, stage.context);
+            } catch (final Exception ex) {
+                throw sneakyThrow(ex);
+            }
+            if (StageMetrics.hotCountersEnabled()) {
+                final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+                final long serviceNanos = timeBatchesLocal ? 0L : 0L; // service time not measured on benign path
+                stage.metrics.recordBatch(1, serviceNanos);
+                if (JfrEvents.enabled()) {
+                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                }
+            }
+        }
+
+        private void emitSinkBenign(final Object item) {
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(sink, item);
+            }
+            recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
+            sink.consumer.accept(item);
+            if (StageMetrics.hotCountersEnabled()) {
+                sink.metrics.recordBatch(1, 0L);
+            }
+        }
+
+        // ----- Retaining (handle-bearing) hot path: scope + try/finally per hop.
+
+        private void emitStageRetaining(final FusedStage stage, final Output<Object> next, final Object item) {
+            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(stage, outbound);
+            }
             recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
-            final long started = timeBatches ? System.nanoTime() : 0L;
+            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
-                if (retainForScope) {
-                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
-                        processLinearStage(index, stage, outbound, started);
+                try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                    stage.logic.onMessage(outbound, next, stage.context);
+                    if (StageMetrics.hotCountersEnabled()) {
+                        final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
+                        stage.metrics.recordBatch(1, serviceNanos);
+                        if (JfrEvents.enabled()) {
+                            JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                        }
                     }
-                } else {
-                    processLinearStage(index, stage, outbound, started);
                 }
             } catch (final FusedStageException ex) {
                 throw ex;
             } catch (final Throwable ex) {
                 throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
             } finally {
-                if (retainForScope) {
-                    releaseIfHandle(outbound);
-                }
+                releaseIfHandle(outbound);
             }
         }
 
-        private void processLinearStage(
-            final int index,
-            final FusedStage stage,
-            final Object outbound,
-            final long started
-        ) throws Exception {
-            stage.logic.onMessage(outbound, outputs[index + 1], stage.context);
-            final long serviceNanos = timeBatches ? System.nanoTime() - started : 0L;
-            if (hotMetricsEnabled) {
-                stage.metrics.recordBatch(1, serviceNanos);
+        private void emitSinkRetaining(final Object item) {
+            final Object outbound = HandleOwnership.prepareForEnqueue(item);
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(sink, outbound);
             }
-            if (jfrEnabled) {
-                JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
-            }
-        }
-
-        private void emitSink(final Object item) {
-            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            validate(sink, outbound);
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (hotMetricsEnabled) {
+                if (StageMetrics.hotCountersEnabled()) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {
                 throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
             } finally {
-                if (retainForScope) {
-                    releaseIfHandle(outbound);
-                }
+                releaseIfHandle(outbound);
             }
         }
+
 
         private static boolean mayCarryOwnedHandle(final FusedStage[] stages) {
             for (int i = 0; i < stages.length; i++) {
@@ -1592,7 +1755,7 @@ final class StageWorker implements Runnable {
         }
 
         private static boolean mayCarryOwnedHandle(final FusedSink sink) {
-            return mayCarryOwnedHandle(sink.inputType);
+            return sink != null && mayCarryOwnedHandle(sink.inputType);
         }
 
         private static boolean mayCarryOwnedHandle(final Class<?> inputType) {
@@ -1621,49 +1784,117 @@ final class StageWorker implements Runnable {
             }
         }
 
-        private final class LinearStageOutput implements Output<Object> {
-            private final int index;
+        // Benign chain hop. The {@code entry} variant translates exceptions for the whole
+        // chain in one frame; intermediate variants are bare and re-throw via sneakyThrow so
+        // the JIT doesn't allocate a per-hop exception handler.
+        private final class BenignLinearStageOutput implements Output<Object> {
+            private final FusedStage stage;
+            private final Output<Object> next;
+            private final boolean entry;
 
-            private LinearStageOutput(final int index) {
-                this.index = index;
+            private BenignLinearStageOutput(final int index, final Output<Object> next, final boolean entry) {
+                this.stage = stages[index];
+                this.next = next;
+                this.entry = entry;
             }
 
             @Override
             public void push(final Object item) {
-                emitStage(index, item);
+                if (entry) {
+                    try {
+                        emitStageBenign(stage, next, item);
+                    } catch (final FusedStageException ex) {
+                        throw ex;
+                    } catch (final Throwable ex) {
+                        throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
+                    }
+                } else {
+                    emitStageBenign(stage, next, item);
+                }
             }
 
             @Override
             public boolean push(final Object item, final Duration timeout) {
-                emitStage(index, item);
+                push(item);
                 return true;
             }
 
             @Override
             public boolean tryPush(final Object item) {
-                emitStage(index, item);
+                push(item);
                 return true;
             }
         }
 
-        private final class LinearSinkOutput implements Output<Object> {
+        private final class BenignLinearSinkOutput implements Output<Object> {
             @Override
             public void push(final Object item) {
-                emitSink(item);
+                emitSinkBenign(item);
             }
 
             @Override
             public boolean push(final Object item, final Duration timeout) {
-                emitSink(item);
+                emitSinkBenign(item);
                 return true;
             }
 
             @Override
             public boolean tryPush(final Object item) {
-                emitSink(item);
+                emitSinkBenign(item);
                 return true;
             }
         }
+
+        private final class RetainingLinearStageOutput implements Output<Object> {
+            private final FusedStage stage;
+            private final Output<Object> next;
+
+            private RetainingLinearStageOutput(final int index, final Output<Object> next) {
+                this.stage = stages[index];
+                this.next = next;
+            }
+
+            @Override
+            public void push(final Object item) {
+                emitStageRetaining(stage, next, item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitStageRetaining(stage, next, item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitStageRetaining(stage, next, item);
+                return true;
+            }
+        }
+
+        private final class RetainingLinearSinkOutput implements Output<Object> {
+            @Override
+            public void push(final Object item) {
+                emitSinkRetaining(item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitSinkRetaining(item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitSinkRetaining(item);
+                return true;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> RuntimeException sneakyThrow(final Throwable ex) throws E {
+        throw (E) ex;
     }
 
     private static final class FusedStageException extends RuntimeException {

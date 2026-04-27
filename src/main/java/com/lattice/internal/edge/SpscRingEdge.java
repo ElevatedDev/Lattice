@@ -41,8 +41,9 @@ public final class SpscRingEdge implements MessageEdge {
     private final PaddedLong head = new PaddedLong();
     private final PaddedLong tail = new PaddedLong();
     private final PaddedBoolean closed = new PaddedBoolean();
-    private long producerHeadCache;
-    private long consumerTailCache;
+
+    private final PaddedLongCache producerHeadCacheBox = new PaddedLongCache();
+    private final PaddedLongCache consumerTailCacheBox = new PaddedLongCache();
 
     public SpscRingEdge(
         final String from,
@@ -97,15 +98,20 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean offer(final Object item) {
-        final long currentTailRaw = (long) CURSOR.getAcquire(tail);
+        final long currentTailRaw = (long) CURSOR.getOpaque(tail);
         if (tailClosed(currentTailRaw)) {
-            return false;
+
+            final long reloaded = (long) CURSOR.getAcquire(tail);
+            if (tailClosed(reloaded)) {
+                return false;
+            }
         }
         final long currentTail = tailSequence(currentTailRaw);
         final long wrapPoint = currentTail - capacity;
-        if (producerHeadCache <= wrapPoint) {
-            producerHeadCache = (long) CURSOR.getAcquire(head);
-            if (producerHeadCache <= wrapPoint) {
+        final PaddedLongCache producerHeadCacheBoxLocal = producerHeadCacheBox;
+        if (producerHeadCacheBoxLocal.value <= wrapPoint) {
+            producerHeadCacheBoxLocal.value = (long) CURSOR.getAcquire(head);
+            if (producerHeadCacheBoxLocal.value <= wrapPoint) {
                 return false;
             }
         }
@@ -113,14 +119,6 @@ public final class SpscRingEdge implements MessageEdge {
         final int index = (int) currentTail & mask;
         final Object[] localBuffer = buffer;
         final LongAccess localPublishTimes = publishTimes;
-        if (closed()) {
-            if (localPublishTimes != null) {
-                localPublishTimes.setPlain(index, 0L);
-            }
-            ELEMENT.setRelease(localBuffer, index, DROPPED);
-            CURSOR.setRelease(tail, currentTail + 1L);
-            return false;
-        }
         if (localPublishTimes != null) {
             localPublishTimes.setPlain(index, System.nanoTime());
         }
@@ -135,11 +133,12 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public Object poll() {
-        final long currentHead = (long) CURSOR.get(head);
-        long currentTail = consumerTailCache;
+        final long currentHead = (long) CURSOR.getOpaque(head);
+        final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
+        long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
             currentTail = tailSequence((long) CURSOR.getAcquire(tail));
-            consumerTailCache = currentTail;
+            consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
             return null;
@@ -177,11 +176,12 @@ public final class SpscRingEdge implements MessageEdge {
             return 0;
         }
 
-        final long currentHead = (long) CURSOR.get(head);
-        long currentTail = consumerTailCache;
+        final long currentHead = (long) CURSOR.getOpaque(head);
+        final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
+        long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
             currentTail = tailSequence((long) CURSOR.getAcquire(tail));
-            consumerTailCache = currentTail;
+            consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
             return 0;
@@ -242,11 +242,12 @@ public final class SpscRingEdge implements MessageEdge {
             return 0;
         }
 
-        final long currentHead = (long) CURSOR.get(head);
-        long currentTail = consumerTailCache;
+        final long currentHead = (long) CURSOR.getOpaque(head);
+        final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
+        long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
             currentTail = tailSequence((long) CURSOR.getAcquire(tail));
-            consumerTailCache = currentTail;
+            consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
             return 0;
@@ -412,7 +413,7 @@ public final class SpscRingEdge implements MessageEdge {
         }
         final long targetTail = tailSequence((long) CURSOR.getAcquire(tail));
         while (true) {
-            final long currentHead = (long) CURSOR.get(head);
+            final long currentHead = (long) CURSOR.getOpaque(head);
             if (currentHead >= targetTail) {
                 return;
             }

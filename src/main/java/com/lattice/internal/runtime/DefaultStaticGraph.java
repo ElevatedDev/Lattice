@@ -7,6 +7,7 @@ import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.graph.PreallocationSpec;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.EdgeFactory;
 import com.lattice.internal.edge.MessageEdge;
@@ -20,6 +21,8 @@ import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
+import com.lattice.routing.Stamped;
+import com.lattice.slab.SlabHandle;
 import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.PreallocatedEmitter;
@@ -92,6 +95,7 @@ public final class DefaultStaticGraph implements StaticGraph {
         buildEdges(edgeMetrics);
         buildEmitters(stageMetrics);
         buildWorkers(stageMetrics);
+        wireInlineFusion();
         coordinator.attach(edgeArray, workerArray, sourceEmitterArray);
     }
 
@@ -488,6 +492,33 @@ public final class DefaultStaticGraph implements StaticGraph {
         return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(value - 1));
     }
 
+    private void wireInlineFusion() {
+        final Map<String, String> inlineFused = runtimePlan.inlineFusedWorkerToSource();
+        if (inlineFused.isEmpty()) {
+            return;
+        }
+        // Index workers by name once for O(1) lookup.
+        final Map<String, StageWorker> workersByName = new LinkedHashMap<>();
+        for (final StageWorker worker : workers) {
+            workersByName.put(worker.stageName(), worker);
+        }
+        for (final Map.Entry<String, String> entry : inlineFused.entrySet()) {
+            final String workerName = entry.getKey();
+            final String sourceName = entry.getValue();
+            final StageWorker worker = workersByName.get(workerName);
+            final SourceEmitter<?> emitter = emitters.get(sourceName);
+            if (worker == null || emitter == null) {
+                continue;
+            }
+            final com.lattice.stage.Output<Object> entryOutput = worker.fusedEntryOutput();
+            if (entryOutput == null) {
+                continue;
+            }
+            emitter.attachInlineOutput(entryOutput);
+            worker.markInlineFused();
+        }
+    }
+
     private void buildWorkers(final Map<String, StageMetrics> stageMetrics) {
         for (final String workerName : runtimePlan.workerOrder()) {
             final NodeDefinition node = compiled.nodes().get(workerName);
@@ -785,13 +816,15 @@ public final class DefaultStaticGraph implements StaticGraph {
             List<String> workerOrder,
             Map<String, FusedSinkPlan> fusedSinks,
             Map<String, FusedStagePlan> fusedStages,
-            Set<String> elidedEdgeKeys
+            Set<String> elidedEdgeKeys,
+            Map<String, String> inlineFusedWorkerToSource
     ) {
         private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
+        private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
 
         static RuntimePlan build(final CompiledGraph compiled) {
             if (!Boolean.parseBoolean(System.getProperty(FUSION_ENABLED_PROPERTY, "true"))) {
-                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of());
+                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of(), Map.of());
             }
 
             final Map<String, FusedSinkPlan> fusedSinks = new LinkedHashMap<>();
@@ -825,17 +858,29 @@ public final class DefaultStaticGraph implements StaticGraph {
             }
 
             if (fusedSinks.isEmpty() && fusedStages.isEmpty()) {
-                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of());
+                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of(), Map.of());
             }
 
             final List<String> actualWorkers = compiled.workerOrder().stream()
                     .filter(worker -> !skippedWorkers.contains(worker))
                     .toList();
+            // Inline source-side fusion: when explicitly enabled via system property, identify
+            // fused-stage / fused-sink workers whose only input is a single-producer source
+            // emitting a non-handle, non-stamped payload over a fusible BLOCK SPSC edge. Such
+            // workers no longer need their thread for hot-path work; the producer thread runs
+            // the fused chain synchronously.
+            final Map<String, String> inlineFused = inlineFusedWorkerToSource(
+                    compiled,
+                    fusedStages,
+                    fusedSinks,
+                    elidedEdges
+            );
             return new RuntimePlan(
                     actualWorkers,
                     Map.copyOf(fusedSinks),
                     Map.copyOf(fusedStages),
-                    Set.copyOf(elidedEdges)
+                    Set.copyOf(elidedEdges),
+                    Map.copyOf(inlineFused)
             );
         }
 
@@ -972,6 +1017,61 @@ public final class DefaultStaticGraph implements StaticGraph {
                     && spec.overflowPolicy().kind() == OverflowPolicy.OverflowKind.BLOCK
                     && spec.memoryMode().kind() == MemoryMode.MemoryKind.ON_HEAP_SLOTS
                     && spec.batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
+        }
+
+        private static Map<String, String> inlineFusedWorkerToSource(
+                final CompiledGraph compiled,
+                final Map<String, FusedStagePlan> fusedStages,
+                final Map<String, FusedSinkPlan> fusedSinks,
+                final Set<String> elidedEdges
+        ) {
+            if (!Boolean.parseBoolean(System.getProperty(INLINE_SOURCE_FUSION_PROPERTY, "true"))) {
+                return Map.of();
+            }
+            final Map<String, String> mapping = new LinkedHashMap<>();
+            collectInlineEligible(compiled, fusedStages.keySet(), elidedEdges, mapping);
+            collectInlineEligible(compiled, fusedSinks.keySet(), elidedEdges, mapping);
+            return mapping;
+        }
+
+        private static void collectInlineEligible(
+                final CompiledGraph compiled,
+                final Set<String> fusedWorkerNames,
+                final Set<String> elidedEdges,
+                final Map<String, String> mapping
+        ) {
+            for (final String workerName : fusedWorkerNames) {
+                final List<EdgeDefinition> incoming = compiled.incomingByTarget()
+                        .getOrDefault(workerName, List.of());
+                if (incoming.size() != 1) {
+                    continue;
+                }
+                final EdgeDefinition edge = incoming.get(0);
+                if (elidedEdges.contains(edge.key()) || !fusibleEdge(edge.spec())) {
+                    continue;
+                }
+                final NodeDefinition source = compiled.nodes().get(edge.from());
+                if (source == null
+                        || source.kind() != GraphPlan.NodeKind.SOURCE
+                        || source.sourceMode() != SourceMode.SINGLE_PRODUCER
+                        || source.preallocationSpec() != null
+                        || source.stampedSource()
+                        || mayCarryHandle(source.outputType())) {
+                    continue;
+                }
+                final List<EdgeDefinition> sourceOutgoing = compiled.normalOutgoingBySource()
+                        .getOrDefault(source.name(), List.of());
+                if (sourceOutgoing.size() != 1) {
+                    continue;
+                }
+                mapping.put(workerName, source.name());
+            }
+        }
+
+        private static boolean mayCarryHandle(final Class<?> type) {
+            return type == Object.class
+                    || type.isAssignableFrom(SlabHandle.class)
+                    || type.isAssignableFrom(Stamped.class);
         }
     }
 }
