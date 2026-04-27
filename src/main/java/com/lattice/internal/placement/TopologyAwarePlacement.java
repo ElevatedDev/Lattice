@@ -5,8 +5,9 @@ import com.lattice.internal.graph.NodeDefinition;
 import com.lattice.placement.PinPolicy;
 import com.staticgraph.runtime.nativeaccess.NativeCapabilities;
 import com.staticgraph.runtime.nativeaccess.NativeTopology;
-import com.staticgraph.runtime.nativeaccess.NativeTopologyException;
+import com.staticgraph.runtime.nativeaccess.NativeTopologySnapshot;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,21 +21,20 @@ public final class TopologyAwarePlacement {
     }
 
     public static Map<String, PinPolicy> plan(final CompiledGraph compiled, final List<String> workerOrder) {
-        if (!Boolean.getBoolean(ENABLED_PROPERTY) || !NativeTopology.isLoaded()) {
+        if (!Boolean.getBoolean(ENABLED_PROPERTY)) {
             return Map.of();
         }
 
-        final NativeCapabilities capabilities;
-        try {
-            capabilities = NativeTopology.capabilities();
-        } catch (final NativeTopologyException ex) {
+        final NativeTopologySnapshot snapshot = NativeTopology.snapshot();
+        if (!snapshot.loaded() || !snapshot.hasCapabilities()) {
             return Map.of();
         }
+        final NativeCapabilities capabilities = snapshot.capabilities();
         if (!capabilities.affinity() || !capabilities.numaQuery()) {
             return Map.of();
         }
 
-        final List<CpuCandidate> candidates = candidates();
+        final List<CpuCandidate> candidates = candidates(snapshot.cpuTopology());
         if (candidates.isEmpty()) {
             return Map.of();
         }
@@ -63,43 +63,22 @@ public final class TopologyAwarePlacement {
         return workers;
     }
 
-    private static List<CpuCandidate> candidates() {
-        final int limit = cpuScanLimit();
-        final List<CpuCandidate> candidates = new ArrayList<>(limit);
-        for (int cpu = 0; cpu < limit; cpu++) {
-            final boolean allowed;
-            try {
-                allowed = NativeTopology.isCpuAllowed(cpu);
-            } catch (final RuntimeException ex) {
+    private static List<CpuCandidate> candidates(final NativeTopologySnapshot.CpuTopology topology) {
+        if (!topology.hasNumaMetadata()) {
+            return List.of();
+        }
+
+        final BitSet allowedCpus = topology.allowedCpus();
+        final List<CpuCandidate> candidates = new ArrayList<>(allowedCpus.cardinality());
+        for (int cpu = allowedCpus.nextSetBit(0); cpu >= 0; cpu = allowedCpus.nextSetBit(cpu + 1)) {
+            final int numaNode = topology.numaNodeOfCpu(cpu);
+            if (numaNode < 0) {
                 continue;
             }
-            if (!allowed) {
-                continue;
-            }
-            try {
-                candidates.add(new CpuCandidate(cpu, NativeTopology.numaNodeOfCpu(cpu)));
-            } catch (final RuntimeException ex) {
-                // CPUs without NUMA metadata are not useful for locality planning.
-            }
+            candidates.add(new CpuCandidate(cpu, numaNode));
         }
         candidates.sort(Comparator.comparingInt(CpuCandidate::numaNode).thenComparingInt(CpuCandidate::cpu));
         return candidates;
-    }
-
-    private static int cpuScanLimit() {
-        final int max = positiveNativeCount(1024, NativeTopology::maxCpuCount);
-        final int configured = positiveNativeCount(max, NativeTopology::configuredCpuCount);
-        final int online = positiveNativeCount(configured, NativeTopology::onlineCpuCount);
-        return Math.max(1, Math.min(max, Math.max(configured, online)));
-    }
-
-    private static int positiveNativeCount(final int fallback, final NativeCount count) {
-        try {
-            final int value = count.get();
-            return value > 0 ? value : fallback;
-        } catch (final RuntimeException ex) {
-            return fallback;
-        }
     }
 
     private static List<CpuCandidate> bestNumaGroup(final List<CpuCandidate> candidates, final int workerCount) {
@@ -121,10 +100,5 @@ public final class TopologyAwarePlacement {
     }
 
     private record CpuCandidate(int cpu, int numaNode) {
-    }
-
-    @FunctionalInterface
-    private interface NativeCount {
-        int get();
     }
 }

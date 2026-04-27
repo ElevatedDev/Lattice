@@ -7,6 +7,7 @@ import com.lattice.routing.Stamped;
 import com.lattice.slab.SlabHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.Objects;
 import java.util.function.Function;
 
 public final class MpscRingEdge implements MessageEdge {
@@ -14,6 +15,7 @@ public final class MpscRingEdge implements MessageEdge {
     private static final VarHandle CURSOR;
     private static final VarHandle CLOSED;
     private static final VarHandle ELEMENT;
+    private static final VarHandle LONG_ELEMENT;
     private static final Object SKIPPED = new Object();
     private static final Object DROPPED = new Object();
     private static final long CLOSED_TAIL_BIT = Long.MIN_VALUE;
@@ -24,6 +26,7 @@ public final class MpscRingEdge implements MessageEdge {
             CURSOR = MethodHandles.lookup().findVarHandle(PaddedLong.class, "value", long.class);
             CLOSED = MethodHandles.lookup().findVarHandle(PaddedBoolean.class, "value", boolean.class);
             ELEMENT = MethodHandles.arrayElementVarHandle(Object[].class);
+            LONG_ELEMENT = MethodHandles.arrayElementVarHandle(long[].class);
         } catch (final ReflectiveOperationException ex) {
             throw new ExceptionInInitializerError(ex);
         }
@@ -34,12 +37,15 @@ public final class MpscRingEdge implements MessageEdge {
     private final int capacity;
     private final int mask;
     private final MemoryMode.MemoryKind memoryKind;
+    private final boolean heapMetadata;
     private final EdgeMetrics metrics;
     private final GraphMetrics graphMetrics;
     private final boolean plainClaim;
     private Object[] buffer;
-    private LongAccess publishedSequences;
-    private LongAccess publishTimes;
+    private long[] publishedSequences;
+    private LongAccess publishedSequenceAccess;
+    private long[] publishTimes;
+    private LongAccess publishTimeAccess;
     private final PaddedLong head = new PaddedLong();
     private final PaddedLong tail = new PaddedLong();
     private final PaddedLong producerHeadCache = new PaddedLong();
@@ -77,11 +83,13 @@ public final class MpscRingEdge implements MessageEdge {
         final boolean plainClaim
     ) {
         validateCapacity(capacity);
+        final MemoryMode.MemoryKind selectedMemoryKind = Objects.requireNonNull(memoryMode, "memoryMode").kind();
         this.from = from;
         this.to = to;
         this.capacity = capacity;
         this.mask = capacity - 1;
-        this.memoryKind = memoryMode.kind();
+        this.memoryKind = selectedMemoryKind;
+        this.heapMetadata = selectedMemoryKind != MemoryMode.MemoryKind.OFF_HEAP_HANDLES;
         this.metrics = metrics;
         this.graphMetrics = graphMetrics;
         this.plainClaim = plainClaim;
@@ -100,8 +108,11 @@ public final class MpscRingEdge implements MessageEdge {
     @Override
     public boolean offer(final Object item) {
         final Object[] localBuffer = buffer;
-        final LongAccess localPublishedSequences = publishedSequences;
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
         final int localCapacity = capacity;
         final int localMask = mask;
         long currentTailRaw;
@@ -114,12 +125,12 @@ public final class MpscRingEdge implements MessageEdge {
             }
             currentTail = tailSequence(currentTailRaw);
             final long wrapPoint = currentTail - localCapacity;
-            if ((long) CURSOR.getAcquire(producerHeadCache) <= wrapPoint) {
+            if ((long) CURSOR.getOpaque(producerHeadCache) <= wrapPoint) {
                 final long currentHead = (long) CURSOR.getAcquire(head);
                 if (currentHead <= wrapPoint) {
                     return false;
                 }
-                CURSOR.setRelease(producerHeadCache, currentHead);
+                CURSOR.setOpaque(producerHeadCache, currentHead);
             }
             index = (int) currentTail & localMask;
             if (CURSOR.compareAndSet(tail, currentTailRaw, currentTail + 1L)) {
@@ -129,17 +140,17 @@ public final class MpscRingEdge implements MessageEdge {
 
         if (closed()) {
             localBuffer[index] = SKIPPED;
-            if (localPublishTimes != null) {
-                localPublishTimes.setPlain(index, 0L);
+            if (timingEnabled) {
+                setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
             }
-            localPublishedSequences.setRelease(index, currentTail);
+            setSequenceRelease(localPublishedSequences, localPublishedSequenceAccess, index, currentTail);
             return false;
         }
         localBuffer[index] = item;
-        if (localPublishTimes != null) {
-            localPublishTimes.setPlain(index, System.nanoTime());
+        if (timingEnabled) {
+            setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, System.nanoTime());
         }
-        localPublishedSequences.setRelease(index, currentTail);
+        setSequenceRelease(localPublishedSequences, localPublishedSequenceAccess, index, currentTail);
         if (EdgeMetrics.hotCountersEnabled()) {
             metrics.recordEmit();
             graphMetrics.recordEmit();
@@ -152,8 +163,9 @@ public final class MpscRingEdge implements MessageEdge {
         final long currentHead = (long) CURSOR.get(head);
         final int index = (int) currentHead & mask;
         final Object[] localBuffer = buffer;
-        final LongAccess localPublishedSequences = publishedSequences;
-        if (localPublishedSequences.getAcquire(index) != currentHead) {
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != currentHead) {
             return null;
         }
 
@@ -161,17 +173,19 @@ public final class MpscRingEdge implements MessageEdge {
         if (item == null) {
             return null;
         }
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
         if (item == SKIPPED || item == DROPPED) {
-            if (localPublishTimes != null) {
-                localPublishTimes.setPlain(index, 0L);
+            if (timingEnabled) {
+                setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
             }
             CURSOR.setRelease(head, currentHead + 1L);
             return null;
         }
-        if (localPublishTimes != null) {
-            metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
-            localPublishTimes.setPlain(index, 0L);
+        if (timingEnabled) {
+            metrics.recordResidenceNanos(System.nanoTime() - getPublishTimePlain(localPublishTimes, localPublishTimeAccess, index));
+            setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
         }
         CURSOR.setRelease(head, currentHead + 1L);
         if (EdgeMetrics.hotCountersEnabled()) {
@@ -194,13 +208,16 @@ public final class MpscRingEdge implements MessageEdge {
         int targetIndex = offset;
         final Object[] localBuffer = buffer;
         final int localMask = mask;
-        final LongAccess localPublishedSequences = publishedSequences;
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
 
-        if (localPublishTimes == null) {
+        if (!timingEnabled) {
             while (drained < max) {
                 final int index = (int) nextHead & localMask;
-                if (localPublishedSequences.getAcquire(index) != nextHead) {
+                if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                     break;
                 }
                 final Object item = claimReadyItem(localBuffer, index);
@@ -218,7 +235,7 @@ public final class MpscRingEdge implements MessageEdge {
         } else {
             while (drained < max) {
                 final int index = (int) nextHead & localMask;
-                if (localPublishedSequences.getAcquire(index) != nextHead) {
+                if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                     break;
                 }
                 final Object item = claimReadyItem(localBuffer, index);
@@ -226,13 +243,13 @@ public final class MpscRingEdge implements MessageEdge {
                     break;
                 }
                 if (item == SKIPPED || item == DROPPED) {
-                    localPublishTimes.setPlain(index, 0L);
+                    setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                     nextHead++;
                     continue;
                 }
                 target[targetIndex++] = item;
-                metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
-                localPublishTimes.setPlain(index, 0L);
+                metrics.recordResidenceNanos(System.nanoTime() - getPublishTimePlain(localPublishTimes, localPublishTimeAccess, index));
+                setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                 nextHead++;
                 drained++;
             }
@@ -261,14 +278,17 @@ public final class MpscRingEdge implements MessageEdge {
         int processed = 0;
         final Object[] localBuffer = buffer;
         final int localMask = mask;
-        final LongAccess localPublishedSequences = publishedSequences;
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
 
         try {
-            if (localPublishTimes == null) {
+            if (!timingEnabled) {
                 while (processed < limit) {
                     final int index = (int) nextHead & localMask;
-                    if (localPublishedSequences.getAcquire(index) != nextHead) {
+                    if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                         break;
                     }
                     final Object item = claimReadyItem(localBuffer, index);
@@ -286,7 +306,7 @@ public final class MpscRingEdge implements MessageEdge {
             } else {
                 while (processed < limit) {
                     final int index = (int) nextHead & localMask;
-                    if (localPublishedSequences.getAcquire(index) != nextHead) {
+                    if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                         break;
                     }
                     final Object item = claimReadyItem(localBuffer, index);
@@ -294,13 +314,13 @@ public final class MpscRingEdge implements MessageEdge {
                         break;
                     }
                     if (item == SKIPPED || item == DROPPED) {
-                        localPublishTimes.setPlain(index, 0L);
+                        setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                         nextHead++;
                         releaseHeadAtLeast(nextHead);
                         continue;
                     }
-                    metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
-                    localPublishTimes.setPlain(index, 0L);
+                    metrics.recordResidenceNanos(System.nanoTime() - getPublishTimePlain(localPublishTimes, localPublishTimeAccess, index));
+                    setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                     nextHead++;
                     releaseHeadAtLeast(nextHead);
                     processed++;
@@ -322,14 +342,17 @@ public final class MpscRingEdge implements MessageEdge {
         int processed = 0;
         final Object[] localBuffer = buffer;
         final int localMask = mask;
-        final LongAccess localPublishedSequences = publishedSequences;
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
 
         try {
-            if (localPublishTimes == null) {
+            if (!timingEnabled) {
                 while (processed < limit) {
                     final int index = (int) nextHead & localMask;
-                    if (localPublishedSequences.getAcquire(index) != nextHead) {
+                    if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                         break;
                     }
                     final Object item = localBuffer[index];
@@ -348,7 +371,7 @@ public final class MpscRingEdge implements MessageEdge {
             } else {
                 while (processed < limit) {
                     final int index = (int) nextHead & localMask;
-                    if (localPublishedSequences.getAcquire(index) != nextHead) {
+                    if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != nextHead) {
                         break;
                     }
                     final Object item = localBuffer[index];
@@ -357,13 +380,13 @@ public final class MpscRingEdge implements MessageEdge {
                     }
                     localBuffer[index] = null;
                     if (item == SKIPPED || item == DROPPED) {
-                        localPublishTimes.setPlain(index, 0L);
+                        setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                         nextHead++;
                         CURSOR.setRelease(head, nextHead);
                         continue;
                     }
-                    metrics.recordResidenceNanos(System.nanoTime() - localPublishTimes.getPlain(index));
-                    localPublishTimes.setPlain(index, 0L);
+                    metrics.recordResidenceNanos(System.nanoTime() - getPublishTimePlain(localPublishTimes, localPublishTimeAccess, index));
+                    setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                     nextHead++;
                     CURSOR.setRelease(head, nextHead);
                     processed++;
@@ -411,10 +434,11 @@ public final class MpscRingEdge implements MessageEdge {
         final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
-        final LongAccess localPublishedSequences = publishedSequences;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
         for (long sequence = currentHead; sequence < currentTail; sequence++) {
             final int index = (int) sequence & localMask;
-            if (localPublishedSequences.getAcquire(index) != sequence) {
+            if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != sequence) {
                 continue;
             }
             final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
@@ -439,10 +463,11 @@ public final class MpscRingEdge implements MessageEdge {
         final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
         final Object[] localBuffer = buffer;
         final int localMask = mask;
-        final LongAccess localPublishedSequences = publishedSequences;
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
         for (long sequence = currentHead; sequence < currentTail; sequence++) {
             final int index = (int) sequence & localMask;
-            if (localPublishedSequences.getAcquire(index) != sequence) {
+            if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != sequence) {
                 continue;
             }
             final Object existing = (Object) ELEMENT.getAcquire(localBuffer, index);
@@ -477,12 +502,24 @@ public final class MpscRingEdge implements MessageEdge {
         }
         final long started = System.nanoTime();
         buffer = new Object[capacity];
-        publishedSequences = LongAccess.create(capacity, memoryKind);
-        for (int i = 0; i < capacity; i++) {
-            publishedSequences.setPlain(i, i - (long) capacity);
-        }
-        if (EdgeMetrics.residenceTimingEnabled()) {
-            publishTimes = LongAccess.create(capacity, memoryKind);
+        if (heapMetadata) {
+            publishedSequences = new long[capacity];
+            final long[] localPublishedSequences = publishedSequences;
+            for (int i = 0; i < capacity; i++) {
+                localPublishedSequences[i] = i - (long) capacity;
+            }
+            if (EdgeMetrics.residenceTimingEnabled()) {
+                publishTimes = new long[capacity];
+            }
+        } else {
+            publishedSequenceAccess = LongAccess.create(capacity, memoryKind);
+            final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+            for (int i = 0; i < capacity; i++) {
+                localPublishedSequenceAccess.setPlain(i, i - (long) capacity);
+            }
+            if (EdgeMetrics.residenceTimingEnabled()) {
+                publishTimeAccess = LongAccess.create(capacity, memoryKind);
+            }
         }
         metrics.recordFirstTouch(System.nanoTime() - started);
     }
@@ -538,18 +575,22 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     private void drainAndRelease() {
-        if (buffer == null || publishedSequences == null) {
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        if (buffer == null || !hasSequenceMetadata(localPublishedSequences, localPublishedSequenceAccess)) {
             return;
         }
         final long targetTail = tailSequence((long) CURSOR.getAcquire(tail));
-        final LongAccess localPublishedSequences = publishedSequences;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
         while (true) {
             final long currentHead = (long) CURSOR.get(head);
             if (currentHead >= targetTail) {
                 return;
             }
             final int index = (int) currentHead & mask;
-            if (localPublishedSequences.getAcquire(index) != currentHead) {
+            if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != currentHead) {
                 Thread.onSpinWait();
                 continue;
             }
@@ -558,9 +599,8 @@ public final class MpscRingEdge implements MessageEdge {
                 Thread.onSpinWait();
                 continue;
             }
-            final LongAccess localPublishTimes = publishTimes;
-            if (localPublishTimes != null) {
-                localPublishTimes.setPlain(index, 0L);
+            if (timingEnabled) {
+                setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
             }
             CURSOR.setRelease(head, currentHead + 1L);
             if (item != SKIPPED && item != DROPPED) {
@@ -571,15 +611,18 @@ public final class MpscRingEdge implements MessageEdge {
 
     private void reclaimDroppedPrefix() {
         final Object[] localBuffer = buffer;
-        final LongAccess localPublishedSequences = publishedSequences;
-        if (localBuffer == null || localPublishedSequences == null) {
+        final long[] localPublishedSequences = publishedSequences;
+        final LongAccess localPublishedSequenceAccess = publishedSequenceAccess;
+        if (localBuffer == null || !hasSequenceMetadata(localPublishedSequences, localPublishedSequenceAccess)) {
             return;
         }
-        final LongAccess localPublishTimes = publishTimes;
+        final long[] localPublishTimes = publishTimes;
+        final LongAccess localPublishTimeAccess = publishTimeAccess;
+        final boolean timingEnabled = hasPublishTimes(localPublishTimes, localPublishTimeAccess);
         while (true) {
             final long currentHead = (long) CURSOR.getAcquire(head);
             final int index = (int) currentHead & mask;
-            if (localPublishedSequences.getAcquire(index) != currentHead) {
+            if (getSequenceAcquire(localPublishedSequences, localPublishedSequenceAccess, index) != currentHead) {
                 return;
             }
             final Object item = (Object) ELEMENT.getAcquire(localBuffer, index);
@@ -588,10 +631,55 @@ public final class MpscRingEdge implements MessageEdge {
             }
             if (CURSOR.compareAndSet(head, currentHead, currentHead + 1L)) {
                 ELEMENT.compareAndSet(localBuffer, index, DROPPED, null);
-                if (localPublishTimes != null) {
-                    localPublishTimes.setPlain(index, 0L);
+                if (timingEnabled) {
+                    setPublishTimePlain(localPublishTimes, localPublishTimeAccess, index, 0L);
                 }
             }
+        }
+    }
+
+    private boolean hasSequenceMetadata(final long[] heapSequences, final LongAccess access) {
+        return heapMetadata ? heapSequences != null : access != null;
+    }
+
+    private boolean hasPublishTimes(final long[] heapTimes, final LongAccess access) {
+        return heapMetadata ? heapTimes != null : access != null;
+    }
+
+    private long getSequenceAcquire(final long[] heapSequences, final LongAccess access, final int index) {
+        if (heapMetadata) {
+            return (long) LONG_ELEMENT.getAcquire(heapSequences, index);
+        }
+        return access.getAcquire(index);
+    }
+
+    private void setSequenceRelease(
+        final long[] heapSequences,
+        final LongAccess access,
+        final int index,
+        final long sequence
+    ) {
+        if (heapMetadata) {
+            LONG_ELEMENT.setRelease(heapSequences, index, sequence);
+        } else {
+            access.setRelease(index, sequence);
+        }
+    }
+
+    private long getPublishTimePlain(final long[] heapTimes, final LongAccess access, final int index) {
+        return heapMetadata ? heapTimes[index] : access.getPlain(index);
+    }
+
+    private void setPublishTimePlain(
+        final long[] heapTimes,
+        final LongAccess access,
+        final int index,
+        final long value
+    ) {
+        if (heapMetadata) {
+            heapTimes[index] = value;
+        } else {
+            access.setPlain(index, value);
         }
     }
 

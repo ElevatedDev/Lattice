@@ -7,6 +7,7 @@ import com.lattice.placement.PinPolicy;
 import com.staticgraph.runtime.nativeaccess.NativeCapabilities;
 import com.staticgraph.runtime.nativeaccess.NativeTopology;
 import com.staticgraph.runtime.nativeaccess.NativeTopologyException;
+import com.staticgraph.runtime.nativeaccess.NativeTopologySnapshot;
 import com.staticgraph.runtime.nativeaccess.NativeTopologyUnavailableException;
 import java.util.BitSet;
 
@@ -29,21 +30,22 @@ public final class PlacementBootstrap {
         int expectedCpu = expectedCpu(policy);
         int expectedNumaNode = expectedNumaNode(policy);
 
-        final boolean nativeLoaded = NativeTopology.isLoaded();
+        final NativeTopologySnapshot snapshot = NativeTopology.snapshot();
+        final boolean nativeLoaded = snapshot.loaded();
         NativeCapabilities capabilities = null;
         if (nativeLoaded) {
-            try {
-                capabilities = NativeTopology.capabilities();
-            } catch (final NativeTopologyException ex) {
-                append(message, ex.getMessage());
+            if (snapshot.hasCapabilities()) {
+                capabilities = snapshot.capabilities();
+            } else {
+                append(message, snapshot.failureMessage());
                 if (placementRequested) {
-                    maybeStrict(stageName, ex);
+                    maybeStrict(stageName, snapshotFailure(snapshot));
                 }
             }
         } else if (placementRequested) {
             status = PlacementStatus.UNAVAILABLE;
             final NativeTopologyUnavailableException unavailable = new NativeTopologyUnavailableException(
-                nativeUnavailableMessage()
+                nativeUnavailableMessage(snapshot)
             );
             append(message, unavailable.getMessage());
             maybeStrict(stageName, unavailable);
@@ -54,7 +56,7 @@ public final class PlacementBootstrap {
                 append(message, "native topology backend does not support this platform");
             }
 
-            final PinAttempt pinAttempt = applyPin(stageName, policy, capabilities);
+            final PinAttempt pinAttempt = applyPin(stageName, policy, capabilities, snapshot);
             pinApplied = pinAttempt.applied();
             expectedCpu = pinAttempt.expectedCpu(expectedCpu);
             expectedNumaNode = pinAttempt.expectedNumaNode(expectedNumaNode);
@@ -77,8 +79,8 @@ public final class PlacementBootstrap {
             append(message, "first-touch completed in " + firstTouchNanos + " ns");
         }
 
-        final int observedCpu = observeCpu(nativeLoaded, capabilities, message);
-        final int observedNumaNode = observeNumaNode(nativeLoaded, capabilities, message);
+        final int observedCpu = observeCpu(snapshot, capabilities, message);
+        final int observedNumaNode = observeNumaNode(snapshot, capabilities, observedCpu, message);
         final boolean affinityViolation = affinityViolation(policy, expectedCpu, observedCpu);
         final boolean numaViolation = expectedNumaNode >= 0
             && observedNumaNode >= 0
@@ -127,7 +129,8 @@ public final class PlacementBootstrap {
     private static PinAttempt applyPin(
         final String stageName,
         final PinPolicy policy,
-        final NativeCapabilities capabilities
+        final NativeCapabilities capabilities,
+        final NativeTopologySnapshot snapshot
     ) {
         if (policy.kind() == PinPolicy.PinKind.NONE || policy.kind() == PinPolicy.PinKind.INHERIT_CPUSET) {
             return PinAttempt.notApplied("", -1, -1);
@@ -150,10 +153,10 @@ public final class PlacementBootstrap {
                 }
                 case CPU_SET -> {
                     final BitSet cpus = policy.cpuSet();
-                    NativeTopology.pinCurrentThreadToCpuSet(cpus);
+                    NativeTopology.pinCurrentThreadToCpuSet(cpus, snapshot.maxCpuCount());
                     yield PinAttempt.applied("pinned to CPU set " + cpus, -1, -1);
                 }
-                case NUMA_NODE -> pinToNumaNode(policy.numaNode());
+                case NUMA_NODE -> pinToNumaNode(policy.numaNode(), snapshot);
                 default -> PinAttempt.notApplied("", -1, -1);
             };
         } catch (final NativeTopologyException | IllegalArgumentException ex) {
@@ -162,21 +165,46 @@ public final class PlacementBootstrap {
         }
     }
 
-    private static PinAttempt pinToNumaNode(final int numaNode) {
+    private static PinAttempt pinToNumaNode(final int numaNode, final NativeTopologySnapshot snapshot) {
         try {
             final int cpu = NativeTopology.pinCurrentThreadToNumaNode(numaNode);
             return PinAttempt.applied("pinned to CPU " + cpu + " on NUMA node " + numaNode, cpu, numaNode);
         } catch (final NativeTopologyUnavailableException ex) {
-            return scanAndPinToNumaNode(numaNode, ex);
+            return scanAndPinToNumaNode(numaNode, ex, snapshot);
         }
     }
 
     private static PinAttempt scanAndPinToNumaNode(
         final int numaNode,
-        final NativeTopologyUnavailableException unavailable
+        final NativeTopologyUnavailableException unavailable,
+        final NativeTopologySnapshot snapshot
     ) {
         RuntimeException lastFailure = unavailable;
-        final int maxCpu = NativeTopology.maxCpuCount();
+        final NativeTopologySnapshot.CpuTopology topology = snapshot.cpuTopology();
+        if (topology.hasNumaMetadata()) {
+            final BitSet allowedCpus = topology.allowedCpus();
+            for (int cpu = allowedCpus.nextSetBit(0); cpu >= 0; cpu = allowedCpus.nextSetBit(cpu + 1)) {
+                if (topology.numaNodeOfCpu(cpu) != numaNode) {
+                    continue;
+                }
+                try {
+                    NativeTopology.pinCurrentThreadToCpu(cpu);
+                    return PinAttempt.applied(
+                        "pinned to CPU " + cpu + " on NUMA node " + numaNode + " using cached topology fallback",
+                        cpu,
+                        numaNode
+                    );
+                } catch (final NativeTopologyException | IllegalArgumentException ex) {
+                    lastFailure = ex;
+                }
+            }
+            throw new NativeTopologyException(
+                "no usable CPU found for NUMA node " + numaNode + " after cached topology fallback",
+                lastFailure
+            );
+        }
+
+        final int maxCpu = snapshot.maxCpuCount();
         for (int cpu = 0; cpu < maxCpu; cpu++) {
             try {
                 if (!NativeTopology.isCpuAllowed(cpu) || NativeTopology.numaNodeOfCpu(cpu) != numaNode) {
@@ -209,11 +237,11 @@ public final class PlacementBootstrap {
     }
 
     private static int observeCpu(
-        final boolean nativeLoaded,
+        final NativeTopologySnapshot snapshot,
         final NativeCapabilities capabilities,
         final StringBuilder message
     ) {
-        if (!nativeLoaded || capabilities == null || !capabilities.currentCpu()) {
+        if (!snapshot.loaded() || capabilities == null || !capabilities.currentCpu()) {
             return -1;
         }
         try {
@@ -225,12 +253,17 @@ public final class PlacementBootstrap {
     }
 
     private static int observeNumaNode(
-        final boolean nativeLoaded,
+        final NativeTopologySnapshot snapshot,
         final NativeCapabilities capabilities,
+        final int observedCpu,
         final StringBuilder message
     ) {
-        if (!nativeLoaded || capabilities == null || !capabilities.numaQuery()) {
+        if (!snapshot.loaded() || capabilities == null || !capabilities.numaQuery()) {
             return -1;
+        }
+        final int cachedNumaNode = snapshot.cachedNumaNodeOfCpu(observedCpu);
+        if (cachedNumaNode >= 0) {
+            return cachedNumaNode;
         }
         try {
             return NativeTopology.currentNumaNode();
@@ -274,12 +307,23 @@ public final class PlacementBootstrap {
         message.append(text);
     }
 
-    private static String nativeUnavailableMessage() {
-        final String loadFailure = NativeTopology.loadFailureMessage();
+    private static String nativeUnavailableMessage(final NativeTopologySnapshot snapshot) {
+        final String loadFailure = snapshot.failureMessage();
         if (loadFailure.isBlank()) {
             return "native topology library is not loaded";
         }
         return "native topology library is not loaded: " + loadFailure;
+    }
+
+    private static Throwable snapshotFailure(final NativeTopologySnapshot snapshot) {
+        final Throwable failure = snapshot.failure();
+        if (failure != null) {
+            return failure;
+        }
+        final String message = snapshot.failureMessage().isBlank()
+            ? "native topology capabilities are unavailable"
+            : snapshot.failureMessage();
+        return new NativeTopologyException(message);
     }
 
     private static void maybeStrict(final String stageName, final Throwable failure) {

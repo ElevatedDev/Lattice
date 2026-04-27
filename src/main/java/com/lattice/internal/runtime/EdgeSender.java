@@ -43,6 +43,7 @@ final class EdgeSender {
     private final String edgeTo;
     private final String edgeName;
     private final boolean jfrEnabled;
+    private final boolean hotMetricsEnabled;
     private boolean overloadClearPending;
 
     EdgeSender(
@@ -64,7 +65,6 @@ final class EdgeSender {
         this.ownerMetrics = ownerMetrics;
         this.coordinator = coordinator;
         this.waitStrategy = WaitStrategies.from(spec.waitSpec());
-        this.waitMetrics = new CombinedWaitMetrics(ownerMetrics, edgeMetrics);
         this.overflowPolicy = spec.overflowPolicy();
         this.overflowKind = overflowPolicy.kind();
         this.lossyOverflow = overflowKind == OverflowPolicy.OverflowKind.DROP_LATEST
@@ -75,6 +75,8 @@ final class EdgeSender {
         this.mayCarryOwnedHandle = messageType == Object.class
             || messageType.isAssignableFrom(SlabHandle.class)
             || messageType.isAssignableFrom(Stamped.class);
+        this.hotMetricsEnabled = StageMetrics.hotCountersEnabled();
+        this.waitMetrics = hotMetricsEnabled ? new CombinedWaitMetrics(ownerMetrics, edgeMetrics) : null;
         this.policyTimeoutNanos = overflowKind == OverflowPolicy.OverflowKind.BLOCK_FOR
             ? spec.overflowPolicy().timeout().toNanos()
             : 0L;
@@ -96,7 +98,7 @@ final class EdgeSender {
             emitBlockingFastPathTrusted(item);
             return;
         }
-        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        final Object outbound = mayCarryOwnedHandle ? HandleOwnership.prepareForEnqueue(item) : item;
         validateItem(outbound);
         boolean handled = false;
         try {
@@ -158,7 +160,7 @@ final class EdgeSender {
     }
 
     boolean emit(final Object item, final long timeoutNanos) {
-        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        final Object outbound = mayCarryOwnedHandle ? HandleOwnership.prepareForEnqueue(item) : item;
         validateItem(outbound);
         boolean handled = false;
         try {
@@ -314,7 +316,7 @@ final class EdgeSender {
     }
 
     boolean tryEmit(final Object item) {
-        final Object outbound = HandleOwnership.prepareForEnqueue(item);
+        final Object outbound = mayCarryOwnedHandle ? HandleOwnership.prepareForEnqueue(item) : item;
         validateItem(outbound);
         boolean handled = false;
         try {
@@ -460,7 +462,7 @@ final class EdgeSender {
     }
 
     private void recordOwnerEmit() {
-        if (StageMetrics.hotCountersEnabled()) {
+        if (hotMetricsEnabled) {
             ownerMetrics.recordEmit();
         }
     }

@@ -14,6 +14,7 @@ import com.lattice.internal.wait.WaitStrategy;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
+import com.lattice.metrics.WaitMetrics;
 import com.lattice.metrics.WorkerState;
 import com.lattice.placement.PinPolicy;
 import com.lattice.routing.BroadcastSpec;
@@ -73,6 +74,7 @@ final class StageWorker implements Runnable {
     private final RuntimeCoordinator coordinator;
     private final RuntimeStageContext context;
     private final WaitStrategy waitStrategy;
+    private final WaitMetrics waitMetrics;
     private final StageExceptionHandler exceptionHandler;
     private final PinPolicy pinPolicy;
     private final StageLogic<Object, Object> logic;
@@ -200,6 +202,7 @@ final class StageWorker implements Runnable {
         this.timeBatches = StageMetrics.histogramsEnabled() || jfrEnabled;
         this.hotMetricsEnabled = StageMetrics.hotCountersEnabled();
         this.edgeHotMetricsEnabled = EdgeMetrics.hotCountersEnabled();
+        this.waitMetrics = hotMetricsEnabled ? metrics : null;
         this.outputMask = powerOfTwoMask(outputSenders.length);
     }
 
@@ -277,7 +280,7 @@ final class StageWorker implements Runnable {
             final PlacementResult placement = PlacementBootstrap.bootstrap(stageName, pinPolicy, ownedEdges);
             this.batch = new ArrayBatch(batchLimit);
             this.batchItems = batch.items();
-            this.batchSources = new int[batchLimit];
+            this.batchSources = processingMode == PROCESS_JOIN ? new int[batchLimit] : null;
             if (processingMode == PROCESS_JOIN) {
                 this.joinStates = joinLongStamp
                     ? new LongJoinStateTable(joinCapacity, inputs.length)
@@ -315,7 +318,7 @@ final class StageWorker implements Runnable {
                             JfrEvents.workerBlocked(graphName, stageName);
                         }
                         final boolean willPark = parkIdleThreshold >= 0 && idle >= parkIdleThreshold;
-                        idle = waitStrategy.idle(idle, metrics);
+                        idle = waitStrategy.idle(idle, waitMetrics);
                         if (willPark) {
                             workerState(WorkerState.PARKED);
                             if (jfrEnabled) {
@@ -599,37 +602,40 @@ final class StageWorker implements Runnable {
     }
 
     private void processSink(final int received) {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batch.itemAt(i);
+            final Object item = localBatchItems[i];
             try {
                 sink.accept(item);
             } finally {
                 if (messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
     }
 
     private void processBatch(final int received) throws Exception {
-        try (HandleOwnership.Scope ignored = HandleOwnership.scope(batchItems, received)) {
+        final Object[] localBatchItems = batchItems;
+        try (HandleOwnership.Scope ignored = HandleOwnership.scope(localBatchItems, received)) {
             batchLogic.onBatch(batch, output, context);
         } finally {
             for (int i = 0; i < received; i++) {
                 if (messageMayCarryOwnedHandle) {
-                    releaseIfHandle(batch.itemAt(i));
+                    releaseIfHandle(localBatchItems[i]);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
             batch.size(0);
         }
     }
 
     private void processMessages(final int received) throws Exception {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batch.itemAt(i);
+            final Object item = localBatchItems[i];
             try {
                 if (messageMayCarryOwnedHandle) {
                     try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
@@ -642,15 +648,16 @@ final class StageWorker implements Runnable {
                 if (messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
     }
 
     private void processDispatch(final int received) {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batch.itemAt(i);
+            final Object item = localBatchItems[i];
             boolean transferred = false;
             try {
                 final int branch = dispatchBranch(item);
@@ -666,15 +673,16 @@ final class StageWorker implements Runnable {
                 if (!transferred && messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
     }
 
     private void processBroadcast(final int received) {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batch.itemAt(i);
+            final Object item = localBatchItems[i];
             try {
                 if (broadcastSlabHandles) {
                     broadcastHandle(item);
@@ -685,7 +693,7 @@ final class StageWorker implements Runnable {
                     metrics.recordRoutingDecision();
                 }
             } finally {
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
@@ -764,8 +772,9 @@ final class StageWorker implements Runnable {
     }
 
     private void processPartition(final int received) {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batch.itemAt(i);
+            final Object item = localBatchItems[i];
             boolean transferred = false;
             try {
                 final Object key = partitionKeyExtractor.apply(item);
@@ -788,18 +797,19 @@ final class StageWorker implements Runnable {
                 if (!transferred && messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
     }
 
     private void processJoin(final int received) {
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
             try {
-                processJoinItem(batchSources[i], batch.itemAt(i));
+                processJoinItem(batchSources[i], localBatchItems[i]);
             } finally {
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
         batch.size(0);
@@ -1032,13 +1042,14 @@ final class StageWorker implements Runnable {
         if (processingMode == PROCESS_BROADCAST || processingMode == PROCESS_JOIN) {
             return;
         }
+        final Object[] localBatchItems = batchItems;
         for (int i = 0; i < received; i++) {
-            final Object item = batchItems[i];
+            final Object item = localBatchItems[i];
             if (item != null) {
                 if (messageMayCarryOwnedHandle) {
                     releaseIfHandle(item);
                 }
-                batchItems[i] = null;
+                localBatchItems[i] = null;
             }
         }
     }
@@ -1211,13 +1222,13 @@ final class StageWorker implements Runnable {
             || inputType.isAssignableFrom(Stamped.class);
     }
 
-    private static void recordLogicalTransfer(
+    private void recordLogicalTransfer(
         final StageMetrics ownerMetrics,
         final EdgeMetrics logicalEdgeMetrics,
         final GraphMetrics graphMetrics,
         final StageMetrics consumerMetrics
     ) {
-        if (!StageMetrics.hotCountersEnabled()) {
+        if (!hotMetricsEnabled) {
             return;
         }
         logicalEdgeMetrics.recordEmit();

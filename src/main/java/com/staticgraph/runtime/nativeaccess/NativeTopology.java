@@ -19,6 +19,10 @@ public final class NativeTopology {
         return NativeTopologyNatives.loadFailureMessage();
     }
 
+    public static NativeTopologySnapshot snapshot() {
+        return SnapshotHolder.SNAPSHOT;
+    }
+
     public static NativeCapabilities capabilities() {
         NativeTopologyNatives.ensureLoaded();
         return NativeCapabilities.fromBits(NativeTopologyNatives.nativeCapabilities0());
@@ -91,10 +95,16 @@ public final class NativeTopology {
     }
 
     public static void pinCurrentThreadToCpuSet(final BitSet cpus) {
+        pinCurrentThreadToCpuSet(cpus, maxCpuCount());
+    }
+
+    public static void pinCurrentThreadToCpuSet(final BitSet cpus, final int maxCpu) {
         Objects.requireNonNull(cpus, "cpus");
         NativeTopologyNatives.ensureLoaded();
 
-        final int maxCpu = maxCpuCount();
+        if (maxCpu <= 0) {
+            throw new IllegalArgumentException("maxCpu must be positive");
+        }
         if (cpus.isEmpty()) {
             throw new IllegalArgumentException("CPU set must not be empty");
         }
@@ -188,5 +198,9 @@ public final class NativeTopology {
             case 38 -> "ENOSYS";
             default -> "errno";
         };
+    }
+
+    private static final class SnapshotHolder {
+        private static final NativeTopologySnapshot SNAPSHOT = NativeTopologySnapshot.captureSystem();
     }
 }
