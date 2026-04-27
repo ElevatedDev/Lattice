@@ -82,6 +82,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    systemProperty 'lattice.fusion.inlineSource', System.getProperty('lattice.fusion.inlineSource', 'true')
     maxParallelForks = providers.gradleProperty('testMaxParallelForks')
         .map { value -> Integer.parseInt(value) }
         .orElse(Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)))
@@ -180,6 +181,18 @@ jmh {
     fork = 1
     warmupIterations = 3
     iterations = 5
+
+    jvmArgsAppend = [
+        '-Xms2g',
+        '-Xmx2g',
+        '-XX:+AlwaysPreTouch',
+        '-XX:+UnlockDiagnosticVMOptions',
+        '-XX:+UseParallelGC',
+        '-Dlattice.metrics.hotCounters=false',
+        '-Dlattice.metrics.residence=false',
+        '-Dlattice.metrics.stageHistograms=false',
+        '-Dlattice.runtime.fusedLogicalEdgeMetrics=false'
+    ]
 }
 
 tasks.register('nativeBuildRelease', Exec) {
@@ -342,17 +355,25 @@ tasks.register('verifyOpenSourceRelease') {
     dependsOn tasks.named('verifyReleaseArtifacts')
 
     doLast {
-        def rootFiles = rootDir.listFiles()?.findAll { it.isFile() } ?: []
-        def hasReadme = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('README') }
-        def hasLicense = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('LICENSE') }
         def missing = []
+        [
+            'README.md',
+            'CHANGELOG.md',
+            'SECURITY.md',
+            'CONTRIBUTING.md',
+            'CODE_OF_CONDUCT.md',
+            'LICENSE',
+            'NOTICE',
+            '.editorconfig',
+            'docs/index.md',
+            'docs/README.md',
+            'docs/_config.yml'
+        ].each { requiredPath ->
+            if (!file(requiredPath).isFile()) {
+                missing << requiredPath
+            }
+        }
 
-        if (!hasReadme) {
-            missing << 'root README'
-        }
-        if (!hasLicense) {
-            missing << 'root LICENSE'
-        }
         if (!releaseLicenseName.isPresent() || !releaseLicenseUrl.isPresent()) {
             missing << 'releaseLicenseName/releaseLicenseUrl Gradle properties for POM license metadata'
         }

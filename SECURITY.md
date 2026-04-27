@@ -2,29 +2,29 @@
 
 ## Supported Versions
 
-Lattice has not shipped a 1.0 release yet. The current repository state should
-be treated as pre-release software.
+Lattice has not shipped a stable release yet. Treat the current repository as
+pre-release software.
 
 | Version | Supported |
 | --- | --- |
-| `main` / current working branch | Best-effort pre-release review |
+| `main` / current development branch | Best-effort pre-release review |
+| `< 1.0` source snapshots | No sustained security support |
 | Published Maven artifacts | Not available yet |
 
 ## Reporting A Vulnerability
 
-This repository does not yet define a public security contact or private
-advisory workflow. Before public release, maintainers should add a monitored
-security address or enable GitHub private vulnerability reporting.
+Do not publish suspected vulnerabilities in public issues, pull requests, or
+discussion threads before maintainers have had a chance to respond privately.
 
-Until that exists, report suspected vulnerabilities privately through the
-maintainers' existing project channel. Do not include exploit details in a
-public issue before maintainers have acknowledged the report.
+Use GitHub private vulnerability reporting if it is enabled for the repository.
+If it is not enabled, contact the maintainers privately through the existing
+project channel and include "security" in the subject or opening line.
 
 Useful report details include:
 
-- affected commit or version;
+- affected commit, branch, or version;
 - operating system, JVM, and native backend status;
-- graph shape and edge policies involved;
+- graph shape, edge policies, and placement settings involved;
 - whether the issue requires untrusted payloads, untrusted graph definitions,
   or local host access;
 - minimal reproduction steps;

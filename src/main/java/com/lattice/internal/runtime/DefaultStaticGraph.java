@@ -7,6 +7,7 @@ import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.graph.PreallocationSpec;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.EdgeFactory;
 import com.lattice.internal.edge.MessageEdge;
@@ -20,6 +21,8 @@ import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
+import com.lattice.routing.Stamped;
+import com.lattice.slab.SlabHandle;
 import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.PreallocatedEmitter;
@@ -70,10 +73,10 @@ public final class DefaultStaticGraph implements StaticGraph {
         final Map<String, EdgeMetrics> edgeMetrics = new LinkedHashMap<>();
         for (final EdgeDefinition edge : compiled.edges()) {
             edgeMetrics.put(edge.key(), new EdgeMetrics(
-                edge.from(),
-                edge.to(),
-                allocationOwner(edge),
-                edge.spec().memoryMode().kind()
+                    edge.from(),
+                    edge.to(),
+                    allocationOwner(edge),
+                    edge.spec().memoryMode().kind()
             ));
         }
 
@@ -92,6 +95,7 @@ public final class DefaultStaticGraph implements StaticGraph {
         buildEdges(edgeMetrics);
         buildEmitters(stageMetrics);
         buildWorkers(stageMetrics);
+        wireInlineFusion();
         coordinator.attach(edgeArray, workerArray, sourceEmitterArray);
     }
 
@@ -116,12 +120,12 @@ public final class DefaultStaticGraph implements StaticGraph {
         final NodeDefinition source = compiled.nodes().get(sourceName);
         if (source.preallocationSpec() != null) {
             throw new GraphRuntimeException("source " + sourceName
-                + " is preallocated; use preallocatedEmitter(...)");
+                    + " is preallocated; use preallocatedEmitter(...)");
         }
         final Class<?> exposedType = source.stampedSource() ? source.sourcePayloadType() : source.outputType();
-        if (!type.isAssignableFrom(exposedType)) {
+        if (!exposedType.isAssignableFrom(type)) {
             throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
-                + ", not " + type.getName());
+                    + ", not assignable to " + type.getName());
         }
         return (Emitter<T>) emitter;
     }
@@ -140,9 +144,10 @@ public final class DefaultStaticGraph implements StaticGraph {
 
         final NodeDefinition source = compiled.nodes().get(sourceName);
         final Class<?> exposedType = source.outputType();
-        if (!type.isAssignableFrom(exposedType)) {
+
+        if (type != exposedType) {
             throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
-                + ", not " + type.getName());
+                    + ", not " + type.getName());
         }
         return (PreallocatedEmitter<T>) emitter;
     }
@@ -260,11 +265,14 @@ public final class DefaultStaticGraph implements StaticGraph {
         closeSources();
         final MessageEdge[] edges = edgeArray;
         for (int i = 0; i < edges.length; i++) {
-            edges[i].abort();
+            edges[i].close();
         }
         interruptWorkers();
         try {
             final boolean terminated = awaitTermination(Duration.ofSeconds(5));
+            for (int i = 0; i < edges.length; i++) {
+                edges[i].abort();
+            }
             if (!terminated) {
                 return;
             }
@@ -359,21 +367,22 @@ public final class DefaultStaticGraph implements StaticGraph {
             final EdgeDefinition outgoing = outgoingEdges.get(0);
             final MessageEdge edge = edgesByKey.get(outgoing.key());
             final EdgeSender sender = new EdgeSender(
-                node.name(),
-                node.outputType(),
-                edge,
-                outgoing.spec(),
-                stageMetrics.get(node.name()),
-                coordinator
+                    node.name(),
+                    node.outputType(),
+                    edge,
+                    outgoing.spec(),
+                    stageMetrics.get(node.name()),
+                    coordinator
             );
             wireRedirect(node.name(), sender, outgoing, stageMetrics.get(node.name()));
             final SourceEmitter<?> emitter = new SourceEmitter<>(
-                node.name(),
-                sender,
-                stageMetrics.get(node.name()),
-                state,
-                node.stampedSource(),
-                node.sourceMode()
+                    node.name(),
+                    sender,
+                    stageMetrics.get(node.name()),
+                    state,
+                    node.stampedSource(),
+                    node.sourceMode(),
+                    coordinator
             );
             emitters.put(node.name(), emitter);
             if (node.preallocationSpec() != null) {
@@ -385,8 +394,8 @@ public final class DefaultStaticGraph implements StaticGraph {
 
     @SuppressWarnings("unchecked")
     private <T> PreallocatedSourceEmitter<T> buildPreallocatedEmitter(
-        final NodeDefinition node,
-        final SourceEmitter<?> sourceEmitter
+            final NodeDefinition node,
+            final SourceEmitter<?> sourceEmitter
     ) {
         final Class<T> type = (Class<T>) node.outputType();
         final PreallocationSpec<T> spec = (PreallocationSpec<T>) node.preallocationSpec();
@@ -396,10 +405,10 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private <T> Object[] preallocationPool(
-        final String sourceName,
-        final Class<T> type,
-        final PreallocationSpec<T> spec,
-        final int reuseBound
+            final String sourceName,
+            final Class<T> type,
+            final PreallocationSpec<T> spec,
+            final int reuseBound
     ) {
         if (spec.fixed()) {
             final T[] pool = spec.fixedPool();
@@ -407,7 +416,7 @@ public final class DefaultStaticGraph implements StaticGraph {
             for (int i = 0; i < pool.length; i++) {
                 if (!type.isInstance(pool[i])) {
                     throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
-                        + " is " + pool[i].getClass().getName() + ", expected " + type.getName());
+                            + " is " + pool[i].getClass().getName() + ", expected " + type.getName());
                 }
             }
             return pool;
@@ -423,11 +432,11 @@ public final class DefaultStaticGraph implements StaticGraph {
             final T item = factory.apply(i);
             if (item == null) {
                 throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
-                    + " must not be null");
+                        + " must not be null");
             }
             if (!type.isInstance(item)) {
                 throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
-                    + " is " + item.getClass().getName() + ", expected " + type.getName());
+                        + " is " + item.getClass().getName() + ", expected " + type.getName());
             }
             pool[i] = item;
         }
@@ -439,7 +448,7 @@ public final class DefaultStaticGraph implements StaticGraph {
         String currentName = sourceName;
         while (true) {
             final List<EdgeDefinition> outgoing = compiled.normalOutgoingBySource()
-                .getOrDefault(currentName, List.of());
+                    .getOrDefault(currentName, List.of());
             if (outgoing.isEmpty()) {
                 break;
             }
@@ -453,7 +462,7 @@ public final class DefaultStaticGraph implements StaticGraph {
             }
             if (bound > Integer.MAX_VALUE) {
                 throw new GraphBuildException("preallocated source " + sourceName
-                    + " reuse bound exceeds supported pool size");
+                        + " reuse bound exceeds supported pool size");
             }
             if (target.kind() == GraphPlan.NodeKind.SINK) {
                 break;
@@ -464,17 +473,17 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private static void validatePreallocationPoolSize(
-        final String sourceName,
-        final int poolSize,
-        final int reuseBound
+            final String sourceName,
+            final int poolSize,
+            final int reuseBound
     ) {
         if (Integer.bitCount(poolSize) != 1) {
             throw new GraphBuildException("preallocated pool size for source " + sourceName
-                + " must be a power of two: " + poolSize);
+                    + " must be a power of two: " + poolSize);
         }
         if (poolSize <= reuseBound) {
             throw new GraphBuildException("preallocated pool size for source " + sourceName
-                + " must be greater than reuse bound " + reuseBound + ": " + poolSize);
+                    + " must be greater than reuse bound " + reuseBound + ": " + poolSize);
         }
     }
 
@@ -488,6 +497,33 @@ public final class DefaultStaticGraph implements StaticGraph {
         return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(value - 1));
     }
 
+    private void wireInlineFusion() {
+        final Map<String, String> inlineFused = runtimePlan.inlineFusedWorkerToSource();
+        if (inlineFused.isEmpty()) {
+            return;
+        }
+        // Index workers by name once for O(1) lookup.
+        final Map<String, StageWorker> workersByName = new LinkedHashMap<>();
+        for (final StageWorker worker : workers) {
+            workersByName.put(worker.stageName(), worker);
+        }
+        for (final Map.Entry<String, String> entry : inlineFused.entrySet()) {
+            final String workerName = entry.getKey();
+            final String sourceName = entry.getValue();
+            final StageWorker worker = workersByName.get(workerName);
+            final SourceEmitter<?> emitter = emitters.get(sourceName);
+            if (worker == null || emitter == null) {
+                continue;
+            }
+            final com.lattice.stage.Output<Object> entryOutput = worker.inlineEntryOutput();
+            if (entryOutput == null) {
+                continue;
+            }
+            emitter.attachInlineOutput(entryOutput);
+            worker.markInlineFused();
+        }
+    }
+
     private void buildWorkers(final Map<String, StageMetrics> stageMetrics) {
         for (final String workerName : runtimePlan.workerOrder()) {
             final NodeDefinition node = compiled.nodes().get(workerName);
@@ -496,58 +532,58 @@ public final class DefaultStaticGraph implements StaticGraph {
             final FusedSinkPlan fusedSinkPlan = runtimePlan.fusedSink(workerName);
             final FusedStagePlan fusedStagePlan = runtimePlan.fusedStage(workerName);
             final List<EdgeDefinition> incomingDefinitions = compiled.incomingByTarget()
-                .getOrDefault(workerName, List.of());
+                    .getOrDefault(workerName, List.of());
             final MessageEdge[] inputs = edges(incomingDefinitions);
             final EdgeSpec[] inputSpecs = specs(incomingDefinitions);
             final String[] inputSources = incomingDefinitions.stream().map(EdgeDefinition::from).toArray(String[]::new);
 
             final List<EdgeDefinition> outgoingDefinitions = compiled.outgoingBySource()
-                .getOrDefault(workerName, List.of());
+                    .getOrDefault(workerName, List.of());
             final List<EdgeDefinition> runtimeOutgoingDefinitions = runtimeOutgoingDefinitions(
-                outgoingDefinitions,
-                fusedStagePlan
+                    outgoingDefinitions,
+                    fusedStagePlan
             );
             final List<EdgeDefinition> normalOutgoingDefinitions = compiled.normalOutgoingBySource()
-                .getOrDefault(workerName, List.of());
+                    .getOrDefault(workerName, List.of());
             final MessageEdge[] outputEdges = edges(runtimeOutgoingDefinitions);
             final List<EdgeDefinition> senderDefinitions = fusedSinkPlan == null && fusedStagePlan == null
-                ? normalOutgoingDefinitions
-                : List.of();
+                    ? normalOutgoingDefinitions
+                    : List.of();
             final EdgeSender[] outputSenders = senders(node, senderDefinitions, nodeMetrics);
             final EdgeOutput<Object> output = outputSenders.length == 0 ? null : new EdgeOutput<>(outputSenders[0]);
             final StageWorker.FusedSink fusedSink = fusedSinkPlan == null
-                ? null
-                : fusedSink(fusedSinkPlan, nodeMetrics, stageMetrics);
+                    ? null
+                    : fusedSink(fusedSinkPlan, nodeMetrics, stageMetrics);
             final StageWorker.FusedStage fusedStage = fusedStagePlan == null
-                ? null
-                : fusedStage(fusedStagePlan, nodeMetrics, stageMetrics);
+                    ? null
+                    : fusedStage(fusedStagePlan, nodeMetrics, stageMetrics);
             PinPolicy effectivePinPolicy = fusedStagePlan != null
-                ? fusedStagePlan.effectivePinPolicy()
-                : fusedSinkPlan == null ? node.spec().pinPolicy() : fusedSinkPlan.effectivePinPolicy();
+                    ? fusedStagePlan.effectivePinPolicy()
+                    : fusedSinkPlan == null ? node.spec().pinPolicy() : fusedSinkPlan.effectivePinPolicy();
             if (effectivePinPolicy.kind() == PinPolicy.PinKind.NONE) {
                 effectivePinPolicy = topologyAwarePins.getOrDefault(nodeName, effectivePinPolicy);
             }
             workers.add(new StageWorker(
-                node,
-                inputs,
-                inputSpecs,
-                inputSources,
-                outputEdges,
-                outputSenders,
-                ownedEdges(
-                    nodeName,
-                    incomingDefinitions,
-                    runtimeOutgoingDefinitions,
-                    runtimePlan.elidedEdgeKeys(),
-                    fusedStagePlan
-                ),
-                output,
-                fusedSink,
-                fusedStage,
-                effectivePinPolicy,
-                nodeMetrics,
-                coordinator,
-                compiled.exceptionHandler()
+                    node,
+                    inputs,
+                    inputSpecs,
+                    inputSources,
+                    outputEdges,
+                    outputSenders,
+                    ownedEdges(
+                            nodeName,
+                            incomingDefinitions,
+                            runtimeOutgoingDefinitions,
+                            runtimePlan.elidedEdgeKeys(),
+                            fusedStagePlan
+                    ),
+                    output,
+                    fusedSink,
+                    fusedStage,
+                    effectivePinPolicy,
+                    nodeMetrics,
+                    coordinator,
+                    compiled.exceptionHandler()
             ));
         }
         workerArray = workers.toArray(StageWorker[]::new);
@@ -570,20 +606,20 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private EdgeSender[] senders(
-        final NodeDefinition node,
-        final List<EdgeDefinition> outgoingDefinitions,
-        final StageMetrics nodeMetrics
+            final NodeDefinition node,
+            final List<EdgeDefinition> outgoingDefinitions,
+            final StageMetrics nodeMetrics
     ) {
         final EdgeSender[] senders = new EdgeSender[outgoingDefinitions.size()];
         for (int i = 0; i < outgoingDefinitions.size(); i++) {
             final EdgeDefinition outgoing = outgoingDefinitions.get(i);
             final EdgeSender sender = new EdgeSender(
-                node.name(),
-                node.outputType(),
-                edgesByKey.get(outgoing.key()),
-                outgoing.spec(),
-                nodeMetrics,
-                coordinator
+                    node.name(),
+                    node.outputType(),
+                    edgesByKey.get(outgoing.key()),
+                    outgoing.spec(),
+                    nodeMetrics,
+                    coordinator
             );
             wireRedirect(node.name(), sender, outgoing, nodeMetrics);
             senders[i] = sender;
@@ -592,14 +628,14 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private List<EdgeDefinition> runtimeOutgoingDefinitions(
-        final List<EdgeDefinition> outgoingDefinitions,
-        final FusedStagePlan fusedStagePlan
+            final List<EdgeDefinition> outgoingDefinitions,
+            final FusedStagePlan fusedStagePlan
     ) {
         if (fusedStagePlan == null) {
             return outgoingDefinitions;
         }
         final List<EdgeDefinition> definitions = new ArrayList<>(
-            outgoingDefinitions.size() + fusedStagePlan.downstreamOutgoing().size()
+                outgoingDefinitions.size() + fusedStagePlan.downstreamOutgoing().size()
         );
         definitions.addAll(outgoingDefinitions);
         definitions.addAll(fusedStagePlan.downstreamOutgoing());
@@ -607,104 +643,104 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private StageWorker.FusedSink fusedSink(
-        final FusedSinkPlan fusedSinkPlan,
-        final StageMetrics ownerMetrics,
-        final Map<String, StageMetrics> stageMetrics
+            final FusedSinkPlan fusedSinkPlan,
+            final StageMetrics ownerMetrics,
+            final Map<String, StageMetrics> stageMetrics
     ) {
         final NodeDefinition sink = compiled.nodes().get(fusedSinkPlan.sinkName());
         final EdgeDefinition edge = fusedSinkPlan.edge();
         return new StageWorker.FusedSink(
-            sink.name(),
-            sink.inputType(),
-            sink.sink(),
-            stageMetrics.get(sink.name()),
-            ownerMetrics,
-            edgesByKey.get(edge.key()).metrics(),
-            coordinator.metrics(),
-            coordinator
+                sink.name(),
+                sink.inputType(),
+                sink.sink(),
+                stageMetrics.get(sink.name()),
+                ownerMetrics,
+                edgesByKey.get(edge.key()).metrics(),
+                coordinator.metrics(),
+                coordinator
         );
     }
 
     private StageWorker.FusedStage fusedStage(
-        final FusedStagePlan fusedStagePlan,
-        final StageMetrics ownerMetrics,
-        final Map<String, StageMetrics> stageMetrics
+            final FusedStagePlan fusedStagePlan,
+            final StageMetrics ownerMetrics,
+            final Map<String, StageMetrics> stageMetrics
     ) {
         return fusedStage(fusedStagePlan, 0, ownerMetrics, stageMetrics);
     }
 
     private StageWorker.FusedStage fusedStage(
-        final FusedStagePlan fusedStagePlan,
-        final int stageIndex,
-        final StageMetrics ownerMetrics,
-        final Map<String, StageMetrics> stageMetrics
+            final FusedStagePlan fusedStagePlan,
+            final int stageIndex,
+            final StageMetrics ownerMetrics,
+            final Map<String, StageMetrics> stageMetrics
     ) {
         final NodeDefinition stage = compiled.nodes().get(fusedStagePlan.stageNames().get(stageIndex));
         final EdgeDefinition edge = fusedStagePlan.stageInputEdges().get(stageIndex);
         final StageMetrics currentMetrics = stageMetrics.get(stage.name());
         final boolean terminalStage = stageIndex == fusedStagePlan.stageNames().size() - 1;
         final StageWorker.FusedStage nextStage = terminalStage
-            ? null
-            : fusedStage(fusedStagePlan, stageIndex + 1, currentMetrics, stageMetrics);
+                ? null
+                : fusedStage(fusedStagePlan, stageIndex + 1, currentMetrics, stageMetrics);
         final StageWorker.FusedSink terminalSink = fusedStagePlan.sinkPlan() == null
-            ? null
-            : terminalStage ? fusedSink(fusedStagePlan.sinkPlan(), currentMetrics, stageMetrics) : null;
+                ? null
+                : terminalStage ? fusedSink(fusedStagePlan.sinkPlan(), currentMetrics, stageMetrics) : null;
         final EdgeOutput<Object> downstreamOutput;
         if (nextStage == null && terminalSink == null) {
             final List<EdgeDefinition> normalOutgoing = compiled.normalOutgoingBySource()
-                .getOrDefault(stage.name(), List.of());
+                    .getOrDefault(stage.name(), List.of());
             final EdgeSender[] senders = senders(stage, normalOutgoing, stageMetrics.get(stage.name()));
             downstreamOutput = senders.length == 0 ? null : new EdgeOutput<>(senders[0]);
         } else {
             downstreamOutput = null;
         }
         return new StageWorker.FusedStage(
-            stage.name(),
-            stage.inputType(),
-            stage.logic(),
-            downstreamOutput,
-            currentMetrics,
-            ownerMetrics,
-            edgesByKey.get(edge.key()).metrics(),
-            coordinator.metrics(),
-            coordinator,
-            nextStage,
-            terminalSink
+                stage.name(),
+                stage.inputType(),
+                stage.logic(),
+                downstreamOutput,
+                currentMetrics,
+                ownerMetrics,
+                edgesByKey.get(edge.key()).metrics(),
+                coordinator.metrics(),
+                coordinator,
+                nextStage,
+                terminalSink
         );
     }
 
     private void wireRedirect(
-        final String sourceName,
-        final EdgeSender sender,
-        final EdgeDefinition primary,
-        final StageMetrics metrics
+            final String sourceName,
+            final EdgeSender sender,
+            final EdgeDefinition primary,
+            final StageMetrics metrics
     ) {
         final String redirectTarget = primary.spec().overflowPolicy().redirectTarget();
         if (redirectTarget == null) {
             return;
         }
         final EdgeDefinition redirect = compiled.redirectBySourceAndTarget()
-            .getOrDefault(sourceName, Map.of())
-            .get(redirectTarget);
+                .getOrDefault(sourceName, Map.of())
+                .get(redirectTarget);
         if (redirect == null) {
             return;
         }
         sender.redirectSender(new EdgeSender(
-            sourceName,
-            primary.messageType(),
-            edgesByKey.get(redirect.key()),
-            redirect.spec(),
-            metrics,
-            coordinator
+                sourceName,
+                primary.messageType(),
+                edgesByKey.get(redirect.key()),
+                redirect.spec(),
+                metrics,
+                coordinator
         ));
     }
 
     private MessageEdge[] ownedEdges(
-        final String nodeName,
-        final List<EdgeDefinition> incomingDefinitions,
-        final List<EdgeDefinition> outgoingDefinitions,
-        final Set<String> elidedEdgeKeys,
-        final FusedStagePlan fusedStagePlan
+            final String nodeName,
+            final List<EdgeDefinition> incomingDefinitions,
+            final List<EdgeDefinition> outgoingDefinitions,
+            final Set<String> elidedEdgeKeys,
+            final FusedStagePlan fusedStagePlan
     ) {
         final List<MessageEdge> owned = new ArrayList<>(incomingDefinitions.size() + outgoingDefinitions.size());
         for (final EdgeDefinition incoming : incomingDefinitions) {
@@ -756,21 +792,21 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private record FusedSinkPlan(
-        String stageName,
-        String sinkName,
-        EdgeDefinition edge,
-        PinPolicy effectivePinPolicy
+            String stageName,
+            String sinkName,
+            EdgeDefinition edge,
+            PinPolicy effectivePinPolicy
     ) {
     }
 
     private record FusedStagePlan(
-        String ownerName,
-        List<String> stageNames,
-        List<EdgeDefinition> stageInputEdges,
-        List<EdgeDefinition> elidedEdges,
-        List<EdgeDefinition> downstreamOutgoing,
-        FusedSinkPlan sinkPlan,
-        PinPolicy effectivePinPolicy
+            String ownerName,
+            List<String> stageNames,
+            List<EdgeDefinition> stageInputEdges,
+            List<EdgeDefinition> elidedEdges,
+            List<EdgeDefinition> downstreamOutgoing,
+            FusedSinkPlan sinkPlan,
+            PinPolicy effectivePinPolicy
     ) {
         String firstStageName() {
             return stageNames.get(0);
@@ -782,16 +818,18 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private record RuntimePlan(
-        List<String> workerOrder,
-        Map<String, FusedSinkPlan> fusedSinks,
-        Map<String, FusedStagePlan> fusedStages,
-        Set<String> elidedEdgeKeys
+            List<String> workerOrder,
+            Map<String, FusedSinkPlan> fusedSinks,
+            Map<String, FusedStagePlan> fusedStages,
+            Set<String> elidedEdgeKeys,
+            Map<String, String> inlineFusedWorkerToSource
     ) {
         private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
+        private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
 
         static RuntimePlan build(final CompiledGraph compiled) {
-            if (!Boolean.getBoolean(FUSION_ENABLED_PROPERTY)) {
-                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of());
+            if (!Boolean.parseBoolean(System.getProperty(FUSION_ENABLED_PROPERTY, "true"))) {
+                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of(), Map.of());
             }
 
             final Map<String, FusedSinkPlan> fusedSinks = new LinkedHashMap<>();
@@ -825,17 +863,29 @@ public final class DefaultStaticGraph implements StaticGraph {
             }
 
             if (fusedSinks.isEmpty() && fusedStages.isEmpty()) {
-                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of());
+                return new RuntimePlan(compiled.workerOrder(), Map.of(), Map.of(), Set.of(), Map.of());
             }
 
             final List<String> actualWorkers = compiled.workerOrder().stream()
-                .filter(worker -> !skippedWorkers.contains(worker))
-                .toList();
+                    .filter(worker -> !skippedWorkers.contains(worker))
+                    .toList();
+            // Inline source-side fusion: when explicitly enabled via system property, identify
+            // fused-stage / fused-sink workers whose only input is a single-producer source
+            // emitting a non-handle, non-stamped payload over a fusible BLOCK SPSC edge. Such
+            // workers no longer need their thread for hot-path work; the producer thread runs
+            // the fused chain synchronously.
+            final Map<String, String> inlineFused = inlineFusedWorkerToSource(
+                    compiled,
+                    fusedStages,
+                    fusedSinks,
+                    elidedEdges
+            );
             return new RuntimePlan(
-                actualWorkers,
-                Map.copyOf(fusedSinks),
-                Map.copyOf(fusedStages),
-                Set.copyOf(elidedEdges)
+                    actualWorkers,
+                    Map.copyOf(fusedSinks),
+                    Map.copyOf(fusedStages),
+                    Set.copyOf(elidedEdges),
+                    Map.copyOf(inlineFused)
             );
         }
 
@@ -850,16 +900,16 @@ public final class DefaultStaticGraph implements StaticGraph {
         private static FusedSinkPlan fusedSinkPlan(final CompiledGraph compiled, final String workerName) {
             final NodeDefinition stage = compiled.nodes().get(workerName);
             if (stage == null
-                || stage.kind() != GraphPlan.NodeKind.STAGE
-                || stage.batchLogic() != null
-                || stage.spec().batchPolicy().kind() != BatchPolicy.BatchKind.DISABLED) {
+                    || stage.kind() != GraphPlan.NodeKind.STAGE
+                    || stage.batchLogic() != null
+                    || stage.spec().batchPolicy().kind() != BatchPolicy.BatchKind.DISABLED) {
                 return null;
             }
 
             final List<EdgeDefinition> normalOutgoing = compiled.normalOutgoingBySource()
-                .getOrDefault(workerName, List.of());
+                    .getOrDefault(workerName, List.of());
             final List<EdgeDefinition> allOutgoing = compiled.outgoingBySource()
-                .getOrDefault(workerName, List.of());
+                    .getOrDefault(workerName, List.of());
             if (normalOutgoing.size() != 1 || allOutgoing.size() != 1) {
                 return null;
             }
@@ -907,9 +957,9 @@ public final class DefaultStaticGraph implements StaticGraph {
 
             while (true) {
                 final List<EdgeDefinition> normalOutgoing = compiled.normalOutgoingBySource()
-                    .getOrDefault(currentName, List.of());
+                        .getOrDefault(currentName, List.of());
                 final List<EdgeDefinition> allOutgoing = compiled.outgoingBySource()
-                    .getOrDefault(currentName, List.of());
+                        .getOrDefault(currentName, List.of());
                 if (normalOutgoing.size() != 1 || allOutgoing.size() != 1) {
                     break;
                 }
@@ -933,8 +983,8 @@ public final class DefaultStaticGraph implements StaticGraph {
                     final FusedSinkPlan candidate = fusedSinkPlan(compiled, currentName);
                     if (candidate != null) {
                         final PinPolicy combinedPinPolicy = effectivePinPolicy(
-                            effectivePinPolicy,
-                            candidate.effectivePinPolicy()
+                                effectivePinPolicy,
+                                candidate.effectivePinPolicy()
                         );
                         if (combinedPinPolicy != null) {
                             effectivePinPolicy = combinedPinPolicy;
@@ -950,28 +1000,90 @@ public final class DefaultStaticGraph implements StaticGraph {
                 return null;
             }
             return new FusedStagePlan(
-                workerName,
-                List.copyOf(stageNames),
-                List.copyOf(stageInputEdges),
-                List.copyOf(elidedEdges),
-                List.copyOf(downstreamOutgoing),
-                sinkPlan,
-                effectivePinPolicy
+                    workerName,
+                    List.copyOf(stageNames),
+                    List.copyOf(stageInputEdges),
+                    List.copyOf(elidedEdges),
+                    List.copyOf(downstreamOutgoing),
+                    sinkPlan,
+                    effectivePinPolicy
             );
         }
 
         private static boolean fusibleStage(final NodeDefinition stage) {
             return stage != null
-                && stage.kind() == GraphPlan.NodeKind.STAGE
-                && stage.batchLogic() == null
-                && stage.spec().batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
+                    && stage.kind() == GraphPlan.NodeKind.STAGE
+                    && stage.batchLogic() == null
+                    && stage.spec().batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
         }
 
         private static boolean fusibleEdge(final EdgeSpec spec) {
             return spec.kind() == EdgeSpec.EdgeKind.SPSC_RING
-                && spec.overflowPolicy().kind() == OverflowPolicy.OverflowKind.BLOCK
-                && spec.memoryMode().kind() == MemoryMode.MemoryKind.ON_HEAP_SLOTS
-                && spec.batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
+                    && spec.overflowPolicy().kind() == OverflowPolicy.OverflowKind.BLOCK
+                    && spec.memoryMode().kind() == MemoryMode.MemoryKind.ON_HEAP_SLOTS
+                    && spec.batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
+        }
+
+        private static Map<String, String> inlineFusedWorkerToSource(
+                final CompiledGraph compiled,
+                final Map<String, FusedStagePlan> fusedStages,
+                final Map<String, FusedSinkPlan> fusedSinks,
+                final Set<String> elidedEdges
+        ) {
+            if (!Boolean.parseBoolean(System.getProperty(INLINE_SOURCE_FUSION_PROPERTY, "true"))) {
+                return Map.of();
+            }
+            final Map<String, String> mapping = new LinkedHashMap<>();
+            collectInlineEligible(compiled, fusedSinks.keySet(), elidedEdges, mapping);
+
+            final Set<String> terminalChainOwners = new HashSet<>();
+            for (final Map.Entry<String, FusedStagePlan> entry : fusedStages.entrySet()) {
+                if (entry.getValue().sinkPlan() != null) {
+                    terminalChainOwners.add(entry.getKey());
+                }
+            }
+            collectInlineEligible(compiled, terminalChainOwners, elidedEdges, mapping);
+            return mapping;
+        }
+
+        private static void collectInlineEligible(
+                final CompiledGraph compiled,
+                final Set<String> fusedWorkerNames,
+                final Set<String> elidedEdges,
+                final Map<String, String> mapping
+        ) {
+            for (final String workerName : fusedWorkerNames) {
+                final List<EdgeDefinition> incoming = compiled.incomingByTarget()
+                        .getOrDefault(workerName, List.of());
+                if (incoming.size() != 1) {
+                    continue;
+                }
+                final EdgeDefinition edge = incoming.get(0);
+                if (elidedEdges.contains(edge.key()) || !fusibleEdge(edge.spec())) {
+                    continue;
+                }
+                final NodeDefinition source = compiled.nodes().get(edge.from());
+                if (source == null
+                        || source.kind() != GraphPlan.NodeKind.SOURCE
+                        || source.sourceMode() != SourceMode.SINGLE_PRODUCER
+                        || source.preallocationSpec() != null
+                        || source.stampedSource()
+                        || mayCarryHandle(source.outputType())) {
+                    continue;
+                }
+                final List<EdgeDefinition> sourceOutgoing = compiled.normalOutgoingBySource()
+                        .getOrDefault(source.name(), List.of());
+                if (sourceOutgoing.size() != 1) {
+                    continue;
+                }
+                mapping.put(workerName, source.name());
+            }
+        }
+
+        private static boolean mayCarryHandle(final Class<?> type) {
+            return type == Object.class
+                    || type.isAssignableFrom(SlabHandle.class)
+                    || type.isAssignableFrom(Stamped.class);
         }
     }
 }

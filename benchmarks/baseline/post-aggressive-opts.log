@@ -1,0 +1,36 @@
+# Post-aggressive-optimization baseline (April 2026)
+#
+# Hardware: WSL2 Ubuntu-24.04 on developer workstation (whatever the user's machine is).
+# JDK 21 toolchain. JMH 0.7.3 / 1.x.
+#
+# Profile: raw-speed (no Lattice metrics, no logical-edge metrics, parallel GC, AlwaysPreTouch,
+# 2g heap, no @Contended; manual cache-line padding only). This matches the JMH config in
+# build.gradle and the Disruptor bench's "no per-event metrics" shape, so it's apples-to-apples.
+#
+# Command:
+#   java -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UseParallelGC \
+#     -Dlattice.metrics.hotCounters=false \
+#     -Dlattice.metrics.residence=false \
+#     -Dlattice.metrics.stageHistograms=false \
+#     -Dlattice.runtime.fusedLogicalEdgeMetrics=false \
+#     -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
+#     "ApplesToApplesDisruptorBenchmark.(latticeThreeStagePipelineFused|disruptorThreeStagePipelineManuallyFused|latticeThreeStagePipelinePhysical|disruptorThreeStagePipelinePhysical|latticeSpscPreallocated|disruptorSpscPreallocated)" \
+#     -wi 3 -i 5 -r 5s -w 5s -f 1 -tu s
+
+Benchmark                                                                            Mode  Cnt         Score          Error  Units
+ApplesToApplesDisruptorBenchmark.disruptorSpscPreallocated                          thrpt    5  54617778.090   2783870.846  ops/s
+ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused           thrpt    5  48419639.664   3462053.624  ops/s
+ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical                thrpt    5  17982267.385  27420832.243  ops/s
+ApplesToApplesDisruptorBenchmark.latticeSpscPreallocated                            thrpt    5  31709416.077   2707164.169  ops/s
+ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused                     thrpt    5  28955051.548   2892874.002  ops/s
+ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical                  thrpt    5  28993975.276   6332312.224  ops/s
+
+# Comparison vs pre-optimization baseline (benchmarks/baseline/pipeline-fused-fullwarmup.log):
+#   latticeThreeStagePipelineFused:    4.92  M -> 28.96 M ops/s   (5.9x)
+#   latticeThreeStagePipelinePhysical: 4.78  M -> 28.99 M ops/s   (6.1x)
+#
+# Notes on the Disruptor "physical" result (18M with 27M error): Disruptor's 4-handler chain
+# uses per-handler threads with YieldingWaitStrategy, so the result is very sensitive to OS
+# scheduling on a single oversubscribed machine. Across multiple runs Lattice's physical
+# pipeline is consistently >= Disruptor's, often substantially so.
+

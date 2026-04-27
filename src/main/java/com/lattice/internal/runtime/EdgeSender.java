@@ -129,8 +129,19 @@ final class EdgeSender {
     }
 
     void emitTrustedFromSource(final Object item) {
+        // Validate even on the "trusted" path. The ring uses null as the empty-slot sentinel
+        // and as the "not yet published" plain-claim signal (see SpscRingEdge#poll); a null
+        // published by the producer would be indistinguishable from "slot not ready" and could
+        // wedge the consumer. The type check is also part of the runtime contract on every
+        // public emit boundary. The cost is one always-not-null branch and one monomorphic
+        // class-equality check on the source-thread hot path.
+        validateItem(item);
         if (!canUseTrustedFastPath()) {
-            emitFromSource(item);
+            // For lossy overflow (DROP_LATEST/DROP_OLDEST/COALESCE/REDIRECT), FAIL_FAST, or
+            // handle-bearing payloads, we must take the full {@code emit()} pipeline. It will
+            // re-validate -- the second null/type check on the cold path is idempotent and
+            // acceptable to keep the routing logic in one place.
+            emit(item);
             return;
         }
         emitBlockingFastPathTrusted(item);

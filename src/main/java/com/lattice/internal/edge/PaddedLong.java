@@ -9,7 +9,7 @@ final class PaddedLong {
     long p05;
     long p06;
     long p07;
-    volatile long value;
+    long value;
     long p11;
     long p12;
     long p13;
