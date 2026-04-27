@@ -73,6 +73,12 @@ class RuntimeCoordinator {
     }
 
     boolean hasInFlightWork() {
+        final SourceEmitter<?>[] currentSources = sources;
+        for (int i = 0; i < currentSources.length; i++) {
+            if (currentSources[i].pendingInline() > 0L) {
+                return true;
+            }
+        }
         final StageWorker[] currentWorkers = workers;
         for (int i = 0; i < currentWorkers.length; i++) {
             if (currentWorkers[i].active()) {
@@ -81,6 +87,7 @@ class RuntimeCoordinator {
         }
         return false;
     }
+
 
     void workerBootstrapped() {
         bootstrapLatch.countDown();
@@ -118,7 +125,7 @@ class RuntimeCoordinator {
 
             final MessageEdge[] currentEdges = edges;
             for (int i = 0; i < currentEdges.length; i++) {
-                currentEdges[i].abort();
+                currentEdges[i].close();
             }
 
             final StageWorker[] currentWorkers = workers;
@@ -170,6 +177,10 @@ class RuntimeCoordinator {
 
     void workerStopped() {
         if (remainingWorkers.decrementAndGet() == 0) {
+            final MessageEdge[] currentEdges = edges;
+            for (int i = 0; i < currentEdges.length; i++) {
+                currentEdges[i].abort();
+            }
             metrics.markStopped();
             state.compareAndSet(GraphState.RUNNING, GraphState.STOPPED);
             state.compareAndSet(GraphState.QUIESCING, GraphState.STOPPED);

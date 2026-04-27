@@ -1606,6 +1606,9 @@ final class StageWorker implements Runnable {
         }
 
         private void emit(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(sink.name + " cannot consume null");
+            }
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             if (LATTICE_VALIDATE_FUSED) {
                 validate(outbound);
@@ -1626,9 +1629,6 @@ final class StageWorker implements Runnable {
         }
 
         private void validate(final Object item) {
-            if (item == null) {
-                throw new NullPointerException(sink.name + " cannot consume null");
-            }
             if (!sink.acceptsAnyType && item.getClass() != sink.inputType && !sink.inputType.isInstance(item)) {
                 throw new ClassCastException(sink.name + " received " + item.getClass().getName()
                     + ", expected " + sink.inputTypeName);
@@ -1666,6 +1666,9 @@ final class StageWorker implements Runnable {
         }
 
         private void emit(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(stage.name + " cannot consume null");
+            }
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
             if (LATTICE_VALIDATE_FUSED) {
                 validate(outbound);
@@ -1708,9 +1711,7 @@ final class StageWorker implements Runnable {
         }
 
         private void validate(final Object item) {
-            if (item == null) {
-                throw new NullPointerException(stage.name + " cannot consume null");
-            }
+            // Null already handled in emit(); keep this for the optional type assertion.
             if (!stage.acceptsAnyType && item.getClass() != stage.inputType && !stage.inputType.isInstance(item)) {
                 throw new ClassCastException(stage.name + " received " + item.getClass().getName()
                     + ", expected " + stage.inputTypeName);
@@ -1775,6 +1776,16 @@ final class StageWorker implements Runnable {
          * downstream chain in a single translator try/catch; intermediate hops are bare calls.
          */
         private void emitStageBenign(final FusedStage stage, final Output<Object> next, final Object item) {
+            // Always reject null. The non-fused EdgeSender always rejects null because the
+            // ring buffer uses null as both the empty-slot sentinel and the "not yet
+            // published" plain-claim signal; a null published by a fused stage would similarly
+            // wedge the next downstream ring (when the chain tail writes to a real edge) and
+            // would surface as a silent NPE inside the user's next stage logic. Keeping the
+            // check unconditional aligns fused and non-fused null semantics; the cost is one
+            // always-not-null branch per hop (well-predicted, near zero on x86).
+            if (item == null) {
+                throw new NullPointerException(stage.name + " cannot consume null");
+            }
             if (LATTICE_VALIDATE_FUSED) {
                 validate(stage, item);
             }
@@ -1797,6 +1808,9 @@ final class StageWorker implements Runnable {
         }
 
         private void emitSinkBenign(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(sink.name + " cannot consume null");
+            }
             if (LATTICE_VALIDATE_FUSED) {
                 validate(sink, item);
             }
@@ -1810,6 +1824,9 @@ final class StageWorker implements Runnable {
         // ----- Retaining (handle-bearing) hot path: scope + try/finally per hop.
 
         private void emitStageRetaining(final FusedStage stage, final Output<Object> next, final Object item) {
+            if (item == null) {
+                throw new NullPointerException(stage.name + " cannot consume null");
+            }
             final Object outbound = HandleOwnership.prepareForEnqueue(item);
             if (LATTICE_VALIDATE_FUSED) {
                 validate(stage, outbound);
@@ -1839,6 +1856,9 @@ final class StageWorker implements Runnable {
         }
 
         private void emitSinkRetaining(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(sink.name + " cannot consume null");
+            }
             final Object outbound = HandleOwnership.prepareForEnqueue(item);
             if (LATTICE_VALIDATE_FUSED) {
                 validate(sink, outbound);
@@ -2009,12 +2029,12 @@ final class StageWorker implements Runnable {
         throw (E) ex;
     }
 
-    private static final class FusedStageException extends RuntimeException {
+    static final class FusedStageException extends RuntimeException {
         private final String stageName;
         private final StageMetrics metrics;
         private final RuntimeStageContext context;
 
-        private FusedStageException(
+        FusedStageException(
             final String stageName,
             final StageMetrics metrics,
             final RuntimeStageContext context,

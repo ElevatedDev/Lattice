@@ -144,9 +144,10 @@ public final class DefaultStaticGraph implements StaticGraph {
 
         final NodeDefinition source = compiled.nodes().get(sourceName);
         final Class<?> exposedType = source.outputType();
-        if (!exposedType.isAssignableFrom(type)) {
+
+        if (type != exposedType) {
             throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
-                    + ", not assignable to " + type.getName());
+                    + ", not " + type.getName());
         }
         return (PreallocatedEmitter<T>) emitter;
     }
