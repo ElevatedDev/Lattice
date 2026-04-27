@@ -64,6 +64,6 @@
     <text class="num" x="598" y="170">26.21M poll</text>
   </g>
 
-  <text class="sub" x="20" y="300">Source: benchmarks/baseline/edge-pair.json · single producer + single consumer · 1024-slot ring</text>
+  <text class="sub" x="20" y="300">Source: local JMH baseline notes; single producer + single consumer; 1024-slot ring</text>
 </svg>
 

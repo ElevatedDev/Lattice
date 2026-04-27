@@ -74,6 +74,9 @@ state is pre-1.0.
   `docs/_config.yml`.
 - GitHub-recognized project metadata files: `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, `NOTICE`, and `.editorconfig`.
+- Open-source repository scaffolding: GitHub Actions CI/release artifact
+  workflows, issue template, pull request template, Dependabot config, and
+  `.gitattributes`.
 - `-Dlattice.fusion.validateTypes` (default `false`) to re-enable defensive
   per-event runtime type assertions inside fused chains while developing
   custom stage logic.
@@ -83,6 +86,11 @@ state is pre-1.0.
 - Root `README.md` rewritten around the public contract, quick start,
   verification commands, native placement, benchmark caveats, and the new docs
   index.
+- Maven coordinates are aligned to `io.github.elevateddev:lattice`, and
+  `HdrHistogram` is exposed as an API dependency because histogram types appear
+  in public metrics accessors.
+- Optional native access classes moved from the old `com.staticgraph.*`
+  namespace to `com.lattice.nativeaccess` before the first public release.
 - `CONTRIBUTING.md` expanded with scope, hot-path, test, documentation, and
   security expectations for public contributions.
 - `SECURITY.md` rewritten for pre-1.0 support status and private vulnerability

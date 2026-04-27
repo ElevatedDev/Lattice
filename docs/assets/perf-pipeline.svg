@@ -83,7 +83,7 @@
     <text class="num" x="772" y="318">62.87M</text>
   </g>
 
-  <text class="sub" x="20" y="438">Source: benchmarks/baseline/smoke-all.json · ApplesToApplesDisruptorBenchmark · TopologyShapeDisruptorBenchmark</text>
+  <text class="sub" x="20" y="438">Source: local JMH baseline notes; ApplesToApplesDisruptorBenchmark; TopologyShapeDisruptorBenchmark</text>
   <text class="sub" x="20" y="453">Lattice's value is in the <tspan font-style="italic">graph contract</tspan>: preallocated payloads, semantic joins, deterministic backpressure, fusion that preserves the logical graph.</text>
 </svg>
 

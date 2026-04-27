@@ -1,4 +1,4 @@
-package com.staticgraph.runtime.nativeaccess;
+package com.lattice.nativeaccess;
 
 import java.util.BitSet;
 import java.util.Objects;

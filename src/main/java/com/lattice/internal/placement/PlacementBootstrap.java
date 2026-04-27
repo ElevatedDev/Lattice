@@ -4,11 +4,11 @@ import com.lattice.graph.GraphRuntimeException;
 import com.lattice.internal.edge.MessageEdge;
 import com.lattice.metrics.PlacementStatus;
 import com.lattice.placement.PinPolicy;
-import com.staticgraph.runtime.nativeaccess.NativeCapabilities;
-import com.staticgraph.runtime.nativeaccess.NativeTopology;
-import com.staticgraph.runtime.nativeaccess.NativeTopologyException;
-import com.staticgraph.runtime.nativeaccess.NativeTopologySnapshot;
-import com.staticgraph.runtime.nativeaccess.NativeTopologyUnavailableException;
+import com.lattice.nativeaccess.NativeCapabilities;
+import com.lattice.nativeaccess.NativeTopology;
+import com.lattice.nativeaccess.NativeTopologyException;
+import com.lattice.nativeaccess.NativeTopologySnapshot;
+import com.lattice.nativeaccess.NativeTopologyUnavailableException;
 import java.util.BitSet;
 
 public final class PlacementBootstrap {

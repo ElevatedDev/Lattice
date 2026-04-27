@@ -23,9 +23,13 @@ Maintainers may edit or delete comments, close discussions, block users, or
 restrict repository access when behavior makes the project harder or unsafe to
 maintain.
 
-Report conduct concerns privately through the same maintainer channel used for
-security-sensitive reports. Include links, screenshots, dates, and a concise
-description of the issue when possible.
+Report conduct concerns through GitHub private vulnerability reporting when the
+report includes private personal data or safety-sensitive details:
+
+<https://github.com/ElevatedDev/Lattice/security/advisories/new>
+
+For non-sensitive conduct issues, open a repository issue with links, dates, and
+a concise description.
 
 ## Scope
 

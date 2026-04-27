@@ -8,7 +8,7 @@ minutes.
 - JDK 21 (matching the project's Gradle toolchain).
 - The checked-in Gradle wrapper (`./gradlew` / `gradlew.bat`).
 - Optional: Rust + Cargo, only if you want the [native placement
-  backend](https://github.com/ElevatedDev/Lattice/blob/main/README.md#native-placement-backend)
+  backend](../README.md#native-placement-backend)
   for Linux affinity and NUMA diagnostics.
 
 ## Build And Smoke-Test
@@ -62,12 +62,12 @@ graph.awaitTermination(Duration.ofSeconds(5));
 
 ## What To Read Next
 
-- [Graph DSL](graph-dsl.md) — every builder method.
-- [Edge Semantics](edge-semantics.md) — SPSC vs MPSC, capacity rules, slab
+- [Graph DSL](graph-dsl.md) - every builder method.
+- [Edge Semantics](edge-semantics.md) - SPSC vs MPSC, capacity rules, slab
   handles.
-- [Ordering Guarantees](ordering-guarantees.md) — exactly what Lattice promises.
-- [Backpressure](backpressure.md) — overflow policies, sizing, redirect.
-- [Observability](observability.md) — metrics, JFR events, placement reports.
-- [Architecture](architecture.md) — how Lattice compiles your graph.
-- [Examples Overview](examples/README.md) — runnable, JMH-grade examples.
+- [Ordering Guarantees](ordering-guarantees.md) - exactly what Lattice promises.
+- [Backpressure](backpressure.md) - overflow policies, sizing, redirect.
+- [Observability](observability.md) - metrics, JFR events, placement reports.
+- [Architecture](architecture.md) - how Lattice compiles your graph.
+- [Examples Overview](examples/README.md) - runnable, JMH-grade examples.
 

@@ -10,5 +10,5 @@ module com.lattice {
     exports com.lattice.slab;
     exports com.lattice.stage;
     exports com.lattice.wait;
-    exports com.staticgraph.runtime.nativeaccess;
+    exports com.lattice.nativeaccess;
 }

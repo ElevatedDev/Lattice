@@ -11,9 +11,8 @@ No stable Maven artifact has been published yet. Until the first release, build
 from source and use `./gradlew javadoc` for local API docs.
 
 This page summarizes the public packages and the stability contract for each
-type. See the repository
-[`CONTRIBUTING.md`](https://github.com/ElevatedDev/Lattice/blob/main/CONTRIBUTING.md)
-for the full stable-surface list and the
+type. See the repository [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full
+stable-surface list and the
 [Compatibility Matrix](compatibility-matrix.md) for the versioning policy.
 
 ## Public Packages
@@ -28,7 +27,7 @@ for the full stable-surface list and the
 | `com.lattice.routing` | `dispatch` / `broadcast` / `partition` / `join` specifications. | **Stable** |
 | `com.lattice.slab` | `SlabPool`, `SlabHandle` and supporting types. | **Stable** |
 | `com.lattice.wait` | `WaitSpec`, wait-strategy primitives. | **Stable** |
-| `com.staticgraph.runtime.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
+| `com.lattice.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
 
 ## Stability Contract
 

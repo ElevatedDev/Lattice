@@ -4,7 +4,7 @@ Lattice and [LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) both
 target low-latency in-process messaging on the JVM, but they make very
 different design choices. This page is the methodology and honest-numbers
 companion to the repository
-[Performance Snapshot](https://github.com/ElevatedDev/Lattice/blob/main/README.md#performance-snapshot).
+[Performance Snapshot](../README.md#performance-snapshot).
 
 ## Conceptual Differences
 
@@ -21,8 +21,8 @@ companion to the repository
 
 ## Methodology
 
-The checked-in snapshots under [`benchmark-results/`](benchmark-results/)
-follow these rules:
+The checked-in benchmark notes under [`benchmark-results/`](benchmark-results/)
+and [`benchmarks/baseline/`](../benchmarks/baseline/) follow these rules:
 
 - JMH 1.37 (via the `me.champeau.jmh` Gradle plugin 0.7.3).
 - JDK 21.0.10, Temurin.
@@ -31,10 +31,11 @@ follow these rules:
 - Disruptor 4.0.0 on the JMH classpath only (never bundled in the published
   jar).
 - Single forked JVM per benchmark.
-- "Smoke" runs use 1 iteration × 3 s for a fast end-to-end signal; "warmed"
-  runs use 3 × 10 s warmup + 5 × 10 s measurement.
-- Numbers are reported in `ops/s` from the original JMH JSON, never
-  hand-massaged.
+- Smoke runs use 1 iteration x 3 s for a fast end-to-end signal; warmed runs
+  use 3 x 10 s warmup + 5 x 10 s measurement.
+- Numbers are reported in `ops/s` from the original JMH output, never
+  hand-massaged. Raw JSON artifacts should be attached to the matching GitHub
+  Release before making publication-grade claims.
 
 ## What The Baseline Set Measures
 
@@ -48,27 +49,29 @@ follow these rules:
   Disruptor's column shows the *manually-fused* equivalent (one handler
   doing all three steps). This row exists to be transparent: Disruptor wins
   this micro because manual fusion on a single ring is hard to beat.
-- **SPSC source→sink (bare)** is the bare-ring primitive shape; Disruptor's
+- **SPSC source->sink (bare)** is the bare-ring primitive shape; Disruptor's
   ring is famously well-tuned for this exact workload.
 - **MPSC reference** is a primitive multi-producer handoff; Disruptor's
   multi-producer ring remains stronger on this primitive shape.
 
 ## Honest Framing
 
-Lattice is competitive with Disruptor on SPSC preallocated payloads
-(≈1.03× in the baseline) and the SPSC edge-pair primitive
-(34.4 M ops/s warmed). Disruptor remains stronger on bare-ring micros and
-manually-fused pipelines. **Lattice's value is the graph contract** —
+The current checked-in WSL2 notes show Lattice strongest on graph-shaped
+pipelines where the runtime can specialize source ingress and fuse eligible
+linear chains. Disruptor remains stronger on some bare-ring micros and
+manually-fused single-handler shapes. **Lattice's value is the graph contract**:
 preallocated payload paths, semantic joins, deterministic backpressure, and
-fusion that preserves the logical graph — not "faster than Disruptor" on
-every shape.
+fusion that preserves the logical graph, not "faster than Disruptor" on every
+shape.
 
 If your workload is "one ring, many handlers, manual fan-out", use
 Disruptor. If your workload is "a fixed DAG with explicit joins, partitions,
 and backpressure", Lattice is what that DAG looks like.
 
-Generated working copies may live under `benchmarks/baseline/` locally. Public
-documentation should cite the versioned snapshot under `docs/benchmark-results/`.
+Generated working copies may live under `results/` locally. Public
+documentation should cite tracked notes under `benchmarks/baseline/`, the
+versioned summary under `docs/benchmark-results/`, or raw artifacts attached to
+the matching GitHub Release.
 
 See also [Linux Validation Notes](linux-validation.md) for how to produce
 publication-grade benchmarks.

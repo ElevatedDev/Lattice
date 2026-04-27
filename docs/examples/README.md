@@ -1,17 +1,17 @@
 # Examples Overview
 
 Runnable examples live under
-[`src/examples/java/com/lattice/examples/`](https://github.com/ElevatedDev/Lattice/tree/main/src/examples/java/com/lattice/examples).
+[`src/examples/java/com/lattice/examples/`](../../src/examples/java/com/lattice/examples/).
 Each is `public static void main` and uses only the public API.
 
 | Example | What it shows |
 | --- | --- |
-| [PreallocatedSourceSinkExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/PreallocatedSourceSinkExample.java) | Reusing payloads through a preallocated source and slab pool. |
-| [FusedLinearPipelineExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/FusedLinearPipelineExample.java) | Linear chain that the compiler fuses into a single owner thread. |
-| [RoutingJoinExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/RoutingJoinExample.java) | Partition + dispatch + stamped join with explicit policy. |
-| [MetricsDiagnosticsExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/MetricsDiagnosticsExample.java) | Reading graph / stage / edge / placement metrics at runtime. |
-| [BenchmarkStyleFastPathExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/BenchmarkStyleFastPathExample.java) | The hot-path discipline used by the JMH suite. |
-| [OrdersPipelineExample](https://github.com/ElevatedDev/Lattice/blob/main/src/examples/java/com/lattice/examples/OrdersPipelineExample.java) | Order validate → enrich → risk → commit pipeline end-to-end. |
+| [PreallocatedSourceSinkExample](../../src/examples/java/com/lattice/examples/PreallocatedSourceSinkExample.java) | Reusing payloads through a preallocated source and slab pool. |
+| [FusedLinearPipelineExample](../../src/examples/java/com/lattice/examples/FusedLinearPipelineExample.java) | Linear chain that the compiler fuses into a single owner thread. |
+| [RoutingJoinExample](../../src/examples/java/com/lattice/examples/RoutingJoinExample.java) | Partition + dispatch + stamped join with explicit policy. |
+| [MetricsDiagnosticsExample](../../src/examples/java/com/lattice/examples/MetricsDiagnosticsExample.java) | Reading graph / stage / edge / placement metrics at runtime. |
+| [BenchmarkStyleFastPathExample](../../src/examples/java/com/lattice/examples/BenchmarkStyleFastPathExample.java) | The hot-path discipline used by the JMH suite. |
+| [OrdersPipelineExample](../../src/examples/java/com/lattice/examples/OrdersPipelineExample.java) | Order validate -> enrich -> risk -> commit pipeline end-to-end. |
 
 ## Running
 

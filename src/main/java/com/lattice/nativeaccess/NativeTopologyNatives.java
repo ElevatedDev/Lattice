@@ -1,4 +1,4 @@
-package com.staticgraph.runtime.nativeaccess;
+package com.lattice.nativeaccess;
 
 final class NativeTopologyNatives {
     static final int CPU_MASK_WORDS = 16;

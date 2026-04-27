@@ -13,7 +13,7 @@ import com.lattice.routing.DispatchSpec;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.PreallocatedEmitter;
 import com.lattice.stage.StageSpec;
-import com.staticgraph.runtime.nativeaccess.NativeTopology;
+import com.lattice.nativeaccess.NativeTopology;
 import jdk.jfr.EventType;
 import jdk.jfr.FlightRecorder;
 import java.time.Duration;

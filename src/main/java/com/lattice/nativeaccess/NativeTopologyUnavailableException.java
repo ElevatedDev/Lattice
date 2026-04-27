@@ -1,4 +1,4 @@
-package com.staticgraph.runtime.nativeaccess;
+package com.lattice.nativeaccess;
 
 /**
  * Raised when the static topology native library cannot be loaded or the host

@@ -6,7 +6,7 @@ through `System.loadLibrary("static_topology_native")`.
 The Java wrapper stays in:
 
 ```text
-src/main/java/com/staticgraph/runtime/nativeaccess
+src/main/java/com/lattice/nativeaccess
 ```
 
 The native implementation now lives in-repo:

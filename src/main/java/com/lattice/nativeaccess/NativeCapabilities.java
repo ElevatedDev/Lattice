@@ -1,4 +1,4 @@
-package com.staticgraph.runtime.nativeaccess;
+package com.lattice.nativeaccess;
 
 /**
  * Capability bits reported by the loaded native topology library.

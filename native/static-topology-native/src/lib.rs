@@ -32,7 +32,7 @@ enum CpuListSelector {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_nativeCapabilities0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_nativeCapabilities0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JLong {
@@ -40,7 +40,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_maxCpuCount0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_maxCpuCount0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -48,7 +48,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_configuredCpuCount0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_configuredCpuCount0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -56,7 +56,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_onlineCpuCount0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_onlineCpuCount0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -64,7 +64,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_currentCpu0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_currentCpu0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -72,7 +72,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_currentNumaNode0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_currentNumaNode0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -80,7 +80,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_numaNodeOfCpu0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_numaNodeOfCpu0(
     _env: JNIEnv,
     _class: JClass,
     cpu: JInt,
@@ -89,7 +89,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_isCpuAllowed0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_isCpuAllowed0(
     _env: JNIEnv,
     _class: JClass,
     cpu: JInt,
@@ -98,7 +98,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpu0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpu0(
     _env: JNIEnv,
     _class: JClass,
     cpu: JInt,
@@ -107,7 +107,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToNumaNode0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToNumaNode0(
     _env: JNIEnv,
     _class: JClass,
     numa_node: JInt,
@@ -117,7 +117,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 
 #[allow(clippy::too_many_arguments)]
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpuMask0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpuMask0(
     _env: JNIEnv,
     _class: JClass,
     word0: JLong,
@@ -144,7 +144,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_setLocalAllocationPolicy0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_setLocalAllocationPolicy0(
     _env: JNIEnv,
     _class: JClass,
 ) -> JInt {
@@ -152,7 +152,7 @@ pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_staticgraph_runtime_nativeaccess_NativeTopologyNatives_firstTouchMemory0(
+pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_firstTouchMemory0(
     _env: JNIEnv,
     _class: JClass,
     address: JLong,
