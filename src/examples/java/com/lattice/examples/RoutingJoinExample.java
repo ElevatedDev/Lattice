@@ -24,7 +24,7 @@ public final class RoutingJoinExample {
 
         final StaticGraph graph = StaticGraph.builder("example-routing-join")
             .stampedSource("orders", Order.class)
-            .broadcast("fanout", Stamped.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
+            .broadcast("fanout", Stamped.class, BroadcastSpec.copy(stamped -> stamped), StageSpec.singleThreaded())
             .stage("journal", Stamped.class, Stamped.class, (stamped, out, ctx) -> {
                 // Replace this pass-through with a durable write, then emit only after the write succeeds.
                 out.push(stamped);

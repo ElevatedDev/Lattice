@@ -195,7 +195,7 @@ public class Phase4TopologyBenchmark {
                 .source("ingress", Order.class)
                 .stage("validate", Order.class, Order.class, (order, out, ctx) -> out.push(order),
                     StageSpec.singleThreaded())
-                .broadcast("fanout", Order.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
+                .broadcast("fanout", Order.class, BroadcastSpec.copy(order -> order), StageSpec.singleThreaded())
                 .sink("journal", Order.class, ignored -> { }, StageSpec.singleThreaded())
                 .stage("risk", Order.class, Order.class, (order, out, ctx) -> out.push(order),
                     StageSpec.singleThreaded())

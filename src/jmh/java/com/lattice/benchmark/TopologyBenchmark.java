@@ -259,7 +259,7 @@ public class TopologyBenchmark {
             if (fusionEnabled) {
                 System.setProperty("lattice.fusion.enabled", "true");
             } else {
-                System.clearProperty("lattice.fusion.enabled");
+                System.setProperty("lattice.fusion.enabled", "false");
             }
             try {
                 graph = StaticGraph.builder(graphName)
@@ -375,7 +375,7 @@ public class TopologyBenchmark {
             if (fusionEnabled) {
                 System.setProperty("lattice.fusion.enabled", "true");
             } else {
-                System.clearProperty("lattice.fusion.enabled");
+                System.setProperty("lattice.fusion.enabled", "false");
             }
             try {
                 graph = StaticGraph.builder(graphName)
@@ -484,7 +484,7 @@ public class TopologyBenchmark {
             if (fusionEnabled) {
                 System.setProperty("lattice.fusion.enabled", "true");
             } else {
-                System.clearProperty("lattice.fusion.enabled");
+                System.setProperty("lattice.fusion.enabled", "false");
             }
             try {
                 graph = StaticGraph.builder(graphName)

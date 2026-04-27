@@ -133,8 +133,8 @@ class RuntimeRegressionTest {
     @Test
     void anyOfDuplicateFailRejectsLaterSourceForAlreadyEmittedStamp() throws Exception {
         final StaticGraph graph = StaticGraph.builder("any-duplicate-fail")
-            .stampedSource("left", String.class)
-            .stampedSource("right", String.class)
+            .source("left", Stamped.class)
+            .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource())
                 .duplicates(JoinSpec.DuplicatePolicy.FAIL), StageSpec.singleThreaded())
             .sink("egress", String.class, ignored -> { }, StageSpec.singleThreaded())
@@ -144,10 +144,12 @@ class RuntimeRegressionTest {
             .build();
 
         graph.start();
-        graph.emitter("left", String.class).emit("l0");
-        graph.emitter("right", String.class).emit("r0");
-        graph.emitter("left", String.class).close();
-        graph.emitter("right", String.class).close();
+        final Emitter<Stamped> left = graph.emitter("left", Stamped.class);
+        final Emitter<Stamped> right = graph.emitter("right", Stamped.class);
+        left.emit(Stamped.of(7L, "l0"));
+        right.emit(Stamped.of(7L, "r0"));
+        left.close();
+        right.close();
 
         assertTrue(graph.awaitTermination(Duration.ofSeconds(1)));
         assertEquals(GraphState.FAILED, graph.state());
@@ -272,8 +274,8 @@ class RuntimeRegressionTest {
         throws Exception {
         final List<String> joined = Collections.synchronizedList(new ArrayList<>());
         final StaticGraph graph = StaticGraph.builder("any-duplicate-" + policy.name().toLowerCase())
-            .stampedSource("left", String.class)
-            .stampedSource("right", String.class)
+            .source("left", Stamped.class)
+            .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource() + ":" + group.stamp())
                 .duplicates(policy), StageSpec.singleThreaded())
             .sink("egress", String.class, joined::add, StageSpec.singleThreaded())
@@ -283,13 +285,15 @@ class RuntimeRegressionTest {
             .build();
 
         graph.start();
-        graph.emitter("left", String.class).emit("l0");
-        graph.emitter("right", String.class).emit("r0");
-        graph.emitter("left", String.class).close();
-        graph.emitter("right", String.class).close();
+        final Emitter<Stamped> left = graph.emitter("left", Stamped.class);
+        final Emitter<Stamped> right = graph.emitter("right", Stamped.class);
+        left.emit(Stamped.of(7L, "l0"));
+        right.emit(Stamped.of(7L, "r0"));
+        left.close();
+        right.close();
 
         assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
-        assertEquals(List.of("left:0"), List.copyOf(joined));
+        assertEquals(List.of("left:7"), List.copyOf(joined));
         assertEquals(duplicates, graph.metrics().stage("join").duplicateJoinStamps());
     }
 

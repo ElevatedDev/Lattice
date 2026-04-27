@@ -14,6 +14,11 @@ import com.lattice.wait.WaitSpec;
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.BusySpinWaitStrategy;
+import com.lmax.disruptor.LiteBlockingWaitStrategy;
+import com.lmax.disruptor.SleepingWaitStrategy;
+import com.lmax.disruptor.WaitStrategy;
 import com.lmax.disruptor.YieldingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.EventHandlerGroup;
@@ -29,6 +34,7 @@ import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -351,12 +357,14 @@ public class ApplesToApplesDisruptorBenchmark {
     @State(Scope.Benchmark)
     public static class DisruptorPipelineState extends PooledSignals {
         final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
         Disruptor<ValueEvent> disruptor;
         RingBuffer<ValueEvent> ringBuffer;
 
         @Setup(Level.Trial)
         public void setup() {
-            disruptor = disruptor("aa-disruptor-pipeline", ProducerType.SINGLE);
+            disruptor = disruptor("aa-disruptor-pipeline", ProducerType.SINGLE, waitProfile);
             disruptor.handleEventsWith(incrementHandler())
                 .then(incrementHandler())
                 .then(incrementHandler())
@@ -374,12 +382,14 @@ public class ApplesToApplesDisruptorBenchmark {
     @State(Scope.Benchmark)
     public static class DisruptorFusedPipelineState extends PooledSignals {
         final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
         Disruptor<ValueEvent> disruptor;
         RingBuffer<ValueEvent> ringBuffer;
 
         @Setup(Level.Trial)
         public void setup() {
-            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE);
+            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE, waitProfile);
             disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
                 event.value++;
                 event.value++;
@@ -434,7 +444,7 @@ public class ApplesToApplesDisruptorBenchmark {
             graph = StaticGraph.builder("aa-lattice-dependency-join")
                 .source("ingress", ImmutableSignal.class, SourceMode.SINGLE_PRODUCER)
                 .stage("validate", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
-                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(), STAGE)
+                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(signal -> signal), STAGE)
                 .stage("journal", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
                 .stage("risk", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
                 .join("join", ImmutableSignal.class, JoinSpec.<ImmutableSignal>allOf(group ->
@@ -540,14 +550,57 @@ public class ApplesToApplesDisruptorBenchmark {
         Signal signal;
     }
 
+    public enum DisruptorWaitProfile {
+        YIELDING {
+            @Override
+            WaitStrategy create() {
+                return new YieldingWaitStrategy();
+            }
+        },
+        BUSY_SPIN {
+            @Override
+            WaitStrategy create() {
+                return new BusySpinWaitStrategy();
+            }
+        },
+        SLEEPING {
+            @Override
+            WaitStrategy create() {
+                return new SleepingWaitStrategy();
+            }
+        },
+        BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new BlockingWaitStrategy();
+            }
+        },
+        LITE_BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new LiteBlockingWaitStrategy();
+            }
+        };
+
+        abstract WaitStrategy create();
+    }
+
     private static Disruptor<ValueEvent> disruptor(final String threadName, final ProducerType producerType) {
+        return disruptor(threadName, producerType, DisruptorWaitProfile.YIELDING);
+    }
+
+    private static Disruptor<ValueEvent> disruptor(
+        final String threadName,
+        final ProducerType producerType,
+        final DisruptorWaitProfile waitProfile
+    ) {
         final EventFactory<ValueEvent> factory = ValueEvent::new;
         return new Disruptor<>(
             factory,
             RING_SIZE,
             namedThreadFactory(threadName),
             producerType,
-            new YieldingWaitStrategy()
+            waitProfile.create()
         );
     }
 
@@ -603,7 +656,7 @@ public class ApplesToApplesDisruptorBenchmark {
         if (fused) {
             System.setProperty("lattice.fusion.enabled", "true");
         } else {
-            System.clearProperty("lattice.fusion.enabled");
+            System.setProperty("lattice.fusion.enabled", "false");
         }
     }
 

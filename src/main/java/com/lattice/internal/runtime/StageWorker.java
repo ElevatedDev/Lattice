@@ -1,6 +1,7 @@
 package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
@@ -50,6 +51,7 @@ final class StageWorker implements Runnable {
     private static final int PROCESS_BROADCAST = 4;
     private static final int PROCESS_PARTITION = 5;
     private static final int PROCESS_JOIN = 6;
+    private static final int MAX_WEIGHTED_DISPATCH_SCHEDULE = 1_000_000;
     private static final int DEFAULT_SINGLE_MESSAGE_BATCH_SIZE = Math.max(
         1,
         Integer.getInteger("lattice.runtime.singleMessageBatchSize", 64)
@@ -1065,7 +1067,30 @@ final class StageWorker implements Runnable {
             }
         }
 
-        if (state.hasValue(sourceIndex) || (joinKind == JoinSpec.JoinKind.ANY_OF && state.emitted)) {
+        if (joinKind == JoinSpec.JoinKind.ANY_OF) {
+            if (state.hasSeen(sourceIndex)) {
+                handleDuplicateJoinStamp(state, source, item);
+                return;
+            }
+            state.markSeen(sourceIndex);
+            if (!state.emitted) {
+                state.setValue(sourceIndex, item);
+                if (hotMetricsEnabled && item instanceof SlabHandle<?>) {
+                    metrics.recordRetainedHandle();
+                }
+                emitJoin(state, source, false, false);
+                state.emitted = true;
+            } else {
+                handleDuplicateJoinStamp(state, source, item);
+            }
+            if (state.seenCount == inputs.length) {
+                joinStates.remove(state);
+                releaseAndRecycleJoinState(state);
+            }
+            return;
+        }
+
+        if (state.hasValue(sourceIndex)) {
             handleDuplicateJoinStamp(state, source, item);
             return;
         }
@@ -1073,18 +1098,6 @@ final class StageWorker implements Runnable {
         state.setValue(sourceIndex, item);
         if (hotMetricsEnabled && item instanceof SlabHandle<?>) {
             metrics.recordRetainedHandle();
-        }
-
-        if (joinKind == JoinSpec.JoinKind.ANY_OF) {
-            if (!state.emitted) {
-                emitJoin(state, source, false, false);
-                state.emitted = true;
-            }
-            if (state.receivedCount == inputs.length) {
-                joinStates.remove(state);
-                releaseAndRecycleJoinState(state);
-            }
-            return;
         }
         if (state.receivedCount == inputs.length) {
             emitJoin(state, source, false, true);
@@ -1382,11 +1395,14 @@ final class StageWorker implements Runnable {
             return new int[0];
         }
         final int[] weights = dispatchSpec.weights();
-        int total = 0;
+        long total = 0L;
         for (final int weight : weights) {
             total += weight;
+            if (total > MAX_WEIGHTED_DISPATCH_SCHEDULE) {
+                throw new GraphBuildException("weighted dispatch schedule is too large: " + total);
+            }
         }
-        final int[] schedule = new int[total];
+        final int[] schedule = new int[(int) total];
         int cursor = 0;
         for (int branch = 0; branch < branchCount; branch++) {
             for (int i = 0; i < weights[branch]; i++) {
@@ -1744,11 +1760,10 @@ final class StageWorker implements Runnable {
             // per chain position and inlinable into the user's StageLogic.onMessage call site.
             //
             // We pick between two shapes per hop based on {@link #retainForScope}: the
-            // {@code Benign*} variants drop the per-hop try/catch and handle-ownership scope
-            // when no fused stage / sink can carry an owned handle, which is the common case
-            // (plain POJO payloads). The chain-entry hop wraps the entire chain in one
-            // translator try/catch so user-visible {@link FusedStageException} semantics are
-            // preserved without each hop paying for its own exception frame.
+            // {@code Benign*} variants drop the handle-ownership scope when no fused stage /
+            // sink can carry an owned handle, which is the common case (plain POJO payloads).
+            // Each benign hop still translates its own exception path so attribution remains
+            // correct for downstream fused stages and sinks.
             final boolean retain = retainForScope;
             if (sink != null) {
                 outputs[stages.length] = retain ? new RetainingLinearSinkOutput() : new BenignLinearSinkOutput();
@@ -1769,55 +1784,59 @@ final class StageWorker implements Runnable {
             return outputs[0];
         }
 
-        // ----- Benign (non-handle) hot path: no per-hop try/catch, no retain-scope branch.
+        // ----- Benign (non-handle) hot path: no retain-scope branch.
 
         /**
-         * Hot path for stages that cannot carry an owned handle. The chain entry hop wraps the
-         * downstream chain in a single translator try/catch; intermediate hops are bare calls.
+         * Hot path for stages that cannot carry an owned handle. Exception translation is
+         * per-hop so failures are attributed to the fused stage or sink that actually threw.
          */
         private void emitStageBenign(final FusedStage stage, final Output<Object> next, final Object item) {
-            // Always reject null. The non-fused EdgeSender always rejects null because the
-            // ring buffer uses null as both the empty-slot sentinel and the "not yet
-            // published" plain-claim signal; a null published by a fused stage would similarly
-            // wedge the next downstream ring (when the chain tail writes to a real edge) and
-            // would surface as a silent NPE inside the user's next stage logic. Keeping the
-            // check unconditional aligns fused and non-fused null semantics; the cost is one
-            // always-not-null branch per hop (well-predicted, near zero on x86).
-            if (item == null) {
-                throw new NullPointerException(stage.name + " cannot consume null");
-            }
-            if (LATTICE_VALIDATE_FUSED) {
-                validate(stage, item);
-            }
-            recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
-            // The user lambda is the only call that can throw on this path; let it propagate
-            // and have the entry hop translate. Stage hot-counters are JIT-folded when off.
             try {
-                stage.logic.onMessage(item, next, stage.context);
-            } catch (final Exception ex) {
-                throw sneakyThrow(ex);
-            }
-            if (StageMetrics.hotCountersEnabled()) {
-                final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
-                final long serviceNanos = timeBatchesLocal ? 0L : 0L; // service time not measured on benign path
-                stage.metrics.recordBatch(1, serviceNanos);
-                if (JfrEvents.enabled()) {
-                    JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                // Always reject null. The non-fused EdgeSender always rejects null because the
+                // ring buffer uses null as both the empty-slot sentinel and the "not yet
+                // published" plain-claim signal; a null published by a fused stage would similarly
+                // wedge the next downstream ring (when the chain tail writes to a real edge) and
+                // would surface as a silent NPE inside the user's next stage logic. Keeping the
+                // check unconditional aligns fused and non-fused null semantics; the cost is one
+                // always-not-null branch per hop (well-predicted, near zero on x86).
+                if (item == null) {
+                    throw new NullPointerException(stage.name + " cannot consume null");
                 }
+                if (LATTICE_VALIDATE_FUSED) {
+                    validate(stage, item);
+                }
+                recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
+                stage.logic.onMessage(item, next, stage.context);
+                if (StageMetrics.hotCountersEnabled()) {
+                    final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+                    final long serviceNanos = timeBatchesLocal ? 0L : 0L; // service time not measured on benign path
+                    stage.metrics.recordBatch(1, serviceNanos);
+                    if (JfrEvents.enabled()) {
+                        JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
+                    }
+                }
+            } catch (final FusedStageException ex) {
+                throw ex;
+            } catch (final Throwable ex) {
+                throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
             }
         }
 
         private void emitSinkBenign(final Object item) {
-            if (item == null) {
-                throw new NullPointerException(sink.name + " cannot consume null");
-            }
-            if (LATTICE_VALIDATE_FUSED) {
-                validate(sink, item);
-            }
-            recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
-            sink.consumer.accept(item);
-            if (StageMetrics.hotCountersEnabled()) {
-                sink.metrics.recordBatch(1, 0L);
+            try {
+                if (item == null) {
+                    throw new NullPointerException(sink.name + " cannot consume null");
+                }
+                if (LATTICE_VALIDATE_FUSED) {
+                    validate(sink, item);
+                }
+                recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
+                sink.consumer.accept(item);
+                if (StageMetrics.hotCountersEnabled()) {
+                    sink.metrics.recordBatch(1, 0L);
+                }
+            } catch (final Throwable ex) {
+                throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
             }
         }
 
@@ -1916,9 +1935,8 @@ final class StageWorker implements Runnable {
             }
         }
 
-        // Benign chain hop. The {@code entry} variant translates exceptions for the whole
-        // chain in one frame; intermediate variants are bare and re-throw via sneakyThrow so
-        // the JIT doesn't allocate a per-hop exception handler.
+        // Benign chain hop. The {@code entry} variant is retained for shape stability with the
+        // previous implementation; each hop now handles its own exception attribution.
         private final class BenignLinearStageOutput implements Output<Object> {
             private final FusedStage stage;
             private final Output<Object> next;
@@ -2022,11 +2040,6 @@ final class StageWorker implements Runnable {
                 return true;
             }
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> RuntimeException sneakyThrow(final Throwable ex) throws E {
-        throw (E) ex;
     }
 
     static final class FusedStageException extends RuntimeException {
@@ -2350,6 +2363,9 @@ final class StageWorker implements Runnable {
         long longStampValue;
         boolean longStamp;
         int receivedCount;
+        int seenCount;
+        long seenMask;
+        final boolean[] seenValues;
         boolean emitted;
         JoinState older;
         JoinState newer;
@@ -2357,6 +2373,7 @@ final class StageWorker implements Runnable {
 
         JoinState(final int sourceCount) {
             this.values = new Object[sourceCount];
+            this.seenValues = sourceCount > Long.SIZE ? new boolean[sourceCount] : null;
         }
 
         void resetObject(final Object stamp, final long createdNanos) {
@@ -2381,6 +2398,22 @@ final class StageWorker implements Runnable {
             return values[sourceIndex] != null;
         }
 
+        boolean hasSeen(final int sourceIndex) {
+            if (seenValues != null) {
+                return seenValues[sourceIndex];
+            }
+            return (seenMask & (1L << sourceIndex)) != 0L;
+        }
+
+        void markSeen(final int sourceIndex) {
+            if (seenValues != null) {
+                seenValues[sourceIndex] = true;
+            } else {
+                seenMask |= 1L << sourceIndex;
+            }
+            seenCount++;
+        }
+
         void setValue(final int sourceIndex, final Object item) {
             values[sourceIndex] = item;
             receivedCount++;
@@ -2392,6 +2425,13 @@ final class StageWorker implements Runnable {
             longStamp = false;
             createdNanos = 0L;
             receivedCount = 0;
+            seenCount = 0;
+            seenMask = 0L;
+            if (seenValues != null) {
+                for (int i = 0; i < seenValues.length; i++) {
+                    seenValues[i] = false;
+                }
+            }
             emitted = false;
             older = null;
             newer = null;

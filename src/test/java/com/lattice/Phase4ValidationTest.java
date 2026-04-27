@@ -3,11 +3,14 @@ package com.lattice;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphBuildException;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
+import com.lattice.routing.BroadcastSpec;
 import com.lattice.routing.DispatchSpec;
 import com.lattice.routing.JoinSpec;
 import com.lattice.routing.PartitionSpec;
 import com.lattice.stage.StageSpec;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,5 +66,68 @@ class Phase4ValidationTest {
             .sink("dlq", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "main", EdgeSpec.mpscRing(8).overflow(OverflowPolicy.redirectTo("dlq")))
             .build());
+    }
+
+    @Test
+    void rejectsOversizedWeightedDispatchSchedule() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad-weighted")
+            .source("ingress", Integer.class)
+            .dispatch("route", Integer.class, DispatchSpec.weighted(1_000_000, 1), StageSpec.singleThreaded())
+            .sink("left", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+            .sink("right", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "route", EdgeSpec.mpscRing(8))
+            .edge("route", "left", EdgeSpec.spscRing(8))
+            .edge("route", "right", EdgeSpec.spscRing(8))
+            .build());
+    }
+
+    @Test
+    void rejectsDropOldestOnEffectiveSpscEdge() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad-spsc-drop-oldest")
+            .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+            .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(8).overflow(OverflowPolicy.dropOldest()))
+            .build());
+    }
+
+    @Test
+    void broadcastCopyRejectsUnsafeReferencesWithoutCopier() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad-object-broadcast")
+            .source("ingress", Object.class)
+            .broadcast("fanout", Object.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
+            .sink("left", Object.class, ignored -> { }, StageSpec.singleThreaded())
+            .sink("right", Object.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "fanout", EdgeSpec.mpscRing(8))
+            .edge("fanout", "left", EdgeSpec.spscRing(8))
+            .edge("fanout", "right", EdgeSpec.spscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad-mutable-record-broadcast")
+            .source("ingress", MutableBroadcast.class)
+            .broadcast("fanout", MutableBroadcast.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
+            .sink("left", MutableBroadcast.class, ignored -> { }, StageSpec.singleThreaded())
+            .sink("right", MutableBroadcast.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "fanout", EdgeSpec.mpscRing(8))
+            .edge("fanout", "left", EdgeSpec.spscRing(8))
+            .edge("fanout", "right", EdgeSpec.spscRing(8))
+            .build());
+
+        final StaticGraph graph = StaticGraph.builder("scalar-record-broadcast")
+            .source("ingress", ScalarBroadcast.class)
+            .broadcast("fanout", ScalarBroadcast.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
+            .sink("left", ScalarBroadcast.class, ignored -> { }, StageSpec.singleThreaded())
+            .sink("right", ScalarBroadcast.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "fanout", EdgeSpec.mpscRing(8))
+            .edge("fanout", "left", EdgeSpec.spscRing(8))
+            .edge("fanout", "right", EdgeSpec.spscRing(8))
+            .build();
+
+        assertEquals(4, graph.plan().nodes().size());
+    }
+
+    private record ScalarBroadcast(int id, String label) {
+    }
+
+    private record MutableBroadcast(List<String> values) {
     }
 }

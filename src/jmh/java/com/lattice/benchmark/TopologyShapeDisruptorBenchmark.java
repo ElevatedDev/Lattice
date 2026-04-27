@@ -541,7 +541,7 @@ public class TopologyShapeDisruptorBenchmark {
             graph = StaticGraph.builder("shape-lattice-dependency-join")
                 .source("ingress", ImmutableSignal.class, SourceMode.SINGLE_PRODUCER)
                 .stage("validate", ImmutableSignal.class, ImmutableSignal.class, TopologyShapeDisruptorBenchmark::pass, STAGE)
-                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(), STAGE)
+                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(signal -> signal), STAGE)
                 .stage("journal", ImmutableSignal.class, ImmutableSignal.class, TopologyShapeDisruptorBenchmark::pass, STAGE)
                 .stage("risk", ImmutableSignal.class, ImmutableSignal.class, TopologyShapeDisruptorBenchmark::pass, STAGE)
                 .join("join", ImmutableSignal.class, JoinSpec.<ImmutableSignal>allOf(group ->
@@ -651,7 +651,7 @@ public class TopologyShapeDisruptorBenchmark {
     ) {
         final StaticGraph.Builder builder = StaticGraph.builder(name)
             .source("ingress", ImmutableSignal.class, SourceMode.SINGLE_PRODUCER)
-            .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(), STAGE)
+            .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(signal -> signal), STAGE)
             .edge("ingress", "fanout", SPSC);
         for (int i = 0; i < branches; i++) {
             final String lane = "lane" + i;
@@ -742,7 +742,7 @@ public class TopologyShapeDisruptorBenchmark {
         if (fused) {
             System.setProperty("lattice.fusion.enabled", "true");
         } else {
-            System.clearProperty("lattice.fusion.enabled");
+            System.setProperty("lattice.fusion.enabled", "false");
         }
     }
 

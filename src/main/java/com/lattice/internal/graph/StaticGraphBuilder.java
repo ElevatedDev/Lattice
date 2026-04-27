@@ -27,6 +27,7 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
     private final List<NodeDefinition> nodes = new ArrayList<>();
     private final List<PendingEdge> edges = new ArrayList<>();
     private StageExceptionHandler exceptionHandler = StageExceptionHandler.failGraph();
+    private boolean customExceptionHandler;
 
     public StaticGraphBuilder(final String name) {
         this.name = requireName(name, "graph");
@@ -333,12 +334,19 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
     @Override
     public StaticGraph.Builder exceptionHandler(final StageExceptionHandler exceptionHandler) {
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+        this.customExceptionHandler = true;
         return this;
     }
 
     @Override
     public StaticGraph build() {
-        final CompiledGraph compiled = new GraphCompiler(name, nodes, edges, exceptionHandler).compile();
+        final CompiledGraph compiled = new GraphCompiler(
+            name,
+            nodes,
+            edges,
+            exceptionHandler,
+            customExceptionHandler
+        ).compile();
         return new DefaultStaticGraph(compiled);
     }
 

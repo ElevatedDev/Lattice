@@ -9,6 +9,8 @@ import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
 import com.lattice.routing.DispatchSpec;
 import com.lattice.routing.BroadcastSpec;
+import com.lattice.routing.Stamped;
+import com.lattice.slab.SlabHandle;
 import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.StageExceptionHandler;
 import com.lattice.stage.StageSpec;
@@ -26,22 +28,26 @@ import java.util.Set;
 
 final class GraphCompiler {
     private static final int NATIVE_CPU_LIMIT = 1024;
+    private static final int MAX_WEIGHTED_DISPATCH_SCHEDULE = 1_000_000;
 
     private final String graphName;
     private final List<NodeDefinition> declaredNodes;
     private final List<StaticGraphBuilder.PendingEdge> declaredEdges;
     private final StageExceptionHandler exceptionHandler;
+    private final boolean customExceptionHandler;
 
     GraphCompiler(
         final String graphName,
         final List<NodeDefinition> declaredNodes,
         final List<StaticGraphBuilder.PendingEdge> declaredEdges,
-        final StageExceptionHandler exceptionHandler
+        final StageExceptionHandler exceptionHandler,
+        final boolean customExceptionHandler
     ) {
         this.graphName = graphName;
         this.declaredNodes = List.copyOf(declaredNodes);
         this.declaredEdges = List.copyOf(declaredEdges);
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+        this.customExceptionHandler = customExceptionHandler;
     }
 
     CompiledGraph compile() {
@@ -80,7 +86,8 @@ final class GraphCompiler {
             normalOutgoingBySource,
             redirectBySourceAndTarget,
             List.copyOf(workerOrder),
-            exceptionHandler
+            exceptionHandler,
+            customExceptionHandler
         );
     }
 
@@ -215,6 +222,12 @@ final class GraphCompiler {
             && spec.overflowPolicy().coalescingKey() == null) {
             throw new GraphBuildException("coalescing overflow requires a key extractor");
         }
+        final EdgeSpec effectiveSpec = effectiveEdgeSpec(from, spec);
+        if (effectiveSpec.kind() == EdgeSpec.EdgeKind.SPSC_RING
+            && effectiveSpec.overflowPolicy().kind() == OverflowPolicy.OverflowKind.DROP_OLDEST) {
+            throw new GraphBuildException("SPSC edges do not support DROP_OLDEST overflow because the consumer "
+                + "owns the head cursor; use an MPSC ingress edge or a different overflow policy");
+        }
         if (from.kind() == GraphPlan.NodeKind.SOURCE
             && from.sourceMode() != SourceMode.SINGLE_PRODUCER
             && spec.kind() != EdgeSpec.EdgeKind.MPSC_RING) {
@@ -347,9 +360,21 @@ final class GraphCompiler {
             return;
         }
         final DispatchSpec<?> spec = node.dispatchSpec();
-        if (spec.kind() == DispatchSpec.DispatchKind.WEIGHTED && spec.weights().length != out) {
+        if (spec.kind() != DispatchSpec.DispatchKind.WEIGHTED) {
+            return;
+        }
+        final int[] weights = spec.weights();
+        if (weights.length != out) {
             throw new GraphBuildException("dispatch node " + node.name() + " has " + out
-                + " branches but " + spec.weights().length + " weights");
+                + " branches but " + weights.length + " weights");
+        }
+        long total = 0L;
+        for (final int weight : weights) {
+            total += weight;
+            if (total > MAX_WEIGHTED_DISPATCH_SCHEDULE) {
+                throw new GraphBuildException("weighted dispatch schedule for node " + node.name()
+                    + " is too large: " + total);
+            }
         }
     }
 
@@ -357,21 +382,63 @@ final class GraphCompiler {
         if (node.kind() != GraphPlan.NodeKind.BROADCAST) {
             return;
         }
-        if (node.broadcastSpec().kind() != BroadcastSpec.BroadcastKind.COPY || node.broadcastSpec().copier() != null) {
+        if (node.broadcastSpec().kind() != BroadcastSpec.BroadcastKind.COPY) {
             return;
         }
         final Class<?> type = node.inputType();
-        if (type.isPrimitive()
-            || type.isEnum()
-            || type.isRecord()
-            || String.class == type
-            || Number.class.isAssignableFrom(type)
-            || Boolean.class == type
-            || Character.class == type) {
+        if (node.broadcastSpec().copier() != null) {
+            return;
+        }
+        if (mayCarryHandle(type)) {
+            throw new GraphBuildException("broadcast copy for handle-capable type " + type.getName()
+                + " is unsafe without an explicit copier");
+        }
+        if (knownImmutableBroadcastReference(type)) {
             return;
         }
         throw new GraphBuildException("broadcast copy for mutable type " + type.getName()
             + " requires BroadcastSpec.copy(copier)");
+    }
+
+    private static boolean mayCarryHandle(final Class<?> type) {
+        return type == Object.class
+            || type.isAssignableFrom(SlabHandle.class)
+            || type.isAssignableFrom(Stamped.class);
+    }
+
+    private static boolean knownImmutableBroadcastReference(final Class<?> type) {
+        return knownImmutableBroadcastReference(type, new HashSet<>());
+    }
+
+    private static boolean knownImmutableBroadcastReference(final Class<?> type, final Set<Class<?>> visiting) {
+        if (type.isRecord()) {
+            if (!visiting.add(type)) {
+                return false;
+            }
+            try {
+                for (final var component : type.getRecordComponents()) {
+                    if (!knownImmutableBroadcastReference(component.getType(), visiting)) {
+                        return false;
+                    }
+                }
+                return true;
+            } finally {
+                visiting.remove(type);
+            }
+        }
+        return type.isPrimitive()
+            || type.isEnum()
+            || type == String.class
+            || type == Integer.class
+            || type == Long.class
+            || type == Short.class
+            || type == Byte.class
+            || type == Double.class
+            || type == Float.class
+            || type == Boolean.class
+            || type == Character.class
+            || type == java.math.BigInteger.class
+            || type == java.math.BigDecimal.class;
     }
 
     private void validateRedirects(

@@ -548,9 +548,17 @@ public final class MpscRingEdge implements MessageEdge {
     }
 
     @Override
-    public void abort() {
+    public void releaseRemainingAfterQuiescence() {
         closeFlag();
         drainAndRelease();
+    }
+
+    /**
+     * Kept for direct edge tests and older internal callers. Runtime cleanup should use
+     * releaseRemainingAfterQuiescence() so the quiescence invariant is visible at call sites.
+     */
+    public void abort() {
+        releaseRemainingAfterQuiescence();
     }
 
     @Override

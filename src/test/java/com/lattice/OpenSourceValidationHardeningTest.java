@@ -1,6 +1,7 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.graph.PreallocationSpec;
@@ -115,6 +116,16 @@ class OpenSourceValidationHardeningTest {
         ingress.close();
         assertTrue(ingress.isClosed());
         assertTrue(graph.stop(Duration.ofSeconds(1)));
+    }
+
+    @Test
+    void preallocatedFactoryPoolRejectsNullItemsWithBuildException() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("preallocated-null-pool")
+            .preallocatedSource("ingress", ReusableMessage.class,
+                PreallocationSpec.<ReusableMessage>pool(ignored -> null).poolSize(128))
+            .sink("egress", ReusableMessage.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(8))
+            .build());
     }
 
     @Test

@@ -46,7 +46,11 @@ public interface MessageEdge {
 
     void close();
 
-    void abort();
+    /**
+     * Releases queued handle-bearing items after all producers and consumers that can touch
+     * this edge are quiescent. This must not be used as a concurrent abort primitive.
+     */
+    void releaseRemainingAfterQuiescence();
 
     int capacity();
 
