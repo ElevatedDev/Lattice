@@ -27,6 +27,18 @@ Run the core checks before opening a change:
 
 On Windows, use `.\gradlew.bat` for the same tasks.
 
+## Pull Requests
+
+Before opening a pull request:
+
+- Keep the change scoped to one behavioral or documentation concern.
+- Include a short description of the user-visible effect and the verification
+  commands you ran.
+- Link related issues or design notes when they exist.
+- Update `CHANGELOG.md` for user-facing runtime, API, release, or docs changes.
+- Avoid checking in local benchmark logs unless the docs explicitly cite them as
+  release evidence.
+
 ## Scope Discipline
 
 The runtime is intentionally scoped to compiled static graphs. Avoid adding
@@ -95,6 +107,10 @@ whether the result is a smoke check or release evidence.
 User-visible behavior changes should update the relevant guide under `docs/`.
 Keep documentation explicit about what is implemented, what is planned, and
 what has only been smoke-tested.
+
+The `/docs` directory is the GitHub Pages source. Keep `docs/index.md` usable
+as the Pages entry point and `docs/README.md` usable as the GitHub directory
+landing page.
 
 ## Security
 

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" role="img"
+     aria-label="Lattice vs LMAX Disruptor — pipeline / fan-out / SPSC throughput, JDK 21">
+  <style>
+    .title { font: 700 18px Inter, system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
+    .sub   { font: 400 12px Inter, system-ui, sans-serif; fill: #475569; }
+    .axis  { stroke: #cbd5e1; stroke-width: 1; }
+    .grid  { stroke: #e2e8f0; stroke-width: 1; }
+    .label { font: 500 12px Inter, system-ui, sans-serif; fill: #334155; }
+    .num   { font: 600 11px Inter, system-ui, sans-serif; fill: #0f172a; }
+    .lat   { fill: #2563eb; }
+    .dis   { fill: #94a3b8; }
+    .legend{ font: 500 12px Inter, system-ui, sans-serif; fill: #334155; }
+    .scen  { font: 600 12px Inter, system-ui, sans-serif; fill: #0f172a; }
+  </style>
+
+  <text class="title" x="20" y="28">Lattice vs LMAX Disruptor — throughput by shape</text>
+  <text class="sub"   x="20" y="48">JDK 21 · i7-7700 · WSL2 Ubuntu 24.04 · single 3 s smoke iteration · higher is better</text>
+
+  <!-- Legend -->
+  <g transform="translate(560,32)">
+    <rect class="lat" x="0" y="0" width="14" height="14" rx="2"/>
+    <text class="legend" x="20" y="11">Lattice</text>
+    <rect class="dis" x="80" y="0" width="14" height="14" rx="2"/>
+    <text class="legend" x="100" y="11">Disruptor</text>
+  </g>
+
+  <!-- Plot box: x in [120, 840] = 720px = 70 Mops -->
+  <g transform="translate(0,80)">
+    <!-- axis -->
+    <line class="axis" x1="120" y1="340" x2="840" y2="340"/>
+    <!-- gridlines / x ticks at 0,10,20,30,40,50,60,70 Mops -->
+    <g>
+      <line class="grid" x1="120" y1="20"  x2="120" y2="340"/>
+      <line class="grid" x1="223" y1="20"  x2="223" y2="340"/>
+      <line class="grid" x1="326" y1="20"  x2="326" y2="340"/>
+      <line class="grid" x1="429" y1="20"  x2="429" y2="340"/>
+      <line class="grid" x1="531" y1="20"  x2="531" y2="340"/>
+      <line class="grid" x1="634" y1="20"  x2="634" y2="340"/>
+      <line class="grid" x1="737" y1="20"  x2="737" y2="340"/>
+      <line class="grid" x1="840" y1="20"  x2="840" y2="340"/>
+    </g>
+    <g class="label" text-anchor="middle">
+      <text x="120" y="358">0</text>
+      <text x="223" y="358">10M</text>
+      <text x="326" y="358">20M</text>
+      <text x="429" y="358">30M</text>
+      <text x="531" y="358">40M</text>
+      <text x="634" y="358">50M</text>
+      <text x="737" y="358">60M</text>
+      <text x="840" y="358">70M</text>
+    </g>
+    <text class="sub" x="480" y="378" text-anchor="middle">ops/s</text>
+
+    <!-- Bars: scale = 720/70e6 = 1.0286e-5 px per op.  width(M) = M * 10.286 -->
+
+    <!-- 1. SPSC preallocated apples-to-apples -->
+    <text class="scen" x="20" y="40">SPSC preallocated (apples)</text>
+    <rect class="lat" x="120" y="48"  width="123.5" height="18"/>
+    <text class="num" x="248" y="62">12.01M</text>
+    <rect class="dis" x="120" y="70"  width="120.5" height="18"/>
+    <text class="num" x="245" y="84">11.71M  Disruptor</text>
+
+    <!-- 2. 3-stage pipeline (physical) -->
+    <text class="scen" x="20" y="118">3-stage pipeline (physical)</text>
+    <rect class="lat" x="120" y="126" width="95.4"  height="18"/>
+    <text class="num" x="220" y="140">9.28M</text>
+    <rect class="dis" x="120" y="148" width="228.9" height="18"/>
+    <text class="num" x="354" y="162">22.26M  Disruptor</text>
+
+    <!-- 3. 3-stage pipeline (fused) -->
+    <text class="scen" x="20" y="196">3-stage pipeline (fused)</text>
+    <rect class="lat" x="120" y="204" width="54.0"  height="18"/>
+    <text class="num" x="180" y="218">5.25M</text>
+    <rect class="dis" x="120" y="226" width="313.6" height="18"/>
+    <text class="num" x="438" y="240">30.49M  Disruptor (manual fusion)</text>
+
+    <!-- 4. SPSC source→sink (bare ring) -->
+    <text class="scen" x="20" y="274">SPSC source→sink (bare)</text>
+    <rect class="lat" x="120" y="282" width="92.1"  height="18"/>
+    <text class="num" x="217" y="296">8.95M</text>
+    <rect class="dis" x="120" y="304" width="646.5" height="18"/>
+    <text class="num" x="772" y="318">62.87M</text>
+  </g>
+
+  <text class="sub" x="20" y="438">Source: benchmarks/baseline/smoke-all.json · ApplesToApplesDisruptorBenchmark · TopologyShapeDisruptorBenchmark</text>
+  <text class="sub" x="20" y="453">Lattice's value is in the <tspan font-style="italic">graph contract</tspan>: preallocated payloads, semantic joins, deterministic backpressure, fusion that preserves the logical graph.</text>
+</svg>
+

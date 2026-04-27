@@ -99,12 +99,8 @@ public final class SpscRingEdge implements MessageEdge {
     @Override
     public boolean offer(final Object item) {
         final long currentTailRaw = (long) CURSOR.getOpaque(tail);
-        if (tailClosed(currentTailRaw)) {
-
-            final long reloaded = (long) CURSOR.getAcquire(tail);
-            if (tailClosed(reloaded)) {
-                return false;
-            }
+        if (tailClosed(currentTailRaw) || closed()) {
+            return false;
         }
         final long currentTail = tailSequence(currentTailRaw);
         final long wrapPoint = currentTail - capacity;

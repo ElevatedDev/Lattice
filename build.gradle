@@ -355,17 +355,25 @@ tasks.register('verifyOpenSourceRelease') {
     dependsOn tasks.named('verifyReleaseArtifacts')
 
     doLast {
-        def rootFiles = rootDir.listFiles()?.findAll { it.isFile() } ?: []
-        def hasReadme = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('README') }
-        def hasLicense = rootFiles.any { it.name.toUpperCase(Locale.ROOT).startsWith('LICENSE') }
         def missing = []
+        [
+            'README.md',
+            'CHANGELOG.md',
+            'SECURITY.md',
+            'CONTRIBUTING.md',
+            'CODE_OF_CONDUCT.md',
+            'LICENSE',
+            'NOTICE',
+            '.editorconfig',
+            'docs/index.md',
+            'docs/README.md',
+            'docs/_config.yml'
+        ].each { requiredPath ->
+            if (!file(requiredPath).isFile()) {
+                missing << requiredPath
+            }
+        }
 
-        if (!hasReadme) {
-            missing << 'root README'
-        }
-        if (!hasLicense) {
-            missing << 'root LICENSE'
-        }
         if (!releaseLicenseName.isPresent() || !releaseLicenseUrl.isPresent()) {
             missing << 'releaseLicenseName/releaseLicenseUrl Gradle properties for POM license metadata'
         }

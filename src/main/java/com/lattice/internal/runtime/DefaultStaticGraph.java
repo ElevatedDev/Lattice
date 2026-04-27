@@ -123,9 +123,9 @@ public final class DefaultStaticGraph implements StaticGraph {
                     + " is preallocated; use preallocatedEmitter(...)");
         }
         final Class<?> exposedType = source.stampedSource() ? source.sourcePayloadType() : source.outputType();
-        if (!type.isAssignableFrom(exposedType)) {
+        if (!exposedType.isAssignableFrom(type)) {
             throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
-                    + ", not " + type.getName());
+                    + ", not assignable to " + type.getName());
         }
         return (Emitter<T>) emitter;
     }
@@ -144,9 +144,9 @@ public final class DefaultStaticGraph implements StaticGraph {
 
         final NodeDefinition source = compiled.nodes().get(sourceName);
         final Class<?> exposedType = source.outputType();
-        if (!type.isAssignableFrom(exposedType)) {
+        if (!exposedType.isAssignableFrom(type)) {
             throw new GraphRuntimeException("source " + sourceName + " emits " + exposedType.getName()
-                    + ", not " + type.getName());
+                    + ", not assignable to " + type.getName());
         }
         return (PreallocatedEmitter<T>) emitter;
     }
@@ -264,11 +264,14 @@ public final class DefaultStaticGraph implements StaticGraph {
         closeSources();
         final MessageEdge[] edges = edgeArray;
         for (int i = 0; i < edges.length; i++) {
-            edges[i].abort();
+            edges[i].close();
         }
         interruptWorkers();
         try {
             final boolean terminated = awaitTermination(Duration.ofSeconds(5));
+            for (int i = 0; i < edges.length; i++) {
+                edges[i].abort();
+            }
             if (!terminated) {
                 return;
             }
@@ -377,7 +380,8 @@ public final class DefaultStaticGraph implements StaticGraph {
                     stageMetrics.get(node.name()),
                     state,
                     node.stampedSource(),
-                    node.sourceMode()
+                    node.sourceMode(),
+                    coordinator
             );
             emitters.put(node.name(), emitter);
             if (node.preallocationSpec() != null) {
@@ -510,7 +514,7 @@ public final class DefaultStaticGraph implements StaticGraph {
             if (worker == null || emitter == null) {
                 continue;
             }
-            final com.lattice.stage.Output<Object> entryOutput = worker.fusedEntryOutput();
+            final com.lattice.stage.Output<Object> entryOutput = worker.inlineEntryOutput();
             if (entryOutput == null) {
                 continue;
             }
@@ -1029,8 +1033,15 @@ public final class DefaultStaticGraph implements StaticGraph {
                 return Map.of();
             }
             final Map<String, String> mapping = new LinkedHashMap<>();
-            collectInlineEligible(compiled, fusedStages.keySet(), elidedEdges, mapping);
             collectInlineEligible(compiled, fusedSinks.keySet(), elidedEdges, mapping);
+
+            final Set<String> terminalChainOwners = new HashSet<>();
+            for (final Map.Entry<String, FusedStagePlan> entry : fusedStages.entrySet()) {
+                if (entry.getValue().sinkPlan() != null) {
+                    terminalChainOwners.add(entry.getKey());
+                }
+            }
+            collectInlineEligible(compiled, terminalChainOwners, elidedEdges, mapping);
             return mapping;
         }
 

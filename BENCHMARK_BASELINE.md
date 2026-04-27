@@ -221,7 +221,7 @@ For the fusion default flip (PR #2):
 
 ---
 
-## 7. Capture log
+## 6. Capture log
 
 | Date | PR / commit | Section(s) refreshed | Run by | Notes |
 |---|---|---|---|---|
@@ -230,7 +230,7 @@ For the fusion default flip (PR #2):
 
 ---
 
-## 8. Post-PR1 results — smoke comparison
+## 7. Post-PR1 results — smoke comparison
 
 PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW.md`:
 
@@ -242,7 +242,7 @@ PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW
 
 **All 107 unit tests pass** after the changes.
 
-### 8.1 Headline wins (Lattice benchmarks)
+### 7.1 Headline wins (Lattice benchmarks)
 
 | Benchmark | Baseline (ops/s) | Post-PR1 (ops/s) | Δ |
 |---|---:|---:|---:|
@@ -264,7 +264,7 @@ PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW
 | TopologyShape.latticeSourceSinkSpsc | 8,954,149 | **9,138,668** | **+2 %** |
 | TopologyShape.latticePartitionFourLanes | 6,805,185 | **7,044,423** | **+4 %** |
 
-### 8.2 Lattice vs Disruptor — gap closure on full topologies
+### 7.2 Lattice vs Disruptor — gap closure on full topologies
 
 | Shape | Baseline ratio L/D | Post-PR1 ratio L/D | Improvement |
 |---|---:|---:|---|
@@ -278,7 +278,7 @@ PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW
 
 *Pipeline numbers in `TopologyShapeDisruptorBenchmark` regressed because the smoke run's 3s warmup is insufficient for the JIT to specialize the now-fusion-enabled pipeline workers; `TopologyBenchmark` shows the *same* shapes as massive wins (e.g. `oneSourceThreeStageSinkFused` +168%, `oneSourceValidateSinkFused` +524%). Re-run with full warmup (`-wi 3 -i 5`) to confirm.
 
-### 8.3 MetricsOverheadBenchmark — direct measurement of finding D1
+### 7.3 MetricsOverheadBenchmark — direct measurement of finding D1
 
 | Variant | Baseline (ops/s) | Post-PR1 (ops/s) | Δ |
 |---|---:|---:|---:|
@@ -289,7 +289,7 @@ PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW
 
 > ⚠️ **The MetricsOverheadBenchmark numbers are not trustworthy in a smoke run.** `jfrDisabledBatchProcessed` is a no-op benchmark that doesn't touch any code we changed, yet shows a −69 % "regression". This is JIT warmup noise — these benchmarks operate at billions of ops/sec where 3 s of warmup is far too short. The real impact of the EdgeMetrics fix shows up in the **end-to-end** `TopologyBenchmark` results in §8.1 (+150–569 %), which exercise the metrics code in a realistic context. A full `-wi 3 -i 5` run is needed for trustworthy MetricsOverhead numbers.
 
-### 8.4 Apparent regressions (likely smoke-run noise)
+### 7.4 Apparent regressions (likely smoke-run noise)
 
 | Benchmark | Baseline | Post-PR1 | Δ | Verdict |
 |---|---:|---:|---:|---|
@@ -302,7 +302,7 @@ PR #1 ships the five mechanical, low-risk optimizations from `PERFORMANCE_REVIEW
 
 The pattern (Disruptor-only benchmarks regressing by similar percentages when no Disruptor code was touched) confirms **most of these "regressions" are smoke-run noise**. The headline wins in §8.1 are real because they're *much larger* than the noise band (+150% to +1,722%).
 
-### 8.5 Overall conclusion for PR #1
+### 7.5 Overall conclusion for PR #1
 
 - **Major wins on full-topology throughput**: 14 benchmarks improved by 27–1,722 %, dominated by 3–6× speedups on `TopologyBenchmark` and the previously-broken `latticeParallelDependencyJoin`.
 - **Real cause of latticeParallelDependencyJoin's 18× speedup**: removing the per-emit `recordDepth` CAS loop unblocked the join's broadcast→two-stage→join shape that was previously contention-bound on the metrics counter.
@@ -312,11 +312,9 @@ The pattern (Disruptor-only benchmarks regressing by similar percentages when no
 
 Smoke total runtime: **11 min 20 s** (vs. 11 min 15 s baseline).
 
-|  |  |  |  |  |
-
 ---
 
-## 7. Raw artifacts
+## 8. Raw artifacts
 
 Store under `benchmarks/baseline/` (gitignored or LFS as appropriate):
 

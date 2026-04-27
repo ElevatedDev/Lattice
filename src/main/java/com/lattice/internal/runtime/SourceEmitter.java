@@ -19,6 +19,7 @@ final class SourceEmitter<T> implements Emitter<T> {
     private final AtomicReference<GraphState> graphState;
     private final boolean stampItems;
     private final boolean singleProducer;
+    private final RuntimeCoordinator coordinator;
     private volatile boolean closed;
     private long nextStamp;
 
@@ -30,7 +31,8 @@ final class SourceEmitter<T> implements Emitter<T> {
         final StageMetrics metrics,
         final AtomicReference<GraphState> graphState,
         final boolean stampItems,
-        final SourceMode sourceMode
+        final SourceMode sourceMode,
+        final RuntimeCoordinator coordinator
     ) {
         this.name = name;
         this.sender = sender;
@@ -38,6 +40,7 @@ final class SourceEmitter<T> implements Emitter<T> {
         this.graphState = graphState;
         this.stampItems = stampItems;
         this.singleProducer = sourceMode == SourceMode.SINGLE_PRODUCER;
+        this.coordinator = coordinator;
     }
 
     @Override
@@ -50,14 +53,7 @@ final class SourceEmitter<T> implements Emitter<T> {
         ensureOpenAndRunning();
         final Output<Object> inline = inlineOutput;
         if (inline != null) {
-            // Inline source-side fusion: execute the entire downstream fused chain on the
-            // producer thread, bypassing the SPSC ring. Backpressure is impossible because
-            // the chain is fully synchronous; eligibility (single producer, no preallocation,
-            // no stamping, no handle-bearing types) is enforced at graph build time.
-            inline.push(item);
-            if (StageMetrics.hotCountersEnabled()) {
-                metrics.recordEmit();
-            }
+            pushInline(inline, item);
             return;
         }
         if (stampItems) {
@@ -81,6 +77,14 @@ final class SourceEmitter<T> implements Emitter<T> {
     @Override
     public boolean emit(final T item, final Duration timeout) {
         ensureOpenAndRunning();
+        final Output<Object> inline = inlineOutput;
+        if (inline != null) {
+            // The inline-fused chain is synchronous on the producer thread; there is no ring
+            // to fill, so the timeout is effectively irrelevant: the chain either runs to
+            // completion or throws. Treat it identically to the unbounded emit path.
+            pushInline(inline, item);
+            return true;
+        }
 
         if (stampItems) {
             return singleProducer
@@ -95,10 +99,44 @@ final class SourceEmitter<T> implements Emitter<T> {
         if (closed || graphState.get() != GraphState.RUNNING) {
             return false;
         }
+        final Output<Object> inline = inlineOutput;
+        if (inline != null) {
+            // Same reasoning as emit(T, Duration): the inline chain has no backpressure to
+            // refuse on, so tryEmit always proceeds and runs the chain synchronously. Any
+            // user-stage exception fails the graph just like the bounded path.
+            pushInline(inline, item);
+            return true;
+        }
         if (stampItems) {
             return singleProducer ? tryEmitStampedSingleProducer(item) : tryEmitStamped(item);
         }
         return sender.tryEmitFromSource(item);
+    }
+
+    /**
+     * Runs the inline-fused chain synchronously on the producer thread. Any user-code failure
+     * is routed through {@link RuntimeCoordinator#fail(String, Throwable)} so the graph
+     * transitions to FAILED with the same semantics as a worker-thread failure, then the
+     * exception is rethrown to the caller as a {@link GraphRuntimeException} so the
+     * application thread does not silently continue past a failed stage.
+     */
+    private void pushInline(final Output<Object> inline, final T item) {
+        try {
+            inline.push(item);
+        } catch (final Throwable ex) {
+            coordinator.fail(name, ex);
+
+            if (ex instanceof RuntimeException re) {
+                throw re;
+            }
+            if (ex instanceof Error err) {
+                throw err;
+            }
+            throw new GraphRuntimeException("inline-fused source emit failed: " + name, ex);
+        }
+        if (StageMetrics.hotCountersEnabled()) {
+            metrics.recordEmit();
+        }
     }
 
     @Override
