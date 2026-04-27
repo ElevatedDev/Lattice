@@ -19,18 +19,22 @@ public final class EdgeMetrics implements WaitMetrics {
         System.getProperty("lattice.metrics.hotCounters", "true")
     );
 
+    private static final int DEPTH_SAMPLE_SHIFT = 10; // sample every 1024 emits
+    private static final long DEPTH_SAMPLE_MASK = (1L << DEPTH_SAMPLE_SHIFT) - 1L;
+
     private final String from;
     private final String to;
     private final String allocationOwner;
     private final MemoryMode.MemoryKind memoryKind;
-    private final AtomicLong emittedCount = new AtomicLong();
-    private final AtomicLong consumedCount = new AtomicLong();
+
+    private final LongAdder emittedCount = new LongAdder();
+    private final LongAdder consumedCount = new LongAdder();
     private final LongAdder failedOffers = new LongAdder();
     private final LongAdder blockedOffers = new LongAdder();
     private final LongAdder backpressureNanos = new LongAdder();
     private final LongAdder droppedLatest = new LongAdder();
     private final LongAdder droppedOldest = new LongAdder();
-    private final AtomicLong droppedOldestCount = new AtomicLong();
+    private final LongAdder droppedOldestCount = new LongAdder();
     private final LongAdder coalescedOffers = new LongAdder();
     private final LongAdder redirectedOffers = new LongAdder();
     private final LongAdder branchIsolationActions = new LongAdder();
@@ -106,11 +110,11 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public long emittedCount() {
-        return emittedCount.get();
+        return emittedCount.sum();
     }
 
     public long consumedCount() {
-        return consumedCount.get();
+        return consumedCount.sum();
     }
 
     public long failedOffers() {
@@ -209,30 +213,49 @@ public final class EdgeMetrics implements WaitMetrics {
      * Returns approximate offer throughput since metric creation.
      */
     public double offerRatePerSecond() {
-        return ratePerSecond(emittedCount.get());
+        return ratePerSecond(emittedCount.sum());
     }
 
     /**
      * Returns approximate poll throughput since metric creation.
      */
     public double pollRatePerSecond() {
-        return ratePerSecond(consumedCount.get());
+        return ratePerSecond(consumedCount.sum());
     }
+
+    /**
+     * Per-thread emit counter used to sample depth without a cross-thread atomic load.
+     * Single-threaded on a given producer (each producer thread owns one edge in SPSC; in
+     * MPSC each producer takes the slow CAS path, so the imprecision is acceptable for a
+     * sampled high-water mark). See PERFORMANCE_REVIEW.md finding D1.
+     */
+    private static final ThreadLocal<long[]> EMIT_TICK = ThreadLocal.withInitial(() -> new long[1]);
 
     public void recordEmit() {
         if (!HOT_COUNTERS_ENABLED) {
             return;
         }
-        final long emitted = emittedCount.incrementAndGet();
-        final long depth = emitted - consumedCount.get() - droppedOldestCount.get();
-        recordDepth(depth);
+        emittedCount.increment();
+        // Sample depth: every emit until we've seen DEPTH_SAMPLE_MASK emits (so small
+        // workloads / unit tests get an exact high-water mark), then once per
+        // (DEPTH_SAMPLE_MASK + 1) emits to amortize the LongAdder.sum() walks.
+        // The previous implementation issued LOCK XADD + 2 cross-thread atomic loads + a
+        // CAS loop on every emit; this version issues only a LongAdder cell increment plus
+        // a pair of LongAdder.sum() walks (cheap, no coherence traffic) at sample points.
+        // See PERFORMANCE_REVIEW.md finding D1.
+        final long[] tick = EMIT_TICK.get();
+        final long next = ++tick[0];
+        if (next <= DEPTH_SAMPLE_MASK || (next & DEPTH_SAMPLE_MASK) == 0L) {
+            final long depth = emittedCount.sum() - consumedCount.sum() - droppedOldestCount.sum();
+            recordDepth(depth);
+        }
     }
 
     public void recordConsume() {
         if (!HOT_COUNTERS_ENABLED) {
             return;
         }
-        consumedCount.incrementAndGet();
+        consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
@@ -240,7 +263,7 @@ public final class EdgeMetrics implements WaitMetrics {
             return;
         }
         if (count > 0) {
-            consumedCount.addAndGet(count);
+            consumedCount.add(count);
         }
     }
 
@@ -270,7 +293,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     public void recordDroppedOldest() {
         droppedOldest.increment();
-        droppedOldestCount.incrementAndGet();
+        droppedOldestCount.increment();
     }
 
     public void recordCoalescedOffer() {
@@ -357,7 +380,7 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     private long currentDepth() {
-        return emittedCount.get() - consumedCount.get() - droppedOldestCount.get();
+        return emittedCount.sum() - consumedCount.sum() - droppedOldestCount.sum();
     }
 
     private static long clampToHistogram(final Histogram histogram, final long value) {

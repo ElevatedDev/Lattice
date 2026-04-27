@@ -219,34 +219,44 @@ class RuntimeRegressionTest {
 
     @Test
     void abortWhileOutputIsBackpressuredDoesNotFailGraph() throws Exception {
-        final CountDownLatch sinkEntered = new CountDownLatch(1);
-        final CountDownLatch releaseSink = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("abort-backpressured-output")
-            .source("ingress", Integer.class)
-            .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
-                StageSpec.singleThreaded())
-            .sink("egress", Integer.class, ignored -> {
-                sinkEntered.countDown();
-                await(releaseSink);
-            }, StageSpec.singleThreaded())
-            .edge("ingress", "identity", EdgeSpec.mpscRing(8))
-            .edge("identity", "egress", EdgeSpec.spscRing(1).overflow(OverflowPolicy.block()))
-            .build();
+        final String previousFusion = System.getProperty("lattice.fusion.enabled");
+        System.setProperty("lattice.fusion.enabled", "false");
+        try {
+            final CountDownLatch sinkEntered = new CountDownLatch(1);
+            final CountDownLatch releaseSink = new CountDownLatch(1);
+            final StaticGraph graph = StaticGraph.builder("abort-backpressured-output")
+                .source("ingress", Integer.class)
+                .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    sinkEntered.countDown();
+                    await(releaseSink);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "identity", EdgeSpec.mpscRing(8))
+                .edge("identity", "egress", EdgeSpec.spscRing(1).overflow(OverflowPolicy.block()))
+                .build();
 
-        graph.start();
-        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
-        ingress.emit(1);
-        assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
-        ingress.emit(2);
-        ingress.emit(3);
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            ingress.emit(1);
+            assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+            ingress.emit(2);
+            ingress.emit(3);
 
-        assertEventually(() -> graph.metrics().stage("identity").blockedOutputs() > 0, Duration.ofSeconds(5));
-        graph.abort();
-        releaseSink.countDown();
+            assertEventually(() -> graph.metrics().stage("identity").blockedOutputs() > 0, Duration.ofSeconds(5));
+            graph.abort();
+            releaseSink.countDown();
 
-        assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
-        assertEquals(GraphState.STOPPED, graph.state());
-        assertTrue(graph.failure().isEmpty());
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.STOPPED, graph.state());
+            assertTrue(graph.failure().isEmpty());
+        } finally {
+            if (previousFusion == null) {
+                System.clearProperty("lattice.fusion.enabled");
+            } else {
+                System.setProperty("lattice.fusion.enabled", previousFusion);
+            }
+        }
     }
 
     @Test

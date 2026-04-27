@@ -97,9 +97,6 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean offer(final Object item) {
-        if (closed()) {
-            return false;
-        }
         final long currentTailRaw = (long) CURSOR.getAcquire(tail);
         if (tailClosed(currentTailRaw)) {
             return false;

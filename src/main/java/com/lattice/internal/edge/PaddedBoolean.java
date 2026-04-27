@@ -9,7 +9,7 @@ final class PaddedBoolean {
     long p05;
     long p06;
     long p07;
-    volatile boolean value;
+    boolean value;
     long p11;
     long p12;
     long p13;
