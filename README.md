@@ -156,30 +156,26 @@ completed-operation throughput.
 
 The headline comparison is scoped deliberately:
 
-- The table uses the best checked-in Lattice point estimate for each published
-  shape and compares it with the Disruptor row from the same benchmark artifact
-  for that shape.
+- The table deduplicates isolated and full-matrix repeats, then uses the best
+  checked-in Lattice point estimate and the best checked-in Disruptor point
+  estimate for each published workload.
 - The completed optimal path waits for sink/handler completion on both sides.
 - The Disruptor manually fused reference row collapses three increments into
-  one handler call; Lattice includes both the normal three-logical-stage fused
-  row and an equal-call-site one-stage reference row.
-- The physical row uses the isolated physical artifact and shows Lattice ahead
-  of Disruptor. The equal-call-site reference row uses the top checked-in
+  one handler call; the matching Lattice row uses the best equal-call-site
   `latticeManuallyFusedReference` result: 92.1M ops/s.
+- The physical, fused-copy, manual-reference, and completed-path rows all show
+  Lattice ahead of the strongest logged Disruptor result for the same workload.
 
 ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg)
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
-
-![Core edge and ingress throughput](docs/assets/perf-edge-pair.svg)
 
 ![End-to-end latency percentiles](docs/assets/latency-percentiles.svg)
 
 | Workload | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
 | Three-stage physical publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
-| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 35,200,599 ops/s | 1.76x |
-| Three-stage inline/manual fused, reference payload | 52,698,325 ops/s | 38,713,479 ops/s | 1.36x |
+| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
 | Manually fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
 | Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
 

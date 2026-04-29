@@ -10,8 +10,7 @@ artifact set refreshed on 2026-04-29 for the 1.0.0 open-source hardening pass.
 | `three-stage-isolated-fused-copy.json` / `.log` | 2 forks, 3x3s warmup + 5x3s measurement | Isolated Lattice inline-fused three-stage vs Disruptor manually fused copy-payload publish throughput. |
 | `three-stage-isolated-reference.json` / `.log` | 2 forks, 3x3s warmup + 5x3s measurement | Isolated reference-payload and equal-call-site Lattice rows vs Disruptor manually fused reference publish throughput. |
 | `optimal-path-completed.json` / `.log` | 3 forks, 5x5s warmup + 8x5s measurement | Completion-gated Lattice inline-fused path vs Disruptor busy-spin/manual-fused equivalent. |
-| `lattice-core-basics.json` / `.log` | 1 fork, 3x5s warmup + 5x5s measurement | Raw edge sanity, SPSC source paths, batched topology, and representative routing rows. |
-| `lattice-edge-pair-mpsc-ingress.json` / `.log` | 1 fork, 3x5s warmup + 5x5s measurement | SPSC/MPSC edge-pair groups plus 4-producer MPSC ingress with latency. |
+| `lattice-core-basics.json` / `.log` | 1 fork, 3x5s warmup + 5x5s measurement | Source/sink paths, batched topology, routing/topology rows, and raw edge regression rows. |
 | `lattice-placement.json` / `.log` | 1 fork, 3x5s warmup + 5x5s measurement | Portable placement subset, `pinning=false`, first-touch on/off, on-heap slots. |
 
 ## Validation Profile
@@ -39,19 +38,15 @@ Native: not loaded; placement rows use pinning=false
 | Row | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
 | Physical three-stage publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
-| Inline/manual fused, copy payload | 61,838,846 ops/s | 35,200,599 ops/s | 1.76x |
-| Inline/manual fused, reference payload | 52,698,325 ops/s | 38,713,479 ops/s | 1.36x |
+| Inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
 | Manual fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
 | Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
 
-The stage rows above use the best checked-in Lattice point estimate for each
-published shape. Lattice's inline-fused path already passes the payload by
-reference; the difference between the 3-stage Lattice reference row and the
-`latticeManuallyFusedReference` row is call-site shape (3 logical stages vs
-1 collapsed handler), not payload semantics. The
+The rows above deduplicate isolated and full-matrix repeats, then use the best
+checked-in point estimate from each side for each published workload. The
 `latticeManuallyFusedReference` row puts Lattice on Disruptor's call-site
-footing and measures 2.09x the Disruptor manually fused reference row in the
-longer checked-in matrix.
+footing and measures 2.09x the strongest logged Disruptor manually fused
+reference row.
 
 The completed optimal path waits for sink/handler completion for the same
 sequence number. It should be used when comparing end-to-end operation

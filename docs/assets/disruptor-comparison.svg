@@ -1,37 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="430" viewBox="0 0 1020 430">
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="390" viewBox="0 0 1040 390">
 <style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:13px}.value{font-size:12px;font-weight:700}.grid{stroke:#d8dee8;stroke-width:1}</style>
-<rect width="1020" height="430" fill="white"/>
-<text class="title" x="22" y="32">Lattice vs Disruptor ratios</text>
-<text class="sub" x="22" y="54">Best checked-in Lattice point estimate per shape; Disruptor row from the same artifact</text>
-<line class="grid" x1="300.0" y1="82" x2="300.0" y2="372"/>
-<text class="axis" x="300.0" y="396" text-anchor="middle">0x</text>
-<line class="grid" x1="395.6" y1="82" x2="395.6" y2="372"/>
-<text class="axis" x="395.6" y="396" text-anchor="middle">1x</text>
-<line class="grid" x1="491.2" y1="82" x2="491.2" y2="372"/>
-<text class="axis" x="491.2" y="396" text-anchor="middle">2x</text>
-<line class="grid" x1="586.8" y1="82" x2="586.8" y2="372"/>
-<text class="axis" x="586.8" y="396" text-anchor="middle">3x</text>
-<line class="grid" x1="682.4" y1="82" x2="682.4" y2="372"/>
-<text class="axis" x="682.4" y="396" text-anchor="middle">4x</text>
-<line class="grid" x1="777.9" y1="82" x2="777.9" y2="372"/>
-<text class="axis" x="777.9" y="396" text-anchor="middle">5x</text>
-<line class="grid" x1="873.5" y1="82" x2="873.5" y2="372"/>
-<text class="axis" x="873.5" y="396" text-anchor="middle">6x</text>
-<line x1="395.6" y1="82" x2="395.6" y2="372" stroke="#102033" stroke-width="1.4" stroke-dasharray="4 4"/>
+<rect width="1040" height="390" fill="white"/>
+<text class="title" x="22" y="32">Lattice speedup over strongest logged Disruptor result</text>
+<text class="sub" x="22" y="54">Best checked-in point estimate per side; isolated and full-matrix repeats deduplicated</text>
+<line class="grid" x1="300.0" y1="82" x2="300.0" y2="330"/>
+<text class="axis" x="300.0" y="354" text-anchor="middle">0x</text>
+<line class="grid" x1="392.9" y1="82" x2="392.9" y2="330"/>
+<text class="axis" x="392.9" y="354" text-anchor="middle">1x</text>
+<line class="grid" x1="485.7" y1="82" x2="485.7" y2="330"/>
+<text class="axis" x="485.7" y="354" text-anchor="middle">2x</text>
+<line class="grid" x1="578.6" y1="82" x2="578.6" y2="330"/>
+<text class="axis" x="578.6" y="354" text-anchor="middle">3x</text>
+<line class="grid" x1="671.4" y1="82" x2="671.4" y2="330"/>
+<text class="axis" x="671.4" y="354" text-anchor="middle">4x</text>
+<line class="grid" x1="764.3" y1="82" x2="764.3" y2="330"/>
+<text class="axis" x="764.3" y="354" text-anchor="middle">5x</text>
+<line class="grid" x1="857.1" y1="82" x2="857.1" y2="330"/>
+<text class="axis" x="857.1" y="354" text-anchor="middle">6x</text>
+<line class="grid" x1="950.0" y1="82" x2="950.0" y2="330"/>
+<text class="axis" x="950.0" y="354" text-anchor="middle">7x</text>
+<line x1="392.9" y1="82" x2="392.9" y2="330" stroke="#102033" stroke-width="1.4" stroke-dasharray="4 4"/>
+<text class="axis" x="397.9" y="72">1.0x parity</text>
+
 <text class="label" x="286" y="116.5" text-anchor="end">Completed optimal path</text>
-<rect x="300" y="92" width="602.7" height="36" rx="3" fill="#0f766e"/>
-<text class="value" x="910.7" y="116.5">6.31x</text>
-<text class="label" x="286" y="168.5" text-anchor="end">Equal call-site manual fused reference</text>
-<rect x="300" y="144" width="199.9" height="36" rx="3" fill="#0f766e"/>
-<text class="value" x="507.9" y="168.5">2.09x</text>
-<text class="label" x="286" y="220.5" text-anchor="end">3-stage fused vs Disruptor ref</text>
-<rect x="300" y="196" width="130.1" height="36" rx="3" fill="#0f766e"/>
-<text class="value" x="438.1" y="220.5">1.36x</text>
-<text class="label" x="286" y="272.5" text-anchor="end">3-stage fused vs Disruptor copy</text>
-<rect x="300" y="248" width="167.9" height="36" rx="3" fill="#0f766e"/>
-<text class="value" x="475.9" y="272.5">1.76x</text>
-<text class="label" x="286" y="324.5" text-anchor="end">Physical 3-stage</text>
-<rect x="300" y="300" width="100.2" height="36" rx="3" fill="#0f766e"/>
-<text class="value" x="408.2" y="324.5">1.05x</text>
-<text class="axis" x="400.6" y="72">1.0x parity</text>
+<rect x="300" y="92" width="585.9" height="36" rx="3" fill="#0f766e"/>
+<text class="value" x="893.9" y="116.5">6.31x</text>
+<text class="label" x="286" y="168.5" text-anchor="end">Manual-fused reference publish</text>
+<rect x="300" y="144" width="194.1" height="36" rx="3" fill="#0f766e"/>
+<text class="value" x="502.1" y="168.5">2.09x</text>
+<text class="label" x="286" y="220.5" text-anchor="end">Fused copy-payload publish</text>
+<rect x="300" y="196" width="125.3" height="36" rx="3" fill="#0f766e"/>
+<text class="value" x="433.3" y="220.5">1.35x</text>
+<text class="label" x="286" y="272.5" text-anchor="end">Physical three-stage publish</text>
+<rect x="300" y="248" width="97.5" height="36" rx="3" fill="#0f766e"/>
+<text class="value" x="405.5" y="272.5">1.05x</text>
 </svg>

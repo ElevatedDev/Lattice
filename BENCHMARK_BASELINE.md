@@ -43,9 +43,8 @@ include patterns and artifact profiles.
 
 | Figure | Description |
 | --- | --- |
-| ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Top checked-in Lattice stage rows and their same-artifact Disruptor comparators with JMH error bars. |
-| ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratios for top checked-in stage rows plus the completion-gated optimal path. |
-| ![Core edge and ingress throughput](docs/assets/perf-edge-pair.svg) | Core SPSC/MPSC edge and ingress throughput rows. |
+| ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Deduplicated best logged Lattice and Disruptor publish rows with JMH error bars. |
+| ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratios for the deduplicated publish rows plus the completion-gated optimal path. |
 | ![End-to-end latency percentiles](docs/assets/latency-percentiles.svg) | Saturating-throughput end-to-end latency percentiles from checked-in logs. |
 
 ## Artifacts
@@ -57,36 +56,29 @@ include patterns and artifact profiles.
 | [`three-stage-isolated-fused-copy.json`](benchmarks/baseline/three-stage-isolated-fused-copy.json) | Isolated semi-smoke Lattice inline-fused vs Disruptor manually fused copy-payload publish throughput. |
 | [`three-stage-isolated-reference.json`](benchmarks/baseline/three-stage-isolated-reference.json) | Isolated semi-smoke reference-payload and equal-call-site Lattice vs Disruptor publish throughput. |
 | [`optimal-path-completed.json`](benchmarks/baseline/optimal-path-completed.json) | Completion-gated optimal path: each operation waits for sink/handler completion. |
-| [`lattice-core-basics.json`](benchmarks/baseline/lattice-core-basics.json) | Raw edge sanity, SPSC source paths, batched topology, routing/topology rows. |
-| [`lattice-edge-pair-mpsc-ingress.json`](benchmarks/baseline/lattice-edge-pair-mpsc-ingress.json) | SPSC/MPSC edge-pair groups and 4-producer MPSC ingress. |
+| [`lattice-core-basics.json`](benchmarks/baseline/lattice-core-basics.json) | Source/sink paths, batched topology, routing/topology rows, and raw edge regression rows. |
 | [`lattice-placement.json`](benchmarks/baseline/lattice-placement.json) | Portable placement subset, first-touch on/off, pinning disabled. |
 
 ## Headline Results
 
-### Top checked-in three-stage publish throughput
+### Top checked-in head-to-head rows
 
-These rows use the best checked-in Lattice point estimate for each published
-stage shape. Each comparison keeps the Disruptor value from the same benchmark
-artifact as the Lattice row it is compared against.
+These rows deduplicate isolated and full-matrix repeats, then use the best
+checked-in Lattice point estimate and the best checked-in Disruptor point
+estimate for each published workload.
 
-| Comparison | Lattice (ops/s) | Disruptor (ops/s) | Ratio | Artifact |
-| --- | ---: | ---: | ---: | --- |
-| Physical three-stage | 27,660,948 | 26,377,465 | 1.05x | `three-stage-isolated-physical.json` |
-| Inline/manual fused, copy payload | 61,838,846 | 35,200,599 | 1.76x | `three-stage-isolated-fused-copy.json` |
-| Inline/manual fused, reference payload | 52,698,325 | 38,713,479 | 1.36x | `three-stage-isolated-reference.json` |
-| Manual fused reference, equal call-site | 92,094,463 | 44,045,374 | 2.09x | `three-stage-vs-disruptor.json` |
+| Comparison | Lattice (ops/s) | Lattice source | Disruptor (ops/s) | Disruptor source | Ratio |
+| --- | ---: | --- | ---: | --- | ---: |
+| Physical three-stage publish | 27,660,948 | `three-stage-isolated-physical.json` | 26,377,465 | `three-stage-isolated-physical.json` | 1.05x |
+| Inline/manual fused copy publish | 61,838,846 | `three-stage-isolated-fused-copy.json` | 45,888,659 | `three-stage-vs-disruptor.json` | 1.35x |
+| Manual fused reference publish, equal call-site | 92,094,463 | `three-stage-vs-disruptor.json` | 44,045,374 | `three-stage-vs-disruptor.json` | 2.09x |
 
-Lattice's inline-fused path already passes the payload by reference (no
-per-slot field copy). The 3-stage Lattice rows and the 3-stage Disruptor
-manually-fused-reference row are not equal-call-site comparisons: Disruptor's
-row collapses three logical stages into one `EventHandler` call, while the
-Lattice fused rows keep three logical stages. Forcing equal call-site footing
-(`latticeManuallyFusedReference`: one Lattice stage doing three increments
-inline) yields 92.1M ops/s vs Disruptor's 44.0M (2.09x) in the longer
-checked-in matrix. The 3-stage fused copy row measures 61.8M ops/s vs 35.2M
-(1.76x), and the fused reference-framing row measures 52.7M ops/s vs 38.7M
-(1.36x). The physical three-stage isolated row measures 27.7M ops/s vs
-Disruptor's 26.4M (1.05x).
+The fused-copy row intentionally compares the best logged Lattice point against
+the best logged Disruptor copy-payload point, even though those winners come
+from different artifacts. The reference row uses equal call-site footing:
+`latticeManuallyFusedReference` is one Lattice stage doing the same three
+increments inline as the Disruptor manually fused handler. Lattice is ahead in
+all published head-to-head rows.
 
 ### Completed optimal path
 
@@ -100,15 +92,10 @@ until the sink/handler confirms completion for the same sequence. On this host,
 the Lattice inline-fused completed path measured 6.31x the Disruptor
 busy-spin/manual-fused completed path.
 
-### Lattice basics
+### Broader Lattice topology rows
 
 | Benchmark | Score (ops/s) | Error |
 | --- | ---: | ---: |
-| EdgeMicro SPSC same-thread sanity | 41,650,443 | +-55,884,184 |
-| EdgeMicro MPSC same-thread sanity | 25,057,290 | +-17,254,709 |
-| EdgePair SPSC total | 101,094,180 | +-14,838,658 |
-| EdgePair MPSC total | 74,115,581 | +-11,211,687 |
-| MPSC ingress, 4 producer threads | 14,289,722 | +-3,851,449 |
 | One source/sink single-producer | 12,398,644 | +-4,959,990 |
 | One source/sink preallocated single-producer | 11,001,289 | +-6,079,214 |
 | One source three-stage fused | 8,438,270 | +-3,936,722 |
@@ -133,7 +120,6 @@ saturating-throughput histograms, not fixed-rate latency measurements.
 | oneSourceOneSinkSingleProducer | end-to-end | 801 | 892,415 | 4,190,207 | 9,936,895 | 45,088,767 |
 | oneSourceOneSinkPreallocatedSingleProducer | end-to-end | 12,911 | 948,735 | 7,958,527 | 11,444,223 | 20,938,751 |
 | oneSourceThreeStageSinkFused | end-to-end | 342,527 | 1,847,295 | 6,238,207 | 12,369,919 | 22,986,751 |
-| mpscIngress | end-to-end | 16,815 | 1,558,527 | 5,804,031 | 11,976,703 | 43,057,151 |
 | batchedValidateSink | end-to-end | 1,001 | 1,740,799 | 7,335,935 | 15,433,727 | 32,243,711 |
 | validateJournalRiskCommit | end-to-end | 1,500 | 2,498,559 | 11,657,215 | 19,021,823 | 44,761,087 |
 

@@ -14,7 +14,6 @@ profile, JVM flags, and exact include patterns.
 | --- | --- |
 | Three-stage throughput | `../../docs/assets/perf-pipeline.svg` |
 | Lattice vs Disruptor ratios | `../../docs/assets/disruptor-comparison.svg` |
-| Core edge and ingress throughput | `../../docs/assets/perf-edge-pair.svg` |
 | End-to-end latency percentiles | `../../docs/assets/latency-percentiles.svg` |
 
 ## Artifact Map
@@ -26,33 +25,28 @@ profile, JVM flags, and exact include patterns.
 | `three-stage-isolated-fused-copy.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated Lattice inline-fused three-stage vs Disruptor manually fused copy-payload publish throughput. |
 | `three-stage-isolated-reference.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated reference-payload and equal-call-site Lattice rows vs Disruptor manually fused reference publish throughput. |
 | `optimal-path-completed.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Completion-gated optimal path: each operation waits for the sink/handler to complete the same sequence. |
-| `lattice-core-basics.json` / `.log` | 1 fork, 3x5s warmup, 5x5s measure | Raw edge sanity, SPSC source paths, batched topology, and routing/topology rows with latency logs. |
-| `lattice-edge-pair-mpsc-ingress.json` / `.log` | 1 fork, 3x5s warmup, 5x5s measure | SPSC/MPSC edge-pair group rows and 4-producer MPSC ingress with latency. |
+| `lattice-core-basics.json` / `.log` | 1 fork, 3x5s warmup, 5x5s measure | Source/sink paths, batched topology, routing/topology rows, and raw edge regression rows with latency logs. |
 | `lattice-placement.json` / `.log` | 1 fork, 3x5s warmup, 5x5s measure | Portable placement subset: `containerCpuset`, `pinning=false`, first-touch on/off, on-heap slots. |
 | `env.txt` | n/a | Host, toolchain, JVM flags, and include patterns. |
 
-## Top Checked-In Three-Stage Head-To-Head
+## Top Checked-In Head-To-Head
 
-Publish-throughput rows using the best checked-in Lattice point estimate for
-each published shape. Each comparison uses the Disruptor row from the same
-artifact as the Lattice row it is compared against.
+Rows using the best checked-in Lattice point estimate and the best checked-in
+Disruptor point estimate for each published workload, with isolated and
+full-matrix repeats deduplicated.
 
-| Comparison | Lattice (ops/s) | Disruptor (ops/s) | Ratio | Artifact |
-| --- | ---: | ---: | ---: | --- |
-| Physical three-stage | 27,660,948 | 26,377,465 | 1.05x | `three-stage-isolated-physical.json` |
-| Inline/manual fused, copy payload | 61,838,846 | 35,200,599 | 1.76x | `three-stage-isolated-fused-copy.json` |
-| Inline/manual fused, reference payload | 52,698,325 | 38,713,479 | 1.36x | `three-stage-isolated-reference.json` |
-| Manual fused reference, equal call-site | 92,094,463 | 44,045,374 | 2.09x | `three-stage-vs-disruptor.json` |
+| Comparison | Lattice (ops/s) | Lattice source | Disruptor (ops/s) | Disruptor source | Ratio |
+| --- | ---: | --- | ---: | --- | ---: |
+| Physical three-stage publish | 27,660,948 | `three-stage-isolated-physical.json` | 26,377,465 | `three-stage-isolated-physical.json` | 1.05x |
+| Inline/manual fused copy publish | 61,838,846 | `three-stage-isolated-fused-copy.json` | 45,888,659 | `three-stage-vs-disruptor.json` | 1.35x |
+| Manual fused reference publish, equal call-site | 92,094,463 | `three-stage-vs-disruptor.json` | 44,045,374 | `three-stage-vs-disruptor.json` | 2.09x |
 
-Interpretation: Lattice's inline-fused path already passes the payload by
-reference; there is no per-slot field copy on this path. The reference-payload
-rows compare two shapes: Lattice's three logical stages and an equal-call-site
-row where one Lattice stage performs the three increments inline. The
-equal-call-site Lattice row reaches 92.1M ops/s and is 2.09x the Disruptor
-manually fused reference row in the longer checked-in matrix. The physical
-three-stage point estimate is 1.05x Disruptor in the isolated physical
-artifact; the clearer stage wins are the inline-fused, reference,
-equal-call-site, and completed-path rows.
+Interpretation: the fused-copy row gives Disruptor its strongest logged
+copy-payload result from the full matrix, and Lattice still leads by point
+estimate. The reference row uses equal call-site footing: one Lattice stage
+performs the same three increments inline as Disruptor's manually fused
+handler. The physical three-stage point estimate remains above parity, and the
+completed path is the strict end-to-end row below.
 
 ## Completed Optimal Path
 
@@ -67,18 +61,12 @@ the same sequence number.
 
 Ratio: Lattice completed path / Disruptor completed path = 6.31x on this host.
 
-## Lattice Basics
+## Broader Lattice Topology Rows
 
-Selected throughput rows from `lattice-core-basics.json` and
-`lattice-edge-pair-mpsc-ingress.json`.
+Selected non-edge throughput rows from `lattice-core-basics.json`.
 
 | Benchmark | Score (ops/s) | Error |
 | --- | ---: | ---: |
-| EdgeMicro SPSC same-thread sanity | 41,650,443 | +-55,884,184 |
-| EdgeMicro MPSC same-thread sanity | 25,057,290 | +-17,254,709 |
-| EdgePair SPSC total | 101,094,180 | +-14,838,658 |
-| EdgePair MPSC total | 74,115,581 | +-11,211,687 |
-| MPSC ingress, 4 producer threads | 14,289,722 | +-3,851,449 |
 | One source/sink single-producer | 12,398,644 | +-4,959,990 |
 | One source/sink preallocated single-producer | 11,001,289 | +-6,079,214 |
 | One source three-stage fused | 8,438,270 | +-3,936,722 |
@@ -103,7 +91,6 @@ saturating-throughput histograms, not fixed-rate service latency.
 | oneSourceOneSinkSingleProducer | end-to-end | 801 | 892,415 | 4,190,207 | 9,936,895 | 45,088,767 |
 | oneSourceOneSinkPreallocatedSingleProducer | end-to-end | 12,911 | 948,735 | 7,958,527 | 11,444,223 | 20,938,751 |
 | oneSourceThreeStageSinkFused | end-to-end | 342,527 | 1,847,295 | 6,238,207 | 12,369,919 | 22,986,751 |
-| mpscIngress | end-to-end | 16,815 | 1,558,527 | 5,804,031 | 11,976,703 | 43,057,151 |
 | batchedValidateSink | end-to-end | 1,001 | 1,740,799 | 7,335,935 | 15,433,727 | 32,243,711 |
 | validateJournalRiskCommit | end-to-end | 1,500 | 2,498,559 | 11,657,215 | 19,021,823 | 44,761,087 |
 

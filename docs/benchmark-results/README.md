@@ -17,7 +17,6 @@ deliberately chooses to check them in.
 
 - [Three-stage publish throughput](../assets/perf-pipeline.svg)
 - [Lattice vs Disruptor ratios](../assets/disruptor-comparison.svg)
-- [Core edge and ingress throughput](../assets/perf-edge-pair.svg)
 - [End-to-end latency percentiles](../assets/latency-percentiles.svg)
 - [Runtime guarantee map](../assets/guarantees-map.svg)
 
@@ -25,7 +24,7 @@ deliberately chooses to check them in.
 
 When quoting a Lattice number, always include:
 
-1. The benchmark class and method (e.g. `ApplesToApplesDisruptorBenchmark.spscPreallocated`).
+1. The benchmark class and method (e.g. `OptimalPathBenchmark.latticeInlineFusedCompleted`).
 2. The profile (`2 forks, 3x3s warmup, 5x3s measurement` for isolated stage
    artifacts; `3 forks, 5x5s warmup, 8x5s measurement` for the longer
    Disruptor matrix, the 92.1M manual-fused reference row, and the completed

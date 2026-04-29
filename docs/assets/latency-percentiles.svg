@@ -62,13 +62,6 @@
 <circle class="dot" cx="870.0" cy="103.3" r="4" fill="#6366f1"/>
 <rect x="898" y="190" width="14" height="14" rx="2" fill="#6366f1"/>
 <text class="legend" x="920" y="202">threeStageFused</text>
-<polyline class="line" points="86.0,259.6 347.3,152.3 608.7,121.2 870.0,104.1" stroke="#7c3aed"/>
-<circle class="dot" cx="86.0" cy="259.6" r="4" fill="#7c3aed"/>
-<circle class="dot" cx="347.3" cy="152.3" r="4" fill="#7c3aed"/>
-<circle class="dot" cx="608.7" cy="121.2" r="4" fill="#7c3aed"/>
-<circle class="dot" cx="870.0" cy="104.1" r="4" fill="#7c3aed"/>
-<rect x="898" y="216" width="14" height="14" rx="2" fill="#7c3aed"/>
-<text class="legend" x="920" y="228">mpscIngress</text>
 <line class="axisline" x1="86" y1="490" x2="870" y2="490"/>
 <line class="axisline" x1="86" y1="86" x2="86" y2="490"/>
 </svg>
