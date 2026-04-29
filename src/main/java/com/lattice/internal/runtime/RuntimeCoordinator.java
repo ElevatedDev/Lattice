@@ -73,11 +73,8 @@ class RuntimeCoordinator {
     }
 
     boolean hasInFlightWork() {
-        final SourceEmitter<?>[] currentSources = sources;
-        for (int i = 0; i < currentSources.length; i++) {
-            if (currentSources[i].pendingInline() > 0L) {
-                return true;
-            }
+        if (hasInFlightInlineWork()) {
+            return true;
         }
         final StageWorker[] currentWorkers = workers;
         for (int i = 0; i < currentWorkers.length; i++) {
@@ -88,6 +85,15 @@ class RuntimeCoordinator {
         return false;
     }
 
+    boolean hasInFlightInlineWork() {
+        final SourceEmitter<?>[] currentSources = sources;
+        for (int i = 0; i < currentSources.length; i++) {
+            if (currentSources[i].pendingInline() > 0L) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     void workerBootstrapped() {
         bootstrapLatch.countDown();

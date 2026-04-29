@@ -80,6 +80,9 @@ state is pre-1.0.
 - `-Dlattice.fusion.validateTypes` (default `false`) to re-enable defensive
   per-event runtime type assertions inside fused chains while developing
   custom stage logic.
+- `OptimalPathBenchmark`, a completion-gated Lattice-vs-Disruptor comparison
+  that waits for sink/handler completion of the same sequence instead of
+  measuring enqueue rate only.
 
 ### Changed
 
@@ -112,7 +115,8 @@ state is pre-1.0.
 
 - Documentation now avoids claims about public stability annotation classes
   that do not exist in the current module.
-- Benchmark documentation now points at the checked-in
+- Benchmark documentation now points at the refreshed checked-in
+  `benchmarks/baseline/` artifact set and
   `docs/benchmark-results/v1.0.0-baseline/` snapshot instead of older local
   result paths.
 

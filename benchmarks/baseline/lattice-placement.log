@@ -1,0 +1,153 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.PlacementBenchmark.mpscPlacement
+# Parameters: (firstTouchPlacement = false, memory = onHeap, pinning = false, placement = containerCpuset)
+
+# Run progress: 0.00% complete, ETA 00:02:40
+# Fork: 1 of 1
+# Warmup Iteration   1: 10551111.869 ops/s
+# Warmup Iteration   2: 7683544.030 ops/s
+# Warmup Iteration   3: 8866582.467 ops/s
+Iteration   1: 9907065.686 ops/s
+Iteration   2: 12648600.619 ops/s
+Iteration   3: 12263615.394 ops/s
+Iteration   4: 12867726.311 ops/s
+Iteration   5: mpscPlacement-containerCpuset-pinning-false-firstTouch-false-onHeap enqueue latency nanos p50=200 p99=1400 p99.9=3001 p99.99=64511 max=17285119 samples=438517634
+mpscPlacement-containerCpuset-pinning-false-firstTouch-false-onHeap endToEnd latency nanos p50=281343 p99=1809407 p99.9=3923967 p99.99=10289151 max=25640959 samples=438517634
+12901930.230 ops/s
+
+
+Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
+  12117787.648 ±(99.9%) 4858380.244 ops/s [Average]
+  (min, avg, max) = (9907065.686, 12117787.648, 12901930.230), stdev = 1261705.921
+  CI (99.9%): [7259407.404, 16976167.892] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.PlacementBenchmark.mpscPlacement
+# Parameters: (firstTouchPlacement = true, memory = onHeap, pinning = false, placement = containerCpuset)
+
+# Run progress: 25.00% complete, ETA 00:02:06
+# Fork: 1 of 1
+# Warmup Iteration   1: 9668983.447 ops/s
+# Warmup Iteration   2: 12858185.608 ops/s
+# Warmup Iteration   3: 11010249.267 ops/s
+Iteration   1: 11428316.275 ops/s
+Iteration   2: 11121498.967 ops/s
+Iteration   3: 11612492.422 ops/s
+Iteration   4: 11249242.878 ops/s
+Iteration   5: mpscPlacement-containerCpuset-pinning-false-firstTouch-true-onHeap enqueue latency nanos p50=200 p99=1500 p99.9=3401 p99.99=65407 max=22773759 samples=450534051
+mpscPlacement-containerCpuset-pinning-false-firstTouch-true-onHeap endToEnd latency nanos p50=374783 p99=1766399 p99.9=3903487 p99.99=11517951 max=31916031 samples=450534051
+11155043.341 ops/s
+
+
+Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
+  11313318.777 ±(99.9%) 790744.916 ops/s [Average]
+  (min, avg, max) = (11121498.967, 11313318.777, 11612492.422), stdev = 205353.944
+  CI (99.9%): [10522573.861, 12104063.693] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.PlacementBenchmark.spscPlacement
+# Parameters: (firstTouchPlacement = false, memory = onHeap, pinning = false, placement = containerCpuset)
+
+# Run progress: 50.00% complete, ETA 00:01:24
+# Fork: 1 of 1
+# Warmup Iteration   1: 10499666.970 ops/s
+# Warmup Iteration   2: 11933247.445 ops/s
+# Warmup Iteration   3: 12904143.344 ops/s
+Iteration   1: 12858307.697 ops/s
+Iteration   2: 12959890.426 ops/s
+Iteration   3: 12667948.696 ops/s
+Iteration   4: 12903569.756 ops/s
+Iteration   5: spscPlacement-containerCpuset-pinning-false-firstTouch-false-onHeap enqueue latency nanos p50=1 p99=100 p99.9=200 p99.99=12407 max=10272767 samples=498746274
+spscPlacement-containerCpuset-pinning-false-firstTouch-false-onHeap endToEnd latency nanos p50=300 p99=291327 p99.9=946687 p99.99=3215359 max=10305535 samples=498746274
+13016315.959 ops/s
+
+
+Result "com.lattice.benchmark.PlacementBenchmark.spscPlacement":
+  12881206.507 ±(99.9%) 512833.955 ops/s [Average]
+  (min, avg, max) = (12667948.696, 12881206.507, 13016315.959), stdev = 133181.349
+  CI (99.9%): [12368372.552, 13394040.462] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.PlacementBenchmark.spscPlacement
+# Parameters: (firstTouchPlacement = true, memory = onHeap, pinning = false, placement = containerCpuset)
+
+# Run progress: 75.00% complete, ETA 00:00:41
+# Fork: 1 of 1
+# Warmup Iteration   1: 10325292.893 ops/s
+# Warmup Iteration   2: 11102323.075 ops/s
+# Warmup Iteration   3: 11825810.600 ops/s
+Iteration   1: 12519921.729 ops/s
+Iteration   2: 12353646.484 ops/s
+Iteration   3: 12420947.689 ops/s
+Iteration   4: 12401210.692 ops/s
+Iteration   5: spscPlacement-containerCpuset-pinning-false-firstTouch-true-onHeap enqueue latency nanos p50=1 p99=100 p99.9=200 p99.99=12503 max=10805247 samples=476907606
+spscPlacement-containerCpuset-pinning-false-firstTouch-true-onHeap endToEnd latency nanos p50=400 p99=340735 p99.9=953343 p99.99=3035135 max=11804671 samples=476907606
+12426924.838 ops/s
+
+
+Result "com.lattice.benchmark.PlacementBenchmark.spscPlacement":
+  12424530.286 ±(99.9%) 233324.980 ops/s [Average]
+  (min, avg, max) = (12353646.484, 12424530.286, 12519921.729), stdev = 60593.756
+  CI (99.9%): [12191205.306, 12657855.267] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:02:46
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                         (firstTouchPlacement)  (memory)  (pinning)      (placement)   Mode  Cnt         Score         Error  Units
+PlacementBenchmark.mpscPlacement                  false    onHeap      false  containerCpuset  thrpt    5  12117787.648 ± 4858380.244  ops/s
+PlacementBenchmark.mpscPlacement                   true    onHeap      false  containerCpuset  thrpt    5  11313318.777 ±  790744.916  ops/s
+PlacementBenchmark.spscPlacement                  false    onHeap      false  containerCpuset  thrpt    5  12881206.507 ±  512833.955  ops/s
+PlacementBenchmark.spscPlacement                   true    onHeap      false  containerCpuset  thrpt    5  12424530.286 ±  233324.980  ops/s
+
+Benchmark result is saved to benchmarks/baseline/lattice-placement.json

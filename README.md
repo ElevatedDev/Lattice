@@ -124,9 +124,12 @@ See [Ordering Guarantees](docs/ordering-guarantees.md),
 The current checked-in benchmark material is orientation evidence, not a
 publication-grade Linux or NUMA performance claim. Start with the release
 snapshot index, then cite the underlying host, JVM flags, benchmark class, and
-JSON artifact for any number you quote.
+JSON artifact for any number you quote. The refreshed baseline includes both
+publish-throughput rows and a completion-gated `OptimalPathBenchmark` so async
+enqueue rates are not confused with completed-operation throughput.
 
 - [Benchmark Results](docs/benchmark-results/README.md)
+- [Benchmark Baseline](BENCHMARK_BASELINE.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)

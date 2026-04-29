@@ -223,27 +223,14 @@ public final class EdgeMetrics implements WaitMetrics {
         return ratePerSecond(consumedCount.sum());
     }
 
-    /**
-     * Per-thread emit counter used to sample depth without a cross-thread atomic load.
-     * Single-threaded on a given producer (each producer thread owns one edge in SPSC; in
-     * MPSC each producer takes the slow CAS path, so the imprecision is acceptable for a
-     * sampled high-water mark). See PERFORMANCE_REVIEW.md finding D1.
-     */
-    private static final ThreadLocal<long[]> EMIT_TICK = ThreadLocal.withInitial(() -> new long[1]);
+    private final ThreadLocal<long[]> emitTick = ThreadLocal.withInitial(() -> new long[1]);
 
     public void recordEmit() {
         if (!HOT_COUNTERS_ENABLED) {
             return;
         }
         emittedCount.increment();
-        // Sample depth: every emit until we've seen DEPTH_SAMPLE_MASK emits (so small
-        // workloads / unit tests get an exact high-water mark), then once per
-        // (DEPTH_SAMPLE_MASK + 1) emits to amortize the LongAdder.sum() walks.
-        // The previous implementation issued LOCK XADD + 2 cross-thread atomic loads + a
-        // CAS loop on every emit; this version issues only a LongAdder cell increment plus
-        // a pair of LongAdder.sum() walks (cheap, no coherence traffic) at sample points.
-        // See PERFORMANCE_REVIEW.md finding D1.
-        final long[] tick = EMIT_TICK.get();
+        final long[] tick = emitTick.get();
         final long next = ++tick[0];
         if (next <= DEPTH_SAMPLE_MASK || (next & DEPTH_SAMPLE_MASK) == 0L) {
             final long depth = emittedCount.sum() - consumedCount.sum() - droppedOldestCount.sum();

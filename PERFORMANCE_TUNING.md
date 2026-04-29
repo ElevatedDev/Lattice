@@ -91,8 +91,7 @@ source -> stageA -> stageB -> stageC -> sink
 
 When eligible, the runtime elides internal SPSC handoffs and executes the
 segment on the owner worker while preserving logical graph visibility. This is
-why the current local pipeline benchmark shows a large gap between fused and
-physical rows.
+why the current baseline keeps physical and fused pipeline rows separate.
 
 Fusion is deliberately strict. Expect it only for normal SPSC, blocking,
 on-heap, non-batch, non-redirect serial paths without conflicting explicit
@@ -137,8 +136,10 @@ ingress. Disable it explicitly if your producer thread cannot tolerate doing
 the stage and sink work synchronously (for example because it must remain
 free for placement reasons).
 
-The benchmark `latticeThreeStagePipelineFused` improves materially with this
-default.
+The current WSL2 baseline records `latticeThreeStagePipelineFused` at
+52,101,518 ops/s and `latticeThreeStagePipelinePhysical` at 32,977,536 ops/s.
+Treat that as local orientation evidence; rerun on an isolated Linux host
+before making release claims.
 
 ## Batch Size
 
@@ -302,9 +303,9 @@ multiple forks, and store JSON results with the exact JVM flags:
 ```bash
 ./gradlew clean test jmhJar
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
-  "com.lattice.benchmark.(TopologyBenchmark|ApplesToApplesDisruptorBenchmark|DisruptorBaselineBenchmark).*" \
-  -wi 10 -i 10 -f 5 -w 10s -r 10s \
-  -jvmArgsAppend "-Xms4g -Xmx4g -XX:+AlwaysPreTouch -XX:+UseG1GC -XX:+DisableExplicitGC" \
+  "com.lattice.benchmark.(TopologyBenchmark|ApplesToApplesDisruptorBenchmark|OptimalPathBenchmark|DisruptorBaselineBenchmark).*" \
+  -wi 5 -i 8 -f 3 -w 5s -r 5s \
+  -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false" \
   -rf json -rff results/lattice-jmh.json
 ```
 
@@ -324,6 +325,8 @@ For Disruptor comparisons:
 - Compare complete topology semantics, not isolated queue operations.
 - Match producer count, consumer count, buffer capacity, payload model, and
   allocation model.
+- Use completion-gated rows such as `OptimalPathBenchmark` when the claim is
+  completed operation throughput rather than enqueue/publish throughput.
 - Include rows where Disruptor is expected to win, especially single shared
   stream and MPSC reference cases.
 - Keep pooled mutable payload rows separate from allocating value-transform
@@ -335,8 +338,9 @@ For Disruptor comparisons:
 
 The current public result set under
 [`docs/benchmark-results/v1.0.0-baseline/`](docs/benchmark-results/v1.0.0-baseline/)
-is a WSL2 JDK 21 data set. It shows the architectural value of fusion and
-preallocation, but it is not a NUMA release report.
+is a WSL2 JDK 21 data set refreshed on 2026-04-29. It shows the architectural
+value of source specialization and inline fusion, but it is not a NUMA release
+report.
 
 Known caveats:
 
@@ -345,10 +349,14 @@ Known caveats:
   allocation evidence.
 - Apples-to-apples benchmark rows are only fair when the payload model and
   dependency semantics match the claim.
+- Publish-throughput rows are not completed-operation rows. Use
+  `optimal-path-completed.json` when completion matters.
 - Treat single-producer Disruptor rows as baseline context for shared-ring
   workloads, not as proof about every static graph shape.
 
 The practical reading of the current data is mixed: Lattice is strong when the
-compiler can specialize a static topology, while Disruptor remains a strong
-baseline for a single shared sequence domain and multi-producer reference
-paths.
+compiler can specialize and inline a static topology, and the equal-call-site
+manually fused reference row now outperforms the Disruptor reference row on the
+checked-in WSL2 run. Disruptor remains a strong baseline for a single shared
+sequence domain, so keep the raw artifacts and topology semantics attached to
+any comparison.

@@ -1,0 +1,176 @@
+[
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 3,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.runtime.inlineDepthTracking=false"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 5,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 4742326.126586482,
+            "scoreError" : 1028517.3126196894,
+            "scoreConfidence" : [
+                3713808.8139667925,
+                5770843.439206172
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1074687.461252553,
+                "50.0" : 5174782.256893847,
+                "90.0" : 5950220.0608044285,
+                "95.0" : 6118438.04638969,
+                "99.0" : 6153774.249054178,
+                "99.9" : 6153774.249054178,
+                "99.99" : 6153774.249054178,
+                "99.999" : 6153774.249054178,
+                "99.9999" : 6153774.249054178,
+                "100.0" : 6153774.249054178
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    4406992.996575373,
+                    5433575.262335971,
+                    4135546.4199824953,
+                    4587865.402735283,
+                    4906459.193337874,
+                    5465774.496781396,
+                    5171081.1906115925,
+                    4811124.516679274
+                ],
+                [
+                    5494440.496799315,
+                    5316241.409554268,
+                    4409755.362123434,
+                    4992174.025176238,
+                    5284508.668728931,
+                    1795291.8184481813,
+                    1074687.461252553,
+                    1880265.604541627
+                ],
+                [
+                    6153774.249054178,
+                    6012429.438396227,
+                    5600769.119170326,
+                    4445029.792335046,
+                    5761740.305782791,
+                    5609805.801284467,
+                    5888010.6832126295,
+                    5178483.323176101
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 3,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.runtime.inlineDepthTracking=false"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 5,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 2.9903291128425777E7,
+            "scoreError" : 4942063.039265947,
+            "scoreConfidence" : [
+                2.496122808915983E7,
+                3.484535416769172E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1.544478755366755E7,
+                "50.0" : 3.1263969571607046E7,
+                "90.0" : 3.6460393699744195E7,
+                "95.0" : 3.668174757189963E7,
+                "99.0" : 3.669818150763301E7,
+                "99.9" : 3.669818150763301E7,
+                "99.99" : 3.669818150763301E7,
+                "99.999" : 3.669818150763301E7,
+                "99.9999" : 3.669818150763301E7,
+                "100.0" : 3.669818150763301E7
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    3.669818150763301E7,
+                    3.521059847418921E7,
+                    3.628834163478889E7,
+                    3.608717468482267E7,
+                    3.533312326041846E7,
+                    3.663244576469949E7,
+                    3.623266859563874E7,
+                    3.543936362132165E7
+                ],
+                [
+                    3.1028563139781054E7,
+                    3.019884282589981E7,
+                    2.2717130346849393E7,
+                    2.75888025231575E7,
+                    1.544478755366755E7,
+                    2.1627218935284007E7,
+                    1.944226852950323E7,
+                    2.107026084191119E7
+                ],
+                [
+                    3.1499376003433038E7,
+                    3.575155869441351E7,
+                    3.0720650923828784E7,
+                    2.5711733630538914E7,
+                    3.251095029676666E7,
+                    2.478013286794249E7,
+                    2.538493579332938E7,
+                    3.427987663240003E7
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

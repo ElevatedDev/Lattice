@@ -1,0 +1,697 @@
+[
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 8878475.86427022,
+            "scoreError" : 479806.09606876964,
+            "scoreConfidence" : [
+                8398669.76820145,
+                9358281.96033899
+            ],
+            "scorePercentiles" : {
+                "0.0" : 8697290.116231266,
+                "50.0" : 8877806.276198843,
+                "90.0" : 9010888.279315786,
+                "95.0" : 9010888.279315786,
+                "99.0" : 9010888.279315786,
+                "99.9" : 9010888.279315786,
+                "99.99" : 9010888.279315786,
+                "99.999" : 9010888.279315786,
+                "99.9999" : 9010888.279315786,
+                "100.0" : 9010888.279315786
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    9010888.279315786,
+                    8975725.504927937,
+                    8877806.276198843,
+                    8830669.144677259,
+                    8697290.116231266
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 7.889259780070718E7,
+            "scoreError" : 1498696.7015797014,
+            "scoreConfidence" : [
+                7.739390109912747E7,
+                8.039129450228688E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 7.854043685391964E7,
+                "50.0" : 7.876588203849691E7,
+                "90.0" : 7.942630725261496E7,
+                "95.0" : 7.942630725261496E7,
+                "99.0" : 7.942630725261496E7,
+                "99.9" : 7.942630725261496E7,
+                "99.99" : 7.942630725261496E7,
+                "99.999" : 7.942630725261496E7,
+                "99.9999" : 7.942630725261496E7,
+                "100.0" : 7.942630725261496E7
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    7.854043685391964E7,
+                    7.916476809554116E7,
+                    7.876588203849691E7,
+                    7.856559476296318E7,
+                    7.942630725261496E7
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 1.611755511410216E8,
+            "scoreError" : 5880298.688829555,
+            "scoreConfidence" : [
+                1.5529525245219207E8,
+                1.6705584982985115E8
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1.5900004321444324E8,
+                "50.0" : 1.6164817170071578E8,
+                "90.0" : 1.6299787940907216E8,
+                "95.0" : 1.6299787940907216E8,
+                "99.0" : 1.6299787940907216E8,
+                "99.9" : 1.6299787940907216E8,
+                "99.99" : 1.6299787940907216E8,
+                "99.999" : 1.6299787940907216E8,
+                "99.9999" : 1.6299787940907216E8,
+                "100.0" : 1.6299787940907216E8
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    1.5900004321444324E8,
+                    1.6299787940907216E8,
+                    1.6164817170071578E8,
+                    1.6039338450901914E8,
+                    1.6183827687185773E8
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 7141537.705002615,
+            "scoreError" : 434391.9650272904,
+            "scoreConfidence" : [
+                6707145.739975325,
+                7575929.670029906
+            ],
+            "scorePercentiles" : {
+                "0.0" : 7016989.247721577,
+                "50.0" : 7125332.38656051,
+                "90.0" : 7265768.984873481,
+                "95.0" : 7265768.984873481,
+                "99.0" : 7265768.984873481,
+                "99.9" : 7265768.984873481,
+                "99.99" : 7265768.984873481,
+                "99.999" : 7265768.984873481,
+                "99.9999" : 7265768.984873481,
+                "100.0" : 7265768.984873481
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    7265768.984873481,
+                    7248692.176920053,
+                    7050905.728937453,
+                    7125332.38656051,
+                    7016989.247721577
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 7288532.62367023,
+            "scoreError" : 5244219.40834052,
+            "scoreConfidence" : [
+                2044313.2153297095,
+                1.2532752032010749E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 4906259.190776445,
+                "50.0" : 7704516.958815998,
+                "90.0" : 8373505.269007828,
+                "95.0" : 8373505.269007828,
+                "99.0" : 8373505.269007828,
+                "99.9" : 8373505.269007828,
+                "99.99" : 8373505.269007828,
+                "99.999" : 8373505.269007828,
+                "99.9999" : 8373505.269007828,
+                "100.0" : 8373505.269007828
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    8373505.269007828,
+                    7781005.057146333,
+                    7677376.642604546,
+                    7704516.958815998,
+                    4906259.190776445
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 8339433.527682926,
+            "scoreError" : 1961392.6531841026,
+            "scoreConfidence" : [
+                6378040.874498823,
+                1.0300826180867027E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 7770777.213294525,
+                "50.0" : 8409974.235626647,
+                "90.0" : 8899968.754423374,
+                "95.0" : 8899968.754423374,
+                "99.0" : 8899968.754423374,
+                "99.9" : 8899968.754423374,
+                "99.99" : 8899968.754423374,
+                "99.999" : 8899968.754423374,
+                "99.9999" : 8899968.754423374,
+                "100.0" : 8899968.754423374
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    7770777.213294525,
+                    7864756.171290571,
+                    8751691.263779512,
+                    8899968.754423374,
+                    8409974.235626647
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 5035639.645056082,
+            "scoreError" : 3666840.893034604,
+            "scoreConfidence" : [
+                1368798.752021478,
+                8702480.538090685
+            ],
+            "scorePercentiles" : {
+                "0.0" : 3336672.1604001923,
+                "50.0" : 5428000.258982929,
+                "90.0" : 5528414.353097822,
+                "95.0" : 5528414.353097822,
+                "99.0" : 5528414.353097822,
+                "99.9" : 5528414.353097822,
+                "99.99" : 5528414.353097822,
+                "99.999" : 5528414.353097822,
+                "99.9999" : 5528414.353097822,
+                "100.0" : 5528414.353097822
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    3336672.1604001923,
+                    5362482.034995816,
+                    5522629.417803649,
+                    5528414.353097822,
+                    5428000.258982929
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 8790433.367244812,
+            "scoreError" : 1183452.881879217,
+            "scoreConfidence" : [
+                7606980.485365595,
+                9973886.249124028
+            ],
+            "scorePercentiles" : {
+                "0.0" : 8354269.144236406,
+                "50.0" : 8804047.892612275,
+                "90.0" : 9193246.136987276,
+                "95.0" : 9193246.136987276,
+                "99.0" : 9193246.136987276,
+                "99.9" : 9193246.136987276,
+                "99.99" : 9193246.136987276,
+                "99.999" : 9193246.136987276,
+                "99.9999" : 9193246.136987276,
+                "100.0" : 9193246.136987276
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    8688607.050224414,
+                    8804047.892612275,
+                    8354269.144236406,
+                    8911996.612163682,
+                    9193246.136987276
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 1.205380831318358E7,
+            "scoreError" : 1035740.2614128571,
+            "scoreConfidence" : [
+                1.1018068051770722E7,
+                1.3089548574596437E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1.164993390256851E7,
+                "50.0" : 1.2047034472327476E7,
+                "90.0" : 1.2381539863346845E7,
+                "95.0" : 1.2381539863346845E7,
+                "99.0" : 1.2381539863346845E7,
+                "99.9" : 1.2381539863346845E7,
+                "99.99" : 1.2381539863346845E7,
+                "99.999" : 1.2381539863346845E7,
+                "99.9999" : 1.2381539863346845E7,
+                "100.0" : 1.2381539863346845E7
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    1.164993390256851E7,
+                    1.2047034472327476E7,
+                    1.2182992537081352E7,
+                    1.2007540790593712E7,
+                    1.2381539863346845E7
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 1.111004208171035E7,
+            "scoreError" : 223487.84072532627,
+            "scoreConfidence" : [
+                1.0886554240985023E7,
+                1.1333529922435677E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1.1029100130862627E7,
+                "50.0" : 1.113391645548105E7,
+                "90.0" : 1.1161519606135972E7,
+                "95.0" : 1.1161519606135972E7,
+                "99.0" : 1.1161519606135972E7,
+                "99.9" : 1.1161519606135972E7,
+                "99.99" : 1.1161519606135972E7,
+                "99.999" : 1.1161519606135972E7,
+                "99.9999" : 1.1161519606135972E7,
+                "100.0" : 1.1161519606135972E7
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    1.1069901135915296E7,
+                    1.113391645548105E7,
+                    1.1029100130862627E7,
+                    1.1155773080156803E7,
+                    1.1161519606135972E7
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.36",
+        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xms2g",
+            "-Xmx2g",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UnlockDiagnosticVMOptions",
+            "-XX:+UseParallelGC",
+            "-Dlattice.fusion.enabled=true",
+            "-Dlattice.fusion.inlineSource=true",
+            "-Dlattice.metrics.hotCounters=false",
+            "-Dlattice.metrics.residence=false",
+            "-Dlattice.metrics.stageHistograms=false",
+            "-Dlattice.runtime.fusedLogicalEdgeMetrics=false",
+            "-Dlattice.benchmark.latency=true"
+        ],
+        "jdkVersion" : "21.0.10",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.10+7-Ubuntu-124.04",
+        "warmupIterations" : 3,
+        "warmupTime" : "5 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 5,
+        "measurementTime" : "5 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 8348960.09106603,
+            "scoreError" : 2948823.2314377106,
+            "scoreConfidence" : [
+                5400136.85962832,
+                1.129778332250374E7
+            ],
+            "scorePercentiles" : {
+                "0.0" : 7098090.100398793,
+                "50.0" : 8742722.027596105,
+                "90.0" : 8917004.0669546,
+                "95.0" : 8917004.0669546,
+                "99.0" : 8917004.0669546,
+                "99.9" : 8917004.0669546,
+                "99.99" : 8917004.0669546,
+                "99.999" : 8917004.0669546,
+                "99.9999" : 8917004.0669546,
+                "100.0" : 8917004.0669546
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    8742722.027596105,
+                    7098090.100398793,
+                    8855169.86043488,
+                    8917004.0669546,
+                    8131814.399945771
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

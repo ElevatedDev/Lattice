@@ -4,13 +4,14 @@ Tracked benchmark summaries captured for each release.
 
 | Snapshot | Profile | Host | Notes |
 | --- | --- | --- | --- |
-| [`v1.0.0-baseline/`](v1.0.0-baseline/) | Warmed WSL2 notes | WSL2 Ubuntu 24.04, i7-7700, JDK 21.x | Orientation only. Production claims require [Linux validation](../linux-validation.md). |
+| [`v1.0.0-baseline/`](v1.0.0-baseline/) | Refreshed WSL2 baseline | WSL2 Ubuntu, i7-7700, JDK 21.0.10 | Tracks the 2026-04-29 `benchmarks/baseline/` artifact set. Orientation only; production claims require [Linux validation](../linux-validation.md). |
 
 The repository's [`benchmarks/baseline/`](../../benchmarks/baseline/) directory
-holds the tracked working notes used while developing 1.0.0. Raw JMH JSON,
-JFR, and generated HTML artifacts belong in local `results/` directories or as
-GitHub Release attachments unless a release deliberately chooses to check them
-in.
+holds the checked-in local baseline used for regression review. It includes raw
+JMH JSON and stdout logs for the selected public baseline rows. Larger
+publication-grade campaigns, JFR files, generated HTML, and profiler output
+belong in local `results/` directories or as GitHub Release attachments unless
+a release deliberately chooses to check them in.
 
 ## How To Cite A Number
 

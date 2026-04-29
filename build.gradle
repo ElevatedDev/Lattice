@@ -182,7 +182,8 @@ jmh {
         '-Dlattice.metrics.hotCounters=false',
         '-Dlattice.metrics.residence=false',
         '-Dlattice.metrics.stageHistograms=false',
-        '-Dlattice.runtime.fusedLogicalEdgeMetrics=false'
+        '-Dlattice.runtime.fusedLogicalEdgeMetrics=false',
+        '-Dlattice.runtime.inlineDepthTracking=false'
     ]
 }
 
