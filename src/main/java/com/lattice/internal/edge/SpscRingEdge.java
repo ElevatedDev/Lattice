@@ -14,6 +14,7 @@ public final class SpscRingEdge implements MessageEdge {
 
     private static final VarHandle CURSOR;
     private static final VarHandle CLOSED;
+    private static final VarHandle PRODUCER_ACTIVE;
     private static final VarHandle ELEMENT;
     private static final Object DROPPED = new Object();
 
@@ -21,6 +22,7 @@ public final class SpscRingEdge implements MessageEdge {
         try {
             CURSOR = MethodHandles.lookup().findVarHandle(PaddedLong.class, "value", long.class);
             CLOSED = MethodHandles.lookup().findVarHandle(PaddedBoolean.class, "value", boolean.class);
+            PRODUCER_ACTIVE = MethodHandles.lookup().findVarHandle(PaddedBoolean.class, "value", boolean.class);
             ELEMENT = MethodHandles.arrayElementVarHandle(Object[].class);
         } catch (final ReflectiveOperationException ex) {
             throw new ExceptionInInitializerError(ex);
@@ -35,11 +37,13 @@ public final class SpscRingEdge implements MessageEdge {
     private final EdgeMetrics metrics;
     private final GraphMetrics graphMetrics;
     private final boolean plainClaim;
+    private final boolean closeGuard;
     private Object[] buffer;
     private LongAccess publishTimes;
     private final PaddedLong head = new PaddedLong();
     private final PaddedLong tail = new PaddedLong();
     private final PaddedBoolean closed = new PaddedBoolean();
+    private final PaddedBoolean producerActive = new PaddedBoolean();
 
     private final PaddedLongCache producerHeadCacheBox = new PaddedLongCache();
     private final PaddedLongCache consumerTailCacheBox = new PaddedLongCache();
@@ -75,6 +79,19 @@ public final class SpscRingEdge implements MessageEdge {
         final GraphMetrics graphMetrics,
         final boolean plainClaim
     ) {
+        this(from, to, capacity, memoryMode, metrics, graphMetrics, plainClaim, false);
+    }
+
+    public SpscRingEdge(
+        final String from,
+        final String to,
+        final int capacity,
+        final MemoryMode memoryMode,
+        final EdgeMetrics metrics,
+        final GraphMetrics graphMetrics,
+        final boolean plainClaim,
+        final boolean closeGuard
+    ) {
         validateCapacity(capacity);
         final MemoryMode.MemoryKind selectedMemoryKind =
             Objects.requireNonNull(memoryMode, "memoryMode").kind();
@@ -86,6 +103,7 @@ public final class SpscRingEdge implements MessageEdge {
         this.metrics = Objects.requireNonNull(metrics, "metrics");
         this.graphMetrics = Objects.requireNonNull(graphMetrics, "graphMetrics");
         this.plainClaim = plainClaim;
+        this.closeGuard = closeGuard;
     }
 
     @Override
@@ -100,9 +118,24 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean offer(final Object item) {
+        if (closeGuard) {
+            PRODUCER_ACTIVE.setVolatile(producerActive, true);
+            try {
+                if (closed()) {
+                    return false;
+                }
+                return offerAfterOpenCheck(item);
+            } finally {
+                PRODUCER_ACTIVE.setVolatile(producerActive, false);
+            }
+        }
         if (closed()) {
             return false;
         }
+        return offerAfterOpenCheck(item);
+    }
+
+    private boolean offerAfterOpenCheck(final Object item) {
         final long currentTail = (long) CURSOR.getOpaque(tail);
         final long wrapPoint = currentTail - capacity;
         final PaddedLongCache producerHeadCacheBoxLocal = producerHeadCacheBox;
@@ -470,6 +503,11 @@ public final class SpscRingEdge implements MessageEdge {
 
     private void closeFlag() {
         CLOSED.setRelease(closed, true);
+        if (closeGuard) {
+            while ((boolean) PRODUCER_ACTIVE.getVolatile(producerActive)) {
+                Thread.onSpinWait();
+            }
+        }
     }
 
     private static void validateCapacity(final int capacity) {

@@ -24,7 +24,8 @@ public final class EdgeFactory {
                 definition.spec().memoryMode(),
                 metrics,
                 graphMetrics,
-                plainClaim(definition.spec())
+                plainClaim(definition.spec()),
+                definition.sourceIngress()
             );
         } else {
             edge = new MpscRingEdge(

@@ -9,7 +9,8 @@ public record EdgeDefinition(
     EdgeSpec spec,
     int declarationOrder,
     int branchIndex,
-    boolean redirectOnly
+    boolean redirectOnly,
+    boolean sourceIngress
 ) {
 
     public String key() {

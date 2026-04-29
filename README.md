@@ -221,7 +221,7 @@ validation step.
 ## Native Placement Backend
 
 The native backend is optional and currently uses Rust JNI. Build it when you
-need Linux affinity or placement diagnostics:
+need host affinity, placement diagnostics, or first-touch support:
 
 ```bash
 ./gradlew nativeBuildRelease
@@ -233,9 +233,12 @@ Run Java with the native library visible:
 java -Djava.library.path=native/static-topology-native/target/release ...
 ```
 
-Without the native library, placement requests degrade through startup
-diagnostics and metrics by default. Set `-Dlattice.placement.strict=true` to
-fail startup when requested placement cannot be applied.
+Linux exposes the full native placement surface. Windows and macOS expose
+narrower capability bits; see the [Compatibility Matrix](docs/compatibility-matrix.md)
+before making platform-specific placement claims. Without the native library,
+placement requests degrade through startup diagnostics and metrics by default.
+Set `-Dlattice.placement.strict=true` to fail startup when requested placement
+cannot be applied.
 
 ## Documentation
 
