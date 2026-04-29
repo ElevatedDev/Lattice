@@ -165,7 +165,8 @@ final class GraphCompiler {
                 effectiveSpec,
                 pending.declarationOrder(),
                 branchIndex,
-                redirectOnly
+                redirectOnly,
+                from.kind() == GraphPlan.NodeKind.SOURCE
             );
             if (unique.putIfAbsent(edge.key(), edge) != null) {
                 throw new GraphBuildException("duplicate edge: " + edge.key());

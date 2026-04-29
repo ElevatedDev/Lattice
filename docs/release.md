@@ -13,7 +13,8 @@ Maintainer recipe for cutting a Lattice release.
 - [ ] `./gradlew releaseCheck` passes locally on Linux and Windows.
 - [ ] `./gradlew jcstress` passes (long-running; nightly CI is acceptable).
 - [ ] Native backend builds on Linux. Build macOS and Windows native artifacts
-      before advertising host-native binaries for those platforms.
+      before advertising host-native binaries for those platforms, and describe
+      their narrower capability bits separately from Linux.
 - [ ] Benchmark summary recorded under `docs/benchmark-results/<version>/`;
       raw JMH JSON/JFR artifacts and generated figures are attached to the
       release evidence if numbers are cited publicly.

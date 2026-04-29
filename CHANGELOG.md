@@ -38,6 +38,11 @@ state is pre-1.0.
   `exposedType.isAssignableFrom(type)`: callers may request the same type or
   a narrower subtype, never a wider supertype. Same fix applied to
   `preallocatedEmitter`.
+- **SPSC source-ingress close now waits for an in-flight source offer.**
+  Source-owned SPSC edges carry a close guard so `close()` cannot return while
+  the producer thread is between the open check and the tail publish. Direct
+  SPSC edges and worker-to-worker SPSC edges keep the existing fast path; they
+  are made safe by worker quiescence before `releaseRemainingAfterQuiescence()`.
 
 ### Reviewed but not changed (with rationale)
 
@@ -53,16 +58,6 @@ state is pre-1.0.
   correctness bug under Option A. A semantics revision (Option B: per-source
   seen tracking after emission) would be a deliberate API change and is
   out of scope for this round.
-- **SPSC publish/close race for in-flight source-thread offers during
-  `abort()`.** The producer's `setRelease(tail, currentTail+1)` can race with
-  `closeTail`'s CAS that ORs in the `CLOSED_TAIL_BIT`. The previous round's
-  fix added a volatile `closed` check on the offer slow path and reordered
-  `abort()` to close-then-await-then-drain, eliminating the race for
-  worker-to-worker edges. The residual race -- a source-thread producer
-  mid-`offer` while `abort()` snapshots `targetTail` for `drainAndRelease`
-  -- still exists for ingress edges. Closing it requires either a CAS-based
-  publish (a real per-emit cost) or a producer fence at close time. Deferred
-  to a dedicated stop-path correctness branch.
 
 ### Added
 
@@ -114,6 +109,9 @@ state is pre-1.0.
   non-stamping and the message type cannot carry a slab handle.
 - `MpscRingEdge` consumer-side local head reads were lowered from volatile to
   opaque where acquire publication already supplies the required ordering.
+- Native backend support now includes partial Windows x86_64 and macOS 64-bit
+  implementations instead of a blanket non-Linux ENOSYS stub. Linux remains
+  the only backend with full affinity, NUMA query, and local memory policy.
 
 ### Fixed
 

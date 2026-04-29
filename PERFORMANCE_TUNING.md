@@ -251,6 +251,19 @@ left enabled or disabled with:
 -Dlattice.firstTouch.enabled=false
 ```
 
+To compare the same pinned topology with native placement disabled versus
+enabled, use `NativePlacementComparisonBenchmark`. The disabled method forces
+`-Dlattice.native.enabled=false`; the enabled method runs with strict placement
+and requires the library path to be supplied to the forked JVM:
+
+```bash
+./gradlew nativeBuildRelease jmhJar
+java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
+  "com.lattice.benchmark.NativePlacementComparisonBenchmark.*" \
+  -p pinPolicy=none,cpu,core,cpuSet,numaNode,inheritCpuset \
+  -jvmArgsAppend "-Dlattice.native.library.path=$(pwd)/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0 -Dlattice.bench.cpuB=1 -Dlattice.bench.cpuC=2"
+```
+
 ## Recommended Property Sets
 
 Max-throughput, low-observability run:

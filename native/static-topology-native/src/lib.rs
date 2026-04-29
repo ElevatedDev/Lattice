@@ -651,7 +651,484 @@ mod platform {
     }
 }
 
-#[cfg(not(all(target_os = "linux", target_pointer_width = "64")))]
+#[cfg(all(windows, target_pointer_width = "64"))]
+mod platform {
+    use super::{JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, JNI_WORD_COUNT};
+    use core::ffi::c_void;
+    use core::mem;
+    use core::ptr;
+
+    type Bool = i32;
+    type Dword = u32;
+    type Handle = *mut c_void;
+    type Ushort = u16;
+
+    const EINVAL: JInt = 22;
+    const ENOSYS: JInt = 38;
+    const ERANGE: JInt = 34;
+
+    #[repr(C)]
+    struct ProcessorNumber {
+        group: Ushort,
+        number: u8,
+        reserved: u8,
+    }
+
+    #[repr(C)]
+    struct GroupAffinity {
+        mask: usize,
+        group: Ushort,
+        reserved: [Ushort; 3],
+    }
+
+    #[repr(C)]
+    struct SystemInfo {
+        processor_architecture: Ushort,
+        reserved: Ushort,
+        page_size: Dword,
+        minimum_application_address: *mut c_void,
+        maximum_application_address: *mut c_void,
+        active_processor_mask: usize,
+        number_of_processors: Dword,
+        processor_type: Dword,
+        allocation_granularity: Dword,
+        processor_level: Ushort,
+        processor_revision: Ushort,
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetActiveProcessorCount(group_number: Ushort) -> Dword;
+        fn GetActiveProcessorGroupCount() -> Ushort;
+        fn GetCurrentProcessorNumberEx(processor_number: *mut ProcessorNumber);
+        fn GetCurrentThread() -> Handle;
+        fn GetLastError() -> Dword;
+        fn GetMaximumProcessorCount(group_number: Ushort) -> Dword;
+        fn GetMaximumProcessorGroupCount() -> Ushort;
+        fn GetSystemInfo(system_info: *mut SystemInfo);
+        fn GetThreadGroupAffinity(thread: Handle, group_affinity: *mut GroupAffinity) -> Bool;
+        fn SetThreadGroupAffinity(
+            thread: Handle,
+            group_affinity: *const GroupAffinity,
+            previous_group_affinity: *mut GroupAffinity,
+        ) -> Bool;
+    }
+
+    pub fn native_capabilities() -> u64 {
+        CAP_AFFINITY | CAP_CURRENT_CPU | CAP_FIRST_TOUCH
+    }
+
+    pub fn max_cpu_count() -> JInt {
+        sum_processor_counts(GetMaximumProcessorGroupCount, GetMaximumProcessorCount)
+    }
+
+    pub fn configured_cpu_count() -> JInt {
+        max_cpu_count()
+    }
+
+    pub fn online_cpu_count() -> JInt {
+        sum_processor_counts(GetActiveProcessorGroupCount, GetActiveProcessorCount)
+    }
+
+    pub fn current_cpu() -> JInt {
+        let mut processor = ProcessorNumber {
+            group: 0,
+            number: 0,
+            reserved: 0,
+        };
+        unsafe { GetCurrentProcessorNumberEx(&mut processor) };
+        flatten_group_cpu(processor.group, processor.number as Dword)
+    }
+
+    pub fn current_numa_node() -> JInt {
+        -ENOSYS
+    }
+
+    pub fn numa_node_of_cpu(_cpu: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn is_cpu_allowed(cpu: JInt) -> JInt {
+        let Ok((group, number)) = cpu_to_group(cpu) else {
+            return -EINVAL;
+        };
+        let Some(mask) = cpu_mask(number) else {
+            return -EINVAL;
+        };
+        let mut affinity = GroupAffinity {
+            mask: 0,
+            group: 0,
+            reserved: [0; 3],
+        };
+        let rc = unsafe { GetThreadGroupAffinity(GetCurrentThread(), &mut affinity) };
+        if rc == 0 {
+            return -last_error();
+        }
+        if affinity.group == group && (affinity.mask & mask) != 0 {
+            1
+        } else {
+            0
+        }
+    }
+
+    pub fn pin_current_thread_to_cpu(cpu: JInt) -> JInt {
+        let Ok((group, number)) = cpu_to_group(cpu) else {
+            return -EINVAL;
+        };
+        let Some(mask) = cpu_mask(number) else {
+            return -EINVAL;
+        };
+        set_thread_group_affinity(GroupAffinity {
+            mask,
+            group,
+            reserved: [0; 3],
+        })
+    }
+
+    pub fn pin_current_thread_to_numa_node(_numa_node: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn pin_current_thread_to_cpu_mask(words: [JLong; JNI_WORD_COUNT]) -> JInt {
+        let mut selected_group: Option<Ushort> = None;
+        let mut selected_mask = 0usize;
+        let mut non_empty = false;
+
+        for (word_index, word) in words.into_iter().enumerate() {
+            let mut bits = word as u64;
+            while bits != 0 {
+                let bit = bits.trailing_zeros() as usize;
+                let cpu = word_index * u64::BITS as usize + bit;
+                let Ok((group, number)) = cpu_to_group(cpu as JInt) else {
+                    return -EINVAL;
+                };
+                if selected_group.is_some_and(|selected| selected != group) {
+                    return -ERANGE;
+                }
+                let Some(mask) = cpu_mask(number) else {
+                    return -EINVAL;
+                };
+                selected_group = Some(group);
+                selected_mask |= mask;
+                non_empty = true;
+                bits &= bits - 1;
+            }
+        }
+
+        if !non_empty {
+            return -EINVAL;
+        }
+
+        set_thread_group_affinity(GroupAffinity {
+            mask: selected_mask,
+            group: selected_group.unwrap_or(0),
+            reserved: [0; 3],
+        })
+    }
+
+    pub fn set_local_allocation_policy() -> JInt {
+        -ENOSYS
+    }
+
+    pub fn first_touch_memory(address: JLong, bytes: JLong) -> JInt {
+        first_touch(address, bytes, page_size())
+    }
+
+    fn sum_processor_counts(
+        group_count_fn: unsafe extern "system" fn() -> Ushort,
+        count_fn: unsafe extern "system" fn(Ushort) -> Dword,
+    ) -> JInt {
+        let groups = unsafe { group_count_fn() };
+        let mut total = 0i64;
+        for group in 0..groups {
+            total += unsafe { count_fn(group) } as i64;
+            if total > JInt::MAX as i64 {
+                return JInt::MAX;
+            }
+        }
+        total as JInt
+    }
+
+    fn cpu_to_group(cpu: JInt) -> Result<(Ushort, Dword), JInt> {
+        if cpu < 0 {
+            return Err(EINVAL);
+        }
+        let mut remaining = cpu as Dword;
+        let groups = unsafe { GetActiveProcessorGroupCount() };
+        for group in 0..groups {
+            let count = unsafe { GetActiveProcessorCount(group) };
+            if remaining < count {
+                return Ok((group, remaining));
+            }
+            remaining -= count;
+        }
+        Err(EINVAL)
+    }
+
+    fn flatten_group_cpu(group: Ushort, number: Dword) -> JInt {
+        let groups = unsafe { GetActiveProcessorGroupCount() };
+        if group >= groups {
+            return -EINVAL;
+        }
+        let mut flattened = 0i64;
+        for current_group in 0..group {
+            flattened += unsafe { GetActiveProcessorCount(current_group) } as i64;
+            if flattened > JInt::MAX as i64 {
+                return JInt::MAX;
+            }
+        }
+        flattened += number as i64;
+        if flattened > JInt::MAX as i64 {
+            JInt::MAX
+        } else {
+            flattened as JInt
+        }
+    }
+
+    fn cpu_mask(number: Dword) -> Option<usize> {
+        if number >= usize::BITS {
+            None
+        } else {
+            Some(1usize << number)
+        }
+    }
+
+    fn set_thread_group_affinity(affinity: GroupAffinity) -> JInt {
+        let rc = unsafe { SetThreadGroupAffinity(GetCurrentThread(), &affinity, ptr::null_mut()) };
+        if rc != 0 {
+            0
+        } else {
+            -last_error()
+        }
+    }
+
+    fn page_size() -> usize {
+        let mut info: SystemInfo = unsafe { mem::zeroed() };
+        unsafe { GetSystemInfo(&mut info) };
+        if info.page_size == 0 {
+            4096
+        } else {
+            info.page_size as usize
+        }
+    }
+
+    fn last_error() -> JInt {
+        let error = unsafe { GetLastError() };
+        if error > JInt::MAX as Dword {
+            JInt::MAX
+        } else {
+            error as JInt
+        }
+    }
+
+    fn first_touch(address: JLong, bytes: JLong, page_size: usize) -> JInt {
+        if address <= 0 || bytes < 0 || page_size == 0 {
+            return -EINVAL;
+        }
+        if bytes == 0 {
+            return 0;
+        }
+
+        let Ok(start) = usize::try_from(address) else {
+            return -EINVAL;
+        };
+        let Ok(length) = usize::try_from(bytes) else {
+            return -EINVAL;
+        };
+        let Some(end_exclusive) = start.checked_add(length) else {
+            return -EINVAL;
+        };
+
+        let mut cursor = start;
+        while cursor < end_exclusive {
+            touch(cursor);
+            let Some(next_page) = next_page_boundary(cursor, page_size) else {
+                return -EINVAL;
+            };
+            if next_page <= cursor {
+                return -EINVAL;
+            }
+            cursor = next_page;
+        }
+
+        0
+    }
+
+    fn next_page_boundary(address: usize, page_size: usize) -> Option<usize> {
+        let page = address / page_size;
+        page.checked_add(1)?.checked_mul(page_size)
+    }
+
+    fn touch(address: usize) {
+        let pointer = address as *mut u8;
+        unsafe {
+            let value = pointer.read_volatile();
+            pointer.write_volatile(value);
+        }
+    }
+}
+
+#[cfg(all(target_os = "macos", target_pointer_width = "64"))]
+mod platform {
+    use super::{JInt, JLong, CAP_FIRST_TOUCH, JNI_WORD_COUNT};
+    use core::ffi::{c_char, c_int, c_void};
+    use core::ptr;
+
+    const EINVAL: JInt = 22;
+    const ENOSYS: JInt = 38;
+
+    extern "C" {
+        fn __error() -> *mut c_int;
+        fn getpagesize() -> c_int;
+        fn sysctlbyname(
+            name: *const c_char,
+            oldp: *mut c_void,
+            oldlenp: *mut usize,
+            newp: *mut c_void,
+            newlen: usize,
+        ) -> c_int;
+    }
+
+    pub fn native_capabilities() -> u64 {
+        CAP_FIRST_TOUCH
+    }
+
+    pub fn max_cpu_count() -> JInt {
+        sysctl_count_with_fallback(b"hw.logicalcpu_max\0", b"hw.ncpu\0")
+    }
+
+    pub fn configured_cpu_count() -> JInt {
+        max_cpu_count()
+    }
+
+    pub fn online_cpu_count() -> JInt {
+        sysctl_count_with_fallback(b"hw.logicalcpu\0", b"hw.ncpu\0")
+    }
+
+    pub fn current_cpu() -> JInt {
+        -ENOSYS
+    }
+
+    pub fn current_numa_node() -> JInt {
+        -ENOSYS
+    }
+
+    pub fn numa_node_of_cpu(_cpu: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn is_cpu_allowed(_cpu: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn pin_current_thread_to_cpu(_cpu: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn pin_current_thread_to_numa_node(_numa_node: JInt) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn pin_current_thread_to_cpu_mask(_words: [JLong; JNI_WORD_COUNT]) -> JInt {
+        -ENOSYS
+    }
+
+    pub fn set_local_allocation_policy() -> JInt {
+        -ENOSYS
+    }
+
+    pub fn first_touch_memory(address: JLong, bytes: JLong) -> JInt {
+        let page_size = unsafe { getpagesize() };
+        if page_size <= 0 {
+            return -last_errno();
+        }
+        first_touch(address, bytes, page_size as usize)
+    }
+
+    fn sysctl_count_with_fallback(primary: &[u8], fallback: &[u8]) -> JInt {
+        let primary_count = sysctl_i32(primary);
+        if primary_count > 0 {
+            primary_count
+        } else {
+            sysctl_i32(fallback)
+        }
+    }
+
+    fn sysctl_i32(name: &[u8]) -> JInt {
+        let mut value: c_int = 0;
+        let mut len = core::mem::size_of::<c_int>();
+        let rc = unsafe {
+            sysctlbyname(
+                name.as_ptr() as *const c_char,
+                &mut value as *mut c_int as *mut c_void,
+                &mut len,
+                ptr::null_mut(),
+                0,
+            )
+        };
+        if rc == 0 && value > 0 {
+            value
+        } else {
+            -last_errno()
+        }
+    }
+
+    fn last_errno() -> JInt {
+        unsafe { *__error() }
+    }
+
+    fn first_touch(address: JLong, bytes: JLong, page_size: usize) -> JInt {
+        if address <= 0 || bytes < 0 || page_size == 0 {
+            return -EINVAL;
+        }
+        if bytes == 0 {
+            return 0;
+        }
+
+        let Ok(start) = usize::try_from(address) else {
+            return -EINVAL;
+        };
+        let Ok(length) = usize::try_from(bytes) else {
+            return -EINVAL;
+        };
+        let Some(end_exclusive) = start.checked_add(length) else {
+            return -EINVAL;
+        };
+
+        let mut cursor = start;
+        while cursor < end_exclusive {
+            touch(cursor);
+            let Some(next_page) = next_page_boundary(cursor, page_size) else {
+                return -EINVAL;
+            };
+            if next_page <= cursor {
+                return -EINVAL;
+            }
+            cursor = next_page;
+        }
+
+        0
+    }
+
+    fn next_page_boundary(address: usize, page_size: usize) -> Option<usize> {
+        let page = address / page_size;
+        page.checked_add(1)?.checked_mul(page_size)
+    }
+
+    fn touch(address: usize) {
+        let pointer = address as *mut u8;
+        unsafe {
+            let value = pointer.read_volatile();
+            pointer.write_volatile(value);
+        }
+    }
+}
+
+#[cfg(not(any(
+    all(target_os = "linux", target_pointer_width = "64"),
+    all(windows, target_pointer_width = "64"),
+    all(target_os = "macos", target_pointer_width = "64")
+)))]
 mod platform {
     use super::{JInt, JLong, JNI_WORD_COUNT};
 

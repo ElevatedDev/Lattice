@@ -23,11 +23,16 @@ The published jar contains:
 
 | OS | Java runtime | Native backend |
 | --- | --- | --- |
-| Linux x86_64 | Supported | Supported (`libstatic_topology_native.so`). |
-| Linux aarch64 | Supported | Supported (build from source). |
-| macOS (Intel/Apple Silicon) | Supported | Supported (`libstatic_topology_native.dylib`); affinity APIs are advisory. |
-| Windows x86_64 | Supported | Build-only (`static_topology_native.dll`); affinity APIs are best-effort. |
-| Other POSIX | Best-effort | Build-from-source. |
+| Linux x86_64 | Supported | Supported (`libstatic_topology_native.so`): CPU affinity, current CPU, NUMA query, local memory policy, first-touch. |
+| Linux aarch64 | Supported | Supported (build from source): CPU affinity, current CPU, NUMA query, local memory policy, first-touch. |
+| macOS (Intel/Apple Silicon) | Supported | Partial (`libstatic_topology_native.dylib`): CPU counts and first-touch. Affinity and NUMA operations report unavailable. |
+| Windows x86_64 | Supported | Partial (`static_topology_native.dll`): processor-group-aware CPU counts/current CPU, thread affinity within supported processor groups, first-touch. NUMA/local memory policy report unavailable. |
+| Other POSIX | Best-effort | Stub JNI exports build where the target supports them; placement operations report unavailable. |
+
+Native placement features are capability-gated at runtime. A host-native shared
+library does not imply Linux-equivalent NUMA behavior; check
+`NativeTopology.capabilities()` or `GraphMetrics.placementReport()` before
+making placement or benchmark claims for a platform.
 
 ## Disruptor
 

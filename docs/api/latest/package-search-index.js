@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"com.lattice.edge"},{"l":"com.lattice.graph"},{"l":"com.lattice.metrics"},{"l":"com.lattice.nativeaccess"},{"l":"com.lattice.placement"},{"l":"com.lattice.routing"},{"l":"com.lattice.slab"},{"l":"com.lattice.stage"},{"l":"com.lattice.wait"}];updateSearchResults();

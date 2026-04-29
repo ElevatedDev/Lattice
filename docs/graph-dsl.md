@@ -10,17 +10,17 @@ plan.
 | --- | --- |
 | `.source(id, payloadType, SourceMode)` | Declares an external entry. `SINGLE_PRODUCER` is a correctness contract: at most one application thread emits at a time. `MULTI_PRODUCER` allows concurrent emitters. |
 | `.stage(id, in, out, StageLogic, StageSpec)` | A user computation. `StageSpec.singleThreaded()` pins to a single worker. |
-| `.batchStage(id, in, out, BatchStageLogic, BatchPolicy, StageSpec)` | Stage that consumes a `Batch<T>` per invocation. |
+| `.batchStage(id, in, out, BatchStageLogic, StageSpec)` | Stage that consumes a `Batch<T>` per invocation. The `StageSpec` must include a batch policy. |
 | `.sink(id, payloadType, Consumer, StageSpec)` | Terminal node. |
 
 ## Routing
 
 | Method | Purpose |
 | --- | --- |
-| `.dispatch(id, in, KeyExtractor, ...)` | Selects exactly one downstream by key. |
-| `.broadcast(id, in, ...)` | Replicates each item to every downstream. |
-| `.partition(id, in, KeyExtractor, lanes, ...)` | Hash-partitions to N lanes. |
-| `.join(id, StampExtractor, JoinPolicy, Combiner, ...)` | Correlates by stamp across multiple inputs with explicit duplicate, timeout, and missing-branch policy. |
+| `.dispatch(id, in, DispatchSpec, StageSpec)` | Selects exactly one downstream by key, weight, or round-robin policy. |
+| `.broadcast(id, in, BroadcastSpec, StageSpec)` | Replicates each item to every downstream. |
+| `.partition(id, in, PartitionSpec, StageSpec)` | Hash-partitions to N lanes. |
+| `.join(id, out, JoinSpec, StageSpec)` | Correlates by stamp across multiple inputs with explicit duplicate, timeout, and missing-branch policy. |
 
 ## Edges
 
@@ -32,8 +32,8 @@ applies.
 ```java
 EdgeSpec.spscRing(1024)
 EdgeSpec.mpscRing(1024)
-EdgeSpec.spscRing(1024).withWait(WaitSpec.parking())
-EdgeSpec.mpscRing(1024).withOverflow(OverflowPolicy.failFast())
+EdgeSpec.spscRing(1024).wait(WaitSpec.blocking())
+EdgeSpec.mpscRing(1024).overflow(OverflowPolicy.failFast())
 ```
 
 See [Edge Semantics](edge-semantics.md) for capacity rules and handle ownership.
@@ -51,4 +51,3 @@ g.abort();                       // fail-fast; no drain promise
 
 `build()` may throw `GraphBuildException`; runtime failures surface as
 `GraphRuntimeException`. See [Failure Modes](failure-modes.md).
-

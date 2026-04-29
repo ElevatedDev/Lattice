@@ -221,7 +221,7 @@ validation step.
 ## Native Placement Backend
 
 The native backend is optional and currently uses Rust JNI. Build it when you
-need Linux affinity or placement diagnostics:
+need host affinity, placement diagnostics, or first-touch support:
 
 ```bash
 ./gradlew nativeBuildRelease
@@ -233,14 +233,19 @@ Run Java with the native library visible:
 java -Djava.library.path=native/static-topology-native/target/release ...
 ```
 
-Without the native library, placement requests degrade through startup
-diagnostics and metrics by default. Set `-Dlattice.placement.strict=true` to
-fail startup when requested placement cannot be applied.
+Linux exposes the full native placement surface. Windows and macOS expose
+narrower capability bits; see the [Compatibility Matrix](docs/compatibility-matrix.md)
+before making platform-specific placement claims. Without the native library,
+placement requests degrade through startup diagnostics and metrics by default.
+Set `-Dlattice.placement.strict=true` to fail startup when requested placement
+cannot be applied.
 
 ## Documentation
 
-The `/docs` directory is ready to use as the GitHub Pages source. Start at
-[Documentation Home](docs/index.md) when browsing the repository.
+The `/docs` directory is ready to use as the GitHub Pages source. Until Pages
+is enabled, GitHub shows generated Javadocs as checked-in HTML files rather
+than as a rendered API site. Start at [Documentation Home](docs/index.md) when
+browsing the repository.
 
 | Area | Links |
 | --- | --- |
@@ -248,7 +253,7 @@ The `/docs` directory is ready to use as the GitHub Pages source. Start at
 | Graph model | [Graph DSL](docs/graph-dsl.md), [Architecture](docs/architecture.md), [Source Specialization and Fusion](docs/source-specialization-and-fusion.md) |
 | Runtime contract | [Edge Semantics](docs/edge-semantics.md), [Ordering Guarantees](docs/ordering-guarantees.md), [Backpressure](docs/backpressure.md), [Failure Modes](docs/failure-modes.md) |
 | Operations | [Observability](docs/observability.md), [Operations Runbook](docs/operations-runbook.md), [Compatibility Matrix](docs/compatibility-matrix.md) |
-| Release | [API Reference](docs/api.md), [Generated Javadocs](docs/api/latest/index.html), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
+| Release | [API Reference](docs/api.md), [Generated Javadocs HTML](docs/api/latest/index.html), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
 
 ## Project Policies
 

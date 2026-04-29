@@ -4,6 +4,7 @@ import com.lattice.internal.edge.SpscRingEdge;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
+import com.lattice.placement.MemoryMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.openjdk.jcstress.annotations.Actor;
@@ -21,7 +22,16 @@ import org.openjdk.jcstress.infra.results.III_Result;
 @State
 public class SpscClosePublicationDrainStressTest {
 
-    private final SpscRingEdge edge = new SpscRingEdge("source", "sink", 2, edgeMetrics(), graphMetrics());
+    private final SpscRingEdge edge = new SpscRingEdge(
+        "source",
+        "sink",
+        2,
+        MemoryMode.onHeapSlots(),
+        edgeMetrics(),
+        graphMetrics(),
+        true,
+        true
+    );
     private int offered;
 
     @Actor
@@ -38,7 +48,7 @@ public class SpscClosePublicationDrainStressTest {
     public void arbiter(final III_Result result) {
         final Object[] batch = new Object[2];
         result.r1 = offered;
-        result.r2 = edge.drainTo(batch, 2);
+        result.r2 = edge.drainTo(batch, 0, 2);
         result.r3 = edge.isEmpty() ? 1 : 0;
     }
 

@@ -32,21 +32,26 @@ not implemented in this repository today.
 
 The shared library exports JNI methods for:
 
-- CPU affinity for a single CPU or explicit CPU mask;
-- current CPU and current NUMA node observation;
-- CPU-to-NUMA lookup through Linux sysfs;
-- local NUMA allocation policy via `set_mempolicy(MPOL_LOCAL)` where supported;
+- CPU affinity for a single CPU or explicit CPU mask where the host exposes a
+  supported affinity API;
+- current CPU observation where the host exposes it;
+- current NUMA node and CPU-to-NUMA lookup on Linux through `getcpu`/sysfs;
+- local NUMA allocation policy on Linux via `set_mempolicy(MPOL_LOCAL)` where
+  the kernel permits it;
 - first-touching an already allocated native memory range page by page.
 
-On non-Linux or unsupported targets, the crate still builds but reports
-`ENOSYS`-style unavailability through the Java wrapper.
+Unsupported operations report `ENOSYS`-style unavailability through the Java
+wrapper. The Java runtime degrades placement by default unless strict placement
+is enabled.
 
 ## Target Behavior
 
 | Host target | Build result | Runtime placement behavior |
 |---|---|---|
 | Linux x86_64/aarch64, 64-bit | `libstatic_topology_native.so` | CPU affinity, CPU/NUMA diagnostics, local memory policy where the kernel permits it, and first-touch support. |
-| Other 64-bit targets | Host shared library | JNI exports are present, but capability bits are empty and operations return `ENOSYS` through Java. |
+| Windows x86_64, 64-bit | `static_topology_native.dll` | CPU counts, current CPU, thread affinity through processor groups, and first-touch support. NUMA query and local memory policy return unavailable. |
+| macOS x86_64/aarch64, 64-bit | `libstatic_topology_native.dylib` | CPU counts and first-touch support. Affinity, current CPU, NUMA query, and local memory policy return unavailable. |
+| Other 64-bit targets | Host shared library where supported | JNI exports are present, but capability bits are empty and placement operations return unavailable through Java. |
 | 32-bit targets | Not a production target | Not supported for production placement because the JNI CPU mask contract assumes 1024 CPUs across sixteen 64-bit words. |
 
 Unsupported targets are expected to degrade through placement metrics and
@@ -79,7 +84,8 @@ native/static-topology-native/target/release/libstatic_topology_native.so
 
 Windows and macOS can build host-native shared libraries
 (`static_topology_native.dll` and `libstatic_topology_native.dylib`
-respectively), but the production placement/NUMA behavior is Linux-specific.
+respectively). Their supported capability bits are narrower than Linux; they
+should not be used for Linux-equivalent NUMA benchmark claims.
 
 ## Run With Java
 
@@ -121,7 +127,7 @@ Both settings must be present before `NativeTopology` is first initialized.
   source, host OS/architecture, and JVM linker failure so packaging and
   `java.library.path` mistakes are visible in `GraphMetrics.placementReport()`.
 - `PinPolicy.inheritCpuset()` is reported as applied only when the loaded
-  backend identifies Linux support. With no native library or a non-Linux stub
+  backend identifies Linux support. With no native library, or with a non-Linux
   backend, it degrades because the runtime cannot validate Linux cpuset
   placement or NUMA locality.
 - Placement validation is currently surfaced through `GraphPlan` and
