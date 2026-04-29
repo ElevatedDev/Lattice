@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.LongAdder;
  * Hot-path counters can be disabled with {@code lattice.metrics.hotCounters}.
  * Residence-time histograms are opt-in through {@code lattice.metrics.residence}
  * and histogram accessors return defensive copies.
+ * Runtime update methods such as {@code recordEmit()} are exposed for the
+ * runtime implementation and should not be called by applications.
  */
 public final class EdgeMetrics implements WaitMetrics {
 
@@ -109,62 +111,107 @@ public final class EdgeMetrics implements WaitMetrics {
         return memoryKind;
     }
 
+    /**
+     * Returns offers accepted by this edge when hot counters are enabled.
+     */
     public long emittedCount() {
         return emittedCount.sum();
     }
 
+    /**
+     * Returns items consumed from this edge when hot counters are enabled.
+     */
     public long consumedCount() {
         return consumedCount.sum();
     }
 
+    /**
+     * Returns failed offer attempts.
+     */
     public long failedOffers() {
         return failedOffers.sum();
     }
 
+    /**
+     * Returns offer attempts that had to wait for capacity.
+     */
     public long blockedOffers() {
         return blockedOffers.sum();
     }
 
+    /**
+     * Returns total nanoseconds spent under edge backpressure.
+     */
     public long backpressureNanos() {
         return backpressureNanos.sum();
     }
 
+    /**
+     * Returns messages dropped by drop-latest/drop-newest policy.
+     */
     public long droppedLatest() {
         return droppedLatest.sum();
     }
 
+    /**
+     * Returns messages dropped by drop-oldest policy.
+     */
     public long droppedOldest() {
         return droppedOldest.sum();
     }
 
+    /**
+     * Returns offers merged by coalescing overflow policy.
+     */
     public long coalescedOffers() {
         return coalescedOffers.sum();
     }
 
+    /**
+     * Returns offers redirected by overflow policy.
+     */
     public long redirectedOffers() {
         return redirectedOffers.sum();
     }
 
+    /**
+     * Returns branch-isolation actions taken for this edge.
+     */
     public long branchIsolationActions() {
         return branchIsolationActions.sum();
     }
 
+    /**
+     * Returns partition lane selections made for this edge.
+     */
     public long laneSelections() {
         return laneSelections.sum();
     }
 
+    /**
+     * Returns hot-key signals observed for this edge.
+     */
     public long hotKeySignals() {
         return hotKeySignals.sum();
     }
 
+    /**
+     * Returns wait-loop spin count when hot counters are enabled.
+     */
     public long spinCount() {
         return spinCount.sum();
     }
 
+    /**
+     * Returns wait-loop yield count when hot counters are enabled.
+     */
     public long yieldCount() {
         return yieldCount.sum();
     }
 
+    /**
+     * Returns wait-loop park count when hot counters are enabled.
+     */
     public long parkCount() {
         return parkCount.sum();
     }
@@ -177,18 +224,30 @@ public final class EdgeMetrics implements WaitMetrics {
         return currentDepth();
     }
 
+    /**
+     * Returns sampled high-water logical depth.
+     */
     public long highWaterMark() {
         return highWaterMark.get();
     }
 
+    /**
+     * Returns number of residence-time samples recorded.
+     */
     public long residenceSamples() {
         return residenceSamples.sum();
     }
 
+    /**
+     * Returns first-touch operation count for this edge.
+     */
     public long firstTouchCount() {
         return firstTouchCount.sum();
     }
 
+    /**
+     * Returns nanoseconds spent first-touching this edge's memory.
+     */
     public long firstTouchNanos() {
         return firstTouchNanos.sum();
     }

@@ -1,7 +1,7 @@
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -12,28 +12,28 @@
 
 # Run progress: 0.00% complete, ETA 00:07:20
 # Fork: 1 of 1
-# Warmup Iteration   1: 9287521.164 ops/s
-# Warmup Iteration   2: 9469537.814 ops/s
-# Warmup Iteration   3: 8965604.932 ops/s
-Iteration   1: 9010888.279 ops/s
-Iteration   2: 8975725.505 ops/s
-Iteration   3: 8877806.276 ops/s
-Iteration   4: 8830669.145 ops/s
-Iteration   5: batchedValidateSink enqueue latency nanos p50=100 p99=100 p99.9=200 p99.99=12407 max=11116543 samples=360592717
-batchedValidateSink endToEnd latency nanos p50=900 p99=901119 p99.9=2136063 p99.99=9560063 max=15933439 samples=360592717
-8697290.116 ops/s
+# Warmup Iteration   1: 9277805.137 ops/s
+# Warmup Iteration   2: 9583653.436 ops/s
+# Warmup Iteration   3: 9637556.905 ops/s
+Iteration   1: 9306197.096 ops/s
+Iteration   2: 9746794.254 ops/s
+Iteration   3: 9444941.653 ops/s
+Iteration   4: 8685532.922 ops/s
+Iteration   5: batchedValidateSink enqueue latency nanos p50=100 p99=101 p99.9=300 p99.99=12607 max=20611071 samples=365414590
+batchedValidateSink endToEnd latency nanos p50=1001 p99=1740799 p99.9=7335935 p99.99=15433727 max=32243711 samples=365414590
+7392088.117 ops/s
 
 
 Result "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink":
-  8878475.864 ±(99.9%) 479806.096 ops/s [Average]
-  (min, avg, max) = (8697290.116, 8878475.864, 9010888.279), stdev = 124604.119
-  CI (99.9%): [8398669.768, 9358281.960] (assumes normal distribution)
+  8915110.808 ±(99.9%) 3600748.794 ops/s [Average]
+  (min, avg, max) = (7392088.117, 8915110.808, 9746794.254), stdev = 935103.027
+  CI (99.9%): [5314362.014, 12515859.603] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -42,28 +42,28 @@ Result "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath
 
-# Run progress: 9.09% complete, ETA 00:06:51
+# Run progress: 9.09% complete, ETA 00:06:50
 # Fork: 1 of 1
-# Warmup Iteration   1: 77115014.213 ops/s
-# Warmup Iteration   2: 77252958.442 ops/s
-# Warmup Iteration   3: 77397844.951 ops/s
-Iteration   1: 78540436.854 ops/s
-Iteration   2: 79164768.096 ops/s
-Iteration   3: 78765882.038 ops/s
-Iteration   4: 78565594.763 ops/s
-Iteration   5: 79426307.253 ops/s
+# Warmup Iteration   1: 54649353.206 ops/s
+# Warmup Iteration   2: 39111251.805 ops/s
+# Warmup Iteration   3: 26999048.381 ops/s
+Iteration   1: 18543733.362 ops/s
+Iteration   2: 27959590.989 ops/s
+Iteration   3: 22839685.391 ops/s
+Iteration   4: 29916180.209 ops/s
+Iteration   5: 26027261.477 ops/s
 
 
 Result "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath":
-  78892597.801 ±(99.9%) 1498696.702 ops/s [Average]
-  (min, avg, max) = (78540436.854, 78892597.801, 79426307.253), stdev = 389206.774
-  CI (99.9%): [77393901.099, 80391294.502] (assumes normal distribution)
+  25057290.286 ±(99.9%) 17254709.238 ops/s [Average]
+  (min, avg, max) = (18543733.362, 25057290.286, 29916180.209), stdev = 4480993.194
+  CI (99.9%): [7802581.047, 42311999.524] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -72,28 +72,28 @@ Result "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath
 
-# Run progress: 18.18% complete, ETA 00:06:08
+# Run progress: 18.18% complete, ETA 00:06:13
 # Fork: 1 of 1
-# Warmup Iteration   1: 152681292.370 ops/s
-# Warmup Iteration   2: 152897271.616 ops/s
-# Warmup Iteration   3: 163374523.246 ops/s
-Iteration   1: 159000043.214 ops/s
-Iteration   2: 162997879.409 ops/s
-Iteration   3: 161648171.701 ops/s
-Iteration   4: 160393384.509 ops/s
-Iteration   5: 161838276.872 ops/s
+# Warmup Iteration   1: 55871393.997 ops/s
+# Warmup Iteration   2: 55338615.918 ops/s
+# Warmup Iteration   3: 52100274.344 ops/s
+Iteration   1: 66956663.941 ops/s
+Iteration   2: 39911342.145 ops/s
+Iteration   3: 33162489.450 ops/s
+Iteration   4: 36693205.463 ops/s
+Iteration   5: 31528514.092 ops/s
 
 
 Result "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath":
-  161175551.141 ±(99.9%) 5880298.689 ops/s [Average]
-  (min, avg, max) = (159000043.214, 161175551.141, 162997879.409), stdev = 1527094.896
-  CI (99.9%): [155295252.452, 167055849.830] (assumes normal distribution)
+  41650443.018 ±(99.9%) 55884183.684 ops/s [Average]
+  (min, avg, max) = (31528514.092, 41650443.018, 66956663.941), stdev = 14512945.035
+  CI (99.9%): [≈ 0, 97534626.702] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -102,29 +102,29 @@ Result "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch
 
-# Run progress: 27.27% complete, ETA 00:05:26
+# Run progress: 27.27% complete, ETA 00:05:39
 # Fork: 1 of 1
-# Warmup Iteration   1: 8162036.817 ops/s
-# Warmup Iteration   2: 7054789.606 ops/s
-# Warmup Iteration   3: 7765811.766 ops/s
-Iteration   1: 7265768.985 ops/s
-Iteration   2: 7248692.177 ops/s
-Iteration   3: 7050905.729 ops/s
-Iteration   4: 7125332.387 ops/s
-Iteration   5: broadcastFourBranch enqueue latency nanos p50=100 p99=200 p99.9=300 p99.99=9607 max=79429631 samples=293629226
-7016989.248 ops/s
+# Warmup Iteration   1: 1022609.821 ops/s
+# Warmup Iteration   2: 648004.945 ops/s
+# Warmup Iteration   3: 1294080.448 ops/s
+Iteration   1: 1991917.442 ops/s
+Iteration   2: 3633155.281 ops/s
+Iteration   3: 4826552.966 ops/s
+Iteration   4: 6813250.064 ops/s
+Iteration   5: broadcastFourBranch enqueue latency nanos p50=100 p99=200 p99.9=401 p99.99=53727 max=131989503 samples=136720998
+7103271.065 ops/s
 
 
 Result "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch":
-  7141537.705 ±(99.9%) 434391.965 ops/s [Average]
-  (min, avg, max) = (7016989.248, 7141537.705, 7265768.985), stdev = 112810.214
-  CI (99.9%): [6707145.740, 7575929.670] (assumes normal distribution)
+  4873629.363 ±(99.9%) 8298715.313 ops/s [Average]
+  (min, avg, max) = (1991917.442, 4873629.363, 7103271.065), stdev = 2155150.013
+  CI (99.9%): [≈ 0, 13172344.676] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -133,29 +133,29 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout
 
-# Run progress: 36.36% complete, ETA 00:04:45
+# Run progress: 36.36% complete, ETA 00:04:59
 # Fork: 1 of 1
-# Warmup Iteration   1: 10731259.169 ops/s
-# Warmup Iteration   2: 8789621.049 ops/s
-# Warmup Iteration   3: 9776027.300 ops/s
-Iteration   1: 8373505.269 ops/s
-Iteration   2: 7781005.057 ops/s
-Iteration   3: 7677376.643 ops/s
-Iteration   4: 7704516.959 ops/s
-Iteration   5: dispatchFanout enqueue latency nanos p50=100 p99=200 p99.9=200 p99.99=12607 max=23756799 samples=328719406
-4906259.191 ops/s
+# Warmup Iteration   1: 8506910.883 ops/s
+# Warmup Iteration   2: 7721251.104 ops/s
+# Warmup Iteration   3: 7655819.073 ops/s
+Iteration   1: 9121195.227 ops/s
+Iteration   2: 8621450.255 ops/s
+Iteration   3: 8781095.893 ops/s
+Iteration   4: 8887227.650 ops/s
+Iteration   5: dispatchFanout enqueue latency nanos p50=100 p99=200 p99.9=300 p99.99=9807 max=14376959 samples=341779767
+9051820.267 ops/s
 
 
 Result "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout":
-  7288532.624 ±(99.9%) 5244219.408 ops/s [Average]
-  (min, avg, max) = (4906259.191, 7288532.624, 8373505.269), stdev = 1361907.127
-  CI (99.9%): [2044313.215, 12532752.032] (assumes normal distribution)
+  8892557.858 ±(99.9%) 778723.297 ops/s [Average]
+  (min, avg, max) = (8621450.255, 8892557.858, 9121195.227), stdev = 202231.967
+  CI (99.9%): [8113834.562, 9671281.155] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -164,29 +164,29 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes
 
-# Run progress: 45.45% complete, ETA 00:04:05
+# Run progress: 45.45% complete, ETA 00:04:14
 # Fork: 1 of 1
-# Warmup Iteration   1: 7743129.149 ops/s
-# Warmup Iteration   2: 6970568.623 ops/s
-# Warmup Iteration   3: 7663520.811 ops/s
-Iteration   1: 7770777.213 ops/s
-Iteration   2: 7864756.171 ops/s
-Iteration   3: 8751691.264 ops/s
-Iteration   4: 8899968.754 ops/s
-Iteration   5: partitionFourLanes enqueue latency nanos p50=100 p99=100 p99.9=300 p99.99=18911 max=15835135 samples=320449285
-8409974.236 ops/s
+# Warmup Iteration   1: 5349738.928 ops/s
+# Warmup Iteration   2: 8627927.518 ops/s
+# Warmup Iteration   3: 9182163.888 ops/s
+Iteration   1: 9940301.575 ops/s
+Iteration   2: 9789851.192 ops/s
+Iteration   3: 10270800.842 ops/s
+Iteration   4: 9234840.070 ops/s
+Iteration   5: partitionFourLanes enqueue latency nanos p50=100 p99=200 p99.9=300 p99.99=2701 max=21037055 samples=362906308
+10166056.187 ops/s
 
 
 Result "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes":
-  8339433.528 ±(99.9%) 1961392.653 ops/s [Average]
-  (min, avg, max) = (7770777.213, 8339433.528, 8899968.754), stdev = 509367.443
-  CI (99.9%): [6378040.874, 10300826.181] (assumes normal distribution)
+  9880369.973 ±(99.9%) 1567154.339 ops/s [Average]
+  (min, avg, max) = (9234840.070, 9880369.973, 10270800.842), stdev = 406985.005
+  CI (99.9%): [8313215.634, 11447524.313] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -195,29 +195,29 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin
 
-# Run progress: 54.55% complete, ETA 00:03:26
+# Run progress: 54.55% complete, ETA 00:03:31
 # Fork: 1 of 1
-# Warmup Iteration   1: 5261014.384 ops/s
-# Warmup Iteration   2: 2605399.670 ops/s
-# Warmup Iteration   3: 1172419.016 ops/s
-Iteration   1: 3336672.160 ops/s
-Iteration   2: 5362482.035 ops/s
-Iteration   3: 5522629.418 ops/s
-Iteration   4: 5528414.353 ops/s
-Iteration   5: stampedAllOfJoin enqueue latency nanos p50=100 p99=300 p99.9=900 p99.99=25807 max=72810495 samples=171109520
-5428000.259 ops/s
+# Warmup Iteration   1: 5478412.499 ops/s
+# Warmup Iteration   2: 5180521.971 ops/s
+# Warmup Iteration   3: 5311852.757 ops/s
+Iteration   1: 5243649.617 ops/s
+Iteration   2: 5166044.934 ops/s
+Iteration   3: 5319287.272 ops/s
+Iteration   4: 5217829.798 ops/s
+Iteration   5: stampedAllOfJoin enqueue latency nanos p50=100 p99=300 p99.9=801 p99.99=16815 max=12181503 samples=210982173
+5276546.036 ops/s
 
 
 Result "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin":
-  5035639.645 ±(99.9%) 3666840.893 ops/s [Average]
-  (min, avg, max) = (3336672.160, 5035639.645, 5528414.353), stdev = 952266.935
-  CI (99.9%): [1368798.752, 8702480.538] (assumes normal distribution)
+  5244671.531 ±(99.9%) 223595.769 ops/s [Average]
+  (min, avg, max) = (5166044.934, 5244671.531, 5319287.272), stdev = 58067.111
+  CI (99.9%): [5021075.763, 5468267.300] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -226,30 +226,30 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin":
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit
 
-# Run progress: 63.64% complete, ETA 00:02:45
+# Run progress: 63.64% complete, ETA 00:02:48
 # Fork: 1 of 1
-# Warmup Iteration   1: 7624825.509 ops/s
-# Warmup Iteration   2: 8201483.448 ops/s
-# Warmup Iteration   3: 7943275.422 ops/s
-Iteration   1: 8688607.050 ops/s
-Iteration   2: 8804047.893 ops/s
-Iteration   3: 8354269.144 ops/s
-Iteration   4: 8911996.612 ops/s
-Iteration   5: validateJournalRiskCommit enqueue latency nanos p50=100 p99=100 p99.9=300 p99.99=13503 max=14360575 samples=338664103
-validateJournalRiskCommit endToEnd latency nanos p50=1400 p99=3188735 p99.9=8118271 p99.99=13721599 max=18153471 samples=338664103
-9193246.137 ops/s
+# Warmup Iteration   1: 8543283.297 ops/s
+# Warmup Iteration   2: 8786659.390 ops/s
+# Warmup Iteration   3: 9255746.276 ops/s
+Iteration   1: 7443877.107 ops/s
+Iteration   2: 8675621.453 ops/s
+Iteration   3: 8966357.754 ops/s
+Iteration   4: 9121240.800 ops/s
+Iteration   5: validateJournalRiskCommit enqueue latency nanos p50=100 p99=101 p99.9=300 p99.99=4503 max=16023551 samples=349628351
+validateJournalRiskCommit endToEnd latency nanos p50=1500 p99=2498559 p99.9=11657215 p99.99=19021823 max=44761087 samples=349628351
+9129231.715 ops/s
 
 
 Result "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit":
-  8790433.367 ±(99.9%) 1183452.882 ops/s [Average]
-  (min, avg, max) = (8354269.144, 8790433.367, 9193246.137), stdev = 307338.955
-  CI (99.9%): [7606980.485, 9973886.249] (assumes normal distribution)
+  8667265.766 ±(99.9%) 2726701.513 ops/s [Average]
+  (min, avg, max) = (7443877.107, 8667265.766, 9129231.715), stdev = 708115.724
+  CI (99.9%): [5940564.252, 11393967.279] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -258,30 +258,30 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit"
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer
 
-# Run progress: 72.73% complete, ETA 00:02:03
+# Run progress: 72.73% complete, ETA 00:02:05
 # Fork: 1 of 1
-# Warmup Iteration   1: 11579143.763 ops/s
-# Warmup Iteration   2: 12241814.119 ops/s
-# Warmup Iteration   3: 12238362.389 ops/s
-Iteration   1: 11649933.903 ops/s
-Iteration   2: 12047034.472 ops/s
-Iteration   3: 12182992.537 ops/s
-Iteration   4: 12007540.791 ops/s
-Iteration   5: oneSourceOneSinkPreallocatedSingleProducer enqueue latency nanos p50=1 p99=100 p99.9=300 p99.99=12407 max=8994815 samples=481679414
-oneSourceOneSinkPreallocatedSingleProducer endToEnd latency nanos p50=7803 p99=730111 p99.9=1683455 p99.99=4132863 max=9060351 samples=481679414
-12381539.863 ops/s
+# Warmup Iteration   1: 13406936.686 ops/s
+# Warmup Iteration   2: 12405333.906 ops/s
+# Warmup Iteration   3: 9862257.320 ops/s
+Iteration   1: 10519087.651 ops/s
+Iteration   2: 8531888.563 ops/s
+Iteration   3: 11289861.674 ops/s
+Iteration   4: 12404384.099 ops/s
+Iteration   5: oneSourceOneSinkPreallocatedSingleProducer enqueue latency nanos p50=1 p99=101 p99.9=300 p99.99=12607 max=19382271 samples=453479337
+oneSourceOneSinkPreallocatedSingleProducer endToEnd latency nanos p50=12911 p99=948735 p99.9=7958527 p99.99=11444223 max=20938751 samples=453479337
+12261222.514 ops/s
 
 
 Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer":
-  12053808.313 ±(99.9%) 1035740.261 ops/s [Average]
-  (min, avg, max) = (11649933.903, 12053808.313, 12381539.863), stdev = 268978.457
-  CI (99.9%): [11018068.052, 13089548.575] (assumes normal distribution)
+  11001288.900 ±(99.9%) 6079214.136 ops/s [Average]
+  (min, avg, max) = (8531888.563, 11001288.900, 12404384.099), stdev = 1578752.606
+  CI (99.9%): [4922074.764, 17080503.036] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -290,30 +290,30 @@ Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSing
 # Benchmark mode: Throughput, ops/time
 # Benchmark: com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer
 
-# Run progress: 81.82% complete, ETA 00:01:22
+# Run progress: 81.82% complete, ETA 00:01:23
 # Fork: 1 of 1
-# Warmup Iteration   1: 11419835.903 ops/s
-# Warmup Iteration   2: 14305898.209 ops/s
-# Warmup Iteration   3: 12764779.220 ops/s
-Iteration   1: 11069901.136 ops/s
-Iteration   2: 11133916.455 ops/s
-Iteration   3: 11029100.131 ops/s
-Iteration   4: 11155773.080 ops/s
-Iteration   5: oneSourceOneSinkSingleProducer enqueue latency nanos p50=1 p99=100 p99.9=200 p99.99=12503 max=8921087 samples=470227879
-oneSourceOneSinkSingleProducer endToEnd latency nanos p50=700 p99=417023 p99.9=1184767 p99.99=4628479 max=8945663 samples=470227879
-11161519.606 ops/s
+# Warmup Iteration   1: 11767824.064 ops/s
+# Warmup Iteration   2: 11588789.994 ops/s
+# Warmup Iteration   3: 10278488.374 ops/s
+Iteration   1: 10294043.248 ops/s
+Iteration   2: 12150626.460 ops/s
+Iteration   3: 13180063.173 ops/s
+Iteration   4: 12796345.942 ops/s
+Iteration   5: oneSourceOneSinkSingleProducer enqueue latency nanos p50=1 p99=101 p99.9=200 p99.99=1801 max=31277055 samples=478198649
+oneSourceOneSinkSingleProducer endToEnd latency nanos p50=801 p99=892415 p99.9=4190207 p99.99=9936895 max=45088767 samples=478198649
+13572143.067 ops/s
 
 
 Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer":
-  11110042.082 ±(99.9%) 223487.841 ops/s [Average]
-  (min, avg, max) = (11029100.131, 11110042.082, 11161519.606), stdev = 58039.083
-  CI (99.9%): [10886554.241, 11333529.922] (assumes normal distribution)
+  12398644.378 ±(99.9%) 4959989.558 ops/s [Average]
+  (min, avg, max) = (10294043.248, 12398644.378, 13572143.067), stdev = 1288093.537
+  CI (99.9%): [7438654.820, 17358633.936] (assumes normal distribution)
 
 
 # JMH version: 1.36
 # VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
 # VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
-# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.benchmark.latency=true
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
 # Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
 # Warmup: 3 iterations, 5 s each
 # Measurement: 5 iterations, 5 s each
@@ -324,27 +324,27 @@ Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer":
 
 # Run progress: 90.91% complete, ETA 00:00:41
 # Fork: 1 of 1
-# Warmup Iteration   1: 9009633.039 ops/s
-# Warmup Iteration   2: 9065985.639 ops/s
-# Warmup Iteration   3: 8805268.039 ops/s
-Iteration   1: 8742722.028 ops/s
-Iteration   2: 7098090.100 ops/s
-Iteration   3: 8855169.860 ops/s
-Iteration   4: 8917004.067 ops/s
-Iteration   5: oneSourceThreeStageSinkFused enqueue latency nanos p50=100 p99=100 p99.9=2401 p99.99=15607 max=13836287 samples=343148524
-oneSourceThreeStageSinkFused endToEnd latency nanos p50=580095 p99=1690623 p99.9=6033407 p99.99=11755519 max=13869055 samples=343148524
-oneSourceThreeStageSinkFused enqueue latency nanos p50=100 p99=100 p99.9=2401 p99.99=15607 max=13836287 samples=343148524
-oneSourceThreeStageSinkFused endToEnd latency nanos p50=580095 p99=1690623 p99.9=6033407 p99.99=11755519 max=13869055 samples=343148524
-8131814.400 ops/s
+# Warmup Iteration   1: 9445088.796 ops/s
+# Warmup Iteration   2: 8864675.185 ops/s
+# Warmup Iteration   3: 7965231.053 ops/s
+Iteration   1: 9338318.895 ops/s
+Iteration   2: 7070850.009 ops/s
+Iteration   3: 8314712.534 ops/s
+Iteration   4: 7924090.360 ops/s
+Iteration   5: oneSourceThreeStageSinkFused enqueue latency nanos p50=100 p99=101 p99.9=1200 p99.99=19311 max=23887871 samples=342444143
+oneSourceThreeStageSinkFused endToEnd latency nanos p50=342527 p99=1847295 p99.9=6238207 p99.99=12369919 max=22986751 samples=342444143
+oneSourceThreeStageSinkFused enqueue latency nanos p50=100 p99=101 p99.9=1200 p99.99=19311 max=23887871 samples=342444143
+oneSourceThreeStageSinkFused endToEnd latency nanos p50=342527 p99=1847295 p99.9=6238207 p99.99=12369919 max=22986751 samples=342444143
+9543376.348 ops/s
 
 
 Result "com.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused":
-  8348960.091 ±(99.9%) 2948823.231 ops/s [Average]
-  (min, avg, max) = (7098090.100, 8348960.091, 8917004.067), stdev = 765800.029
-  CI (99.9%): [5400136.860, 11297783.323] (assumes normal distribution)
+  8438269.630 ±(99.9%) 3936722.084 ops/s [Average]
+  (min, avg, max) = (7070850.009, 8438269.630, 9543376.348), stdev = 1022354.224
+  CI (99.9%): [4501547.546, 12374991.713] (assumes normal distribution)
 
 
-# Run complete. Total time: 00:07:32
+# Run complete. Total time: 00:07:38
 
 REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
 why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
@@ -358,17 +358,17 @@ works, and factor in a small probability of new VM bugs. Additionally, while com
 different JVMs are already problematic, the performance difference caused by different Blackhole
 modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
 
-Benchmark                                                      Mode  Cnt          Score         Error  Units
-BatchTopologyBenchmark.batchedValidateSink                    thrpt    5    8878475.864 ±  479806.096  ops/s
-EdgeMicroBenchmark.mpscSingleProducerSanityPath               thrpt    5   78892597.801 ± 1498696.702  ops/s
-EdgeMicroBenchmark.spscSameThreadSanityPath                   thrpt    5  161175551.141 ± 5880298.689  ops/s
-Phase4TopologyBenchmark.broadcastFourBranch                   thrpt    5    7141537.705 ±  434391.965  ops/s
-Phase4TopologyBenchmark.dispatchFanout                        thrpt    5    7288532.624 ± 5244219.408  ops/s
-Phase4TopologyBenchmark.partitionFourLanes                    thrpt    5    8339433.528 ± 1961392.653  ops/s
-Phase4TopologyBenchmark.stampedAllOfJoin                      thrpt    5    5035639.645 ± 3666840.893  ops/s
-Phase4TopologyBenchmark.validateJournalRiskCommit             thrpt    5    8790433.367 ± 1183452.882  ops/s
-TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer  thrpt    5   12053808.313 ± 1035740.261  ops/s
-TopologyBenchmark.oneSourceOneSinkSingleProducer              thrpt    5   11110042.082 ±  223487.841  ops/s
-TopologyBenchmark.oneSourceThreeStageSinkFused                thrpt    5    8348960.091 ± 2948823.231  ops/s
+Benchmark                                                      Mode  Cnt         Score          Error  Units
+BatchTopologyBenchmark.batchedValidateSink                    thrpt    5   8915110.808 ±  3600748.794  ops/s
+EdgeMicroBenchmark.mpscSingleProducerSanityPath               thrpt    5  25057290.286 ± 17254709.238  ops/s
+EdgeMicroBenchmark.spscSameThreadSanityPath                   thrpt    5  41650443.018 ± 55884183.684  ops/s
+Phase4TopologyBenchmark.broadcastFourBranch                   thrpt    5   4873629.363 ±  8298715.313  ops/s
+Phase4TopologyBenchmark.dispatchFanout                        thrpt    5   8892557.858 ±   778723.297  ops/s
+Phase4TopologyBenchmark.partitionFourLanes                    thrpt    5   9880369.973 ±  1567154.339  ops/s
+Phase4TopologyBenchmark.stampedAllOfJoin                      thrpt    5   5244671.531 ±   223595.769  ops/s
+Phase4TopologyBenchmark.validateJournalRiskCommit             thrpt    5   8667265.766 ±  2726701.513  ops/s
+TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer  thrpt    5  11001288.900 ±  6079214.136  ops/s
+TopologyBenchmark.oneSourceOneSinkSingleProducer              thrpt    5  12398644.378 ±  4959989.558  ops/s
+TopologyBenchmark.oneSourceThreeStageSinkFused                thrpt    5   8438269.630 ±  3936722.084  ops/s
 
 Benchmark result is saved to benchmarks/baseline/lattice-core-basics.json

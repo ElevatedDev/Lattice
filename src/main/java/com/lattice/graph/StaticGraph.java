@@ -116,10 +116,22 @@ public interface StaticGraph extends AutoCloseable {
         stop();
     }
 
+    /**
+     * Builder for a validated, immutable static topology.
+     * <p>
+     * Builder methods add logical nodes and directed edges. Calling
+     * {@link #build()} validates names, types, edge compatibility, source modes,
+     * routing constraints, and preallocation/fusion eligibility before returning
+     * a graph instance.
+     */
     interface Builder {
 
         /**
          * Adds a multi-producer source.
+         *
+         * @param name source name
+         * @param type payload type accepted by the source
+         * @return this builder
          */
         default <T> Builder source(final String name, final Class<T> type) {
             return source(name, type, SourceMode.MULTI_PRODUCER);
@@ -127,11 +139,21 @@ public interface StaticGraph extends AutoCloseable {
 
         /**
          * Adds a source with an explicit producer mode.
+         *
+         * @param name source name
+         * @param type payload type accepted by the source
+         * @param mode producer ownership contract for external emitters
+         * @return this builder
          */
         <T> Builder source(String name, Class<T> type, SourceMode mode);
 
         /**
          * Adds a source whose items are claimed from a reusable pool.
+         *
+         * @param name source name
+         * @param type pooled payload type
+         * @param spec pool construction and sizing policy
+         * @return this builder
          */
         <T> Builder preallocatedSource(String name, Class<T> type, PreallocationSpec<T> spec);
 
@@ -184,6 +206,13 @@ public interface StaticGraph extends AutoCloseable {
 
         /**
          * Adds a one-message-at-a-time transformation stage.
+         *
+         * @param name stage name
+         * @param inputType input message type
+         * @param outputType output message type
+         * @param logic callback invoked by the stage worker
+         * @param spec stage execution, wait, batch, and placement options
+         * @return this builder
          */
         <I, O> Builder stage(
             String name,
@@ -195,6 +224,13 @@ public interface StaticGraph extends AutoCloseable {
 
         /**
          * Adds a batch transformation stage.
+         *
+         * @param name stage name
+         * @param inputType input message type
+         * @param outputType output message type
+         * @param logic callback invoked with a batch of input messages
+         * @param spec stage execution, wait, batch, and placement options
+         * @return this builder
          */
         <I, O> Builder batchStage(
             String name,
@@ -206,36 +242,57 @@ public interface StaticGraph extends AutoCloseable {
 
         /**
          * Adds a terminal consumer stage.
+         *
+         * @param name sink name
+         * @param inputType input message type
+         * @param consumer terminal callback
+         * @param spec stage execution, wait, batch, and placement options
+         * @return this builder
          */
         <I> Builder sink(String name, Class<I> inputType, Consumer<? super I> consumer, StageSpec spec);
 
         /**
          * Adds a routing stage that chooses one downstream branch.
+         *
+         * @return this builder
          */
         <T> Builder dispatch(String name, Class<T> type, DispatchSpec<? super T> spec, StageSpec stageSpec);
 
         /**
          * Adds a routing stage that publishes to every downstream branch.
+         *
+         * @return this builder
          */
         <T> Builder broadcast(String name, Class<T> type, BroadcastSpec<? super T> spec, StageSpec stageSpec);
 
         /**
          * Adds a keyed partitioning stage with a fixed lane count.
+         *
+         * @return this builder
          */
         <T, K> Builder partition(String name, Class<T> type, PartitionSpec<? super T, K> spec, StageSpec stageSpec);
 
         /**
          * Adds a join stage that correlates inputs by stamp.
+         *
+         * @return this builder
          */
         <O> Builder join(String name, Class<O> outputType, JoinSpec<? extends O> spec, StageSpec stageSpec);
 
         /**
          * Adds a directed edge between two nodes.
+         *
+         * @param from source node name
+         * @param to target node name
+         * @param spec edge configuration
+         * @return this builder
          */
         Builder edge(String from, String to, EdgeSpec spec);
 
         /**
          * Sets the graph-level stage exception handler.
+         *
+         * @return this builder
          */
         Builder exceptionHandler(StageExceptionHandler exceptionHandler);
 

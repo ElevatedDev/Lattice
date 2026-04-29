@@ -1,3 +1,11 @@
+/**
+ * Lattice public API module.
+ * <p>
+ * The module exposes the graph DSL, bounded edge configuration, routing
+ * primitives, lifecycle metrics, wait and placement configuration, slab-pool
+ * helpers, and experimental native topology access used by placement-aware
+ * deployments.
+ */
 module com.lattice {
     requires HdrHistogram;
     requires jdk.jfr;

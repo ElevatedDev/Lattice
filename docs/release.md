@@ -8,14 +8,15 @@ Maintainer recipe for cutting a Lattice release.
       list in `CONTRIBUTING.md`.
 - [ ] `CHANGELOG.md` has a section for the new version with a date.
 - [ ] `docs/compatibility-matrix.md` reflects current JDK / OS support.
-- [ ] Generated Javadoc builds cleanly and reflects the public surface.
+- [ ] Generated Javadoc builds cleanly, reflects the public surface, and is
+      refreshed with `./gradlew docsJavadoc`.
 - [ ] `./gradlew releaseCheck` passes locally on Linux and Windows.
 - [ ] `./gradlew jcstress` passes (long-running; nightly CI is acceptable).
 - [ ] Native backend builds on Linux. Build macOS and Windows native artifacts
       before advertising host-native binaries for those platforms.
 - [ ] Benchmark summary recorded under `docs/benchmark-results/<version>/`;
-      raw JMH JSON/JFR artifacts attached to the GitHub Release if numbers are
-      cited publicly.
+      raw JMH JSON/JFR artifacts and generated figures are attached to the
+      release evidence if numbers are cited publicly.
 
 ## Cut The Release
 

@@ -136,10 +136,12 @@ ingress. Disable it explicitly if your producer thread cannot tolerate doing
 the stage and sink work synchronously (for example because it must remain
 free for placement reasons).
 
-The current WSL2 baseline records `latticeThreeStagePipelineFused` at
-52,101,518 ops/s and `latticeThreeStagePipelinePhysical` at 32,977,536 ops/s.
-Treat that as local orientation evidence; rerun on an isolated Linux host
-before making release claims.
+The current checked-in isolated stage baseline records
+`latticeThreeStagePipelineFused` at 61,838,846 ops/s,
+`latticeThreeStagePipelineFusedReference` at 52,698,325 ops/s, and
+`latticeThreeStagePipelinePhysical` at 27,660,948 ops/s. The completed optimal
+path is tracked separately so publish throughput is not confused with
+completed-operation throughput.
 
 ## Batch Size
 
@@ -327,24 +329,22 @@ For Disruptor comparisons:
   allocation model.
 - Use completion-gated rows such as `OptimalPathBenchmark` when the claim is
   completed operation throughput rather than enqueue/publish throughput.
-- Include rows where Disruptor is expected to win, especially single shared
-  stream and MPSC reference cases.
+- Include rows that exercise favorable Disruptor shapes, especially single
+  shared stream and MPSC reference cases.
 - Keep pooled mutable payload rows separate from allocating value-transform
   rows.
-- Use the standalone Disruptor single-producer baseline when the SPSC apples
-  row is anomalous.
+- Use the standalone Disruptor single-producer baseline when isolating a
+  shared-ring result from graph-topology effects.
 
-## Current Data Caveats
+## Current Data Scope
 
 The current public result set under
 [`docs/benchmark-results/v1.0.0-baseline/`](docs/benchmark-results/v1.0.0-baseline/)
-is a WSL2 JDK 21 data set refreshed on 2026-04-29. It shows the architectural
-value of source specialization and inline fusion, but it is not a NUMA release
-report.
+is a JDK 21 data set refreshed on 2026-04-29. It shows the architectural value
+of source specialization, equal-call-site manual fusion, and inline fusion.
 
-Known caveats:
+Scope rules:
 
-- Windows scheduling variance affects confidence intervals and tail behavior.
 - GC-profiler overhead changes throughput and should be used primarily for
   allocation evidence.
 - Apples-to-apples benchmark rows are only fair when the payload model and
@@ -354,9 +354,10 @@ Known caveats:
 - Treat single-producer Disruptor rows as baseline context for shared-ring
   workloads, not as proof about every static graph shape.
 
-The practical reading of the current data is mixed: Lattice is strong when the
-compiler can specialize and inline a static topology, and the equal-call-site
-manually fused reference row now outperforms the Disruptor reference row on the
-checked-in WSL2 run. Disruptor remains a strong baseline for a single shared
-sequence domain, so keep the raw artifacts and topology semantics attached to
-any comparison.
+The practical reading of the current data is that Lattice is strongest when the
+compiler can specialize and inline a static topology. The isolated physical,
+inline-fused, reference-framed, equal-call-site reference, and completion-gated
+rows all put Lattice ahead by point estimate; the physical row has overlapping
+JMH error bars, while the fused and completion-gated rows are clearer. Disruptor
+remains a strong baseline for a single shared sequence domain, so keep the raw
+artifacts and topology semantics attached to any comparison.

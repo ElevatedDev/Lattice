@@ -99,7 +99,20 @@ tasks.withType(Javadoc).configureEach {
 
 tasks.named('javadoc', Javadoc) {
     exclude 'module-info.java'
+    exclude 'com/lattice/core/**'
+    exclude 'com/lattice/internal/**'
     classpath = configurations.compileClasspath
+    options.windowTitle = 'Lattice API'
+    options.docTitle = 'Lattice API'
+    options.header = 'Lattice'
+}
+
+tasks.register('docsJavadoc', Sync) {
+    group = 'documentation'
+    description = 'Generates API Javadocs under docs/api/latest for GitHub Pages.'
+    dependsOn tasks.named('javadoc')
+    from(tasks.named('javadoc').map { it.destinationDir })
+    into layout.projectDirectory.dir('docs/api/latest')
 }
 
 tasks.withType(AbstractArchiveTask).configureEach {
@@ -213,6 +226,7 @@ tasks.register('jcstress', JavaExec) {
 tasks.register('verifyDocumentationRelease') {
     group = 'verification'
     description = 'Checks public docs links, benchmark artifact references, and project spelling.'
+    dependsOn tasks.named('docsJavadoc')
 
     doLast {
         def failures = []

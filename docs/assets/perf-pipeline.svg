@@ -1,89 +1,68 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 460" role="img"
-     aria-label="Lattice vs LMAX Disruptor — pipeline / fan-out / SPSC throughput, JDK 21">
-  <style>
-    .title { font: 700 18px Inter, system-ui, -apple-system, Segoe UI, sans-serif; fill: #0f172a; }
-    .sub   { font: 400 12px Inter, system-ui, sans-serif; fill: #475569; }
-    .axis  { stroke: #cbd5e1; stroke-width: 1; }
-    .grid  { stroke: #e2e8f0; stroke-width: 1; }
-    .label { font: 500 12px Inter, system-ui, sans-serif; fill: #334155; }
-    .num   { font: 600 11px Inter, system-ui, sans-serif; fill: #0f172a; }
-    .lat   { fill: #2563eb; }
-    .dis   { fill: #94a3b8; }
-    .legend{ font: 500 12px Inter, system-ui, sans-serif; fill: #334155; }
-    .scen  { font: 600 12px Inter, system-ui, sans-serif; fill: #0f172a; }
-  </style>
-
-  <text class="title" x="20" y="28">Lattice vs LMAX Disruptor — throughput by shape</text>
-  <text class="sub"   x="20" y="48">JDK 21 · i7-7700 · WSL2 Ubuntu 24.04 · single 3 s smoke iteration · higher is better</text>
-
-  <!-- Legend -->
-  <g transform="translate(560,32)">
-    <rect class="lat" x="0" y="0" width="14" height="14" rx="2"/>
-    <text class="legend" x="20" y="11">Lattice</text>
-    <rect class="dis" x="80" y="0" width="14" height="14" rx="2"/>
-    <text class="legend" x="100" y="11">Disruptor</text>
-  </g>
-
-  <!-- Plot box: x in [120, 840] = 720px = 70 Mops -->
-  <g transform="translate(0,80)">
-    <!-- axis -->
-    <line class="axis" x1="120" y1="340" x2="840" y2="340"/>
-    <!-- gridlines / x ticks at 0,10,20,30,40,50,60,70 Mops -->
-    <g>
-      <line class="grid" x1="120" y1="20"  x2="120" y2="340"/>
-      <line class="grid" x1="223" y1="20"  x2="223" y2="340"/>
-      <line class="grid" x1="326" y1="20"  x2="326" y2="340"/>
-      <line class="grid" x1="429" y1="20"  x2="429" y2="340"/>
-      <line class="grid" x1="531" y1="20"  x2="531" y2="340"/>
-      <line class="grid" x1="634" y1="20"  x2="634" y2="340"/>
-      <line class="grid" x1="737" y1="20"  x2="737" y2="340"/>
-      <line class="grid" x1="840" y1="20"  x2="840" y2="340"/>
-    </g>
-    <g class="label" text-anchor="middle">
-      <text x="120" y="358">0</text>
-      <text x="223" y="358">10M</text>
-      <text x="326" y="358">20M</text>
-      <text x="429" y="358">30M</text>
-      <text x="531" y="358">40M</text>
-      <text x="634" y="358">50M</text>
-      <text x="737" y="358">60M</text>
-      <text x="840" y="358">70M</text>
-    </g>
-    <text class="sub" x="480" y="378" text-anchor="middle">ops/s</text>
-
-    <!-- Bars: scale = 720/70e6 = 1.0286e-5 px per op.  width(M) = M * 10.286 -->
-
-    <!-- 1. SPSC preallocated apples-to-apples -->
-    <text class="scen" x="20" y="40">SPSC preallocated (apples)</text>
-    <rect class="lat" x="120" y="48"  width="123.5" height="18"/>
-    <text class="num" x="248" y="62">12.01M</text>
-    <rect class="dis" x="120" y="70"  width="120.5" height="18"/>
-    <text class="num" x="245" y="84">11.71M  Disruptor</text>
-
-    <!-- 2. 3-stage pipeline (physical) -->
-    <text class="scen" x="20" y="118">3-stage pipeline (physical)</text>
-    <rect class="lat" x="120" y="126" width="95.4"  height="18"/>
-    <text class="num" x="220" y="140">9.28M</text>
-    <rect class="dis" x="120" y="148" width="228.9" height="18"/>
-    <text class="num" x="354" y="162">22.26M  Disruptor</text>
-
-    <!-- 3. 3-stage pipeline (fused) -->
-    <text class="scen" x="20" y="196">3-stage pipeline (fused)</text>
-    <rect class="lat" x="120" y="204" width="54.0"  height="18"/>
-    <text class="num" x="180" y="218">5.25M</text>
-    <rect class="dis" x="120" y="226" width="313.6" height="18"/>
-    <text class="num" x="438" y="240">30.49M  Disruptor (manual fusion)</text>
-
-    <!-- 4. SPSC source→sink (bare ring) -->
-    <text class="scen" x="20" y="274">SPSC source→sink (bare)</text>
-    <rect class="lat" x="120" y="282" width="92.1"  height="18"/>
-    <text class="num" x="217" y="296">8.95M</text>
-    <rect class="dis" x="120" y="304" width="646.5" height="18"/>
-    <text class="num" x="772" y="318">62.87M</text>
-  </g>
-
-  <text class="sub" x="20" y="438">Source: local JMH baseline notes; ApplesToApplesDisruptorBenchmark; TopologyShapeDisruptorBenchmark</text>
-  <text class="sub" x="20" y="453">Lattice's value is in the <tspan font-style="italic">graph contract</tspan>: preallocated payloads, semantic joins, deterministic backpressure, fusion that preserves the logical graph.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560">
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:13px}.value{font-size:12px;font-weight:600}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}</style>
+<rect width="1120" height="560" fill="white"/>
+<text class="title" x="22" y="32">Top checked-in three-stage publish throughput</text>
+<text class="sub" x="22" y="54">Best checked-in Lattice point estimate per shape; Disruptor row from the same artifact</text>
+<line class="grid" x1="260.0" y1="86" x2="260.0" y2="500"/>
+<text class="axis" x="260.0" y="524" text-anchor="middle">0.0M</text>
+<line class="grid" x1="420.0" y1="86" x2="420.0" y2="500"/>
+<text class="axis" x="420.0" y="524" text-anchor="middle">23.7M</text>
+<line class="grid" x1="580.0" y1="86" x2="580.0" y2="500"/>
+<text class="axis" x="580.0" y="524" text-anchor="middle">47.4M</text>
+<line class="grid" x1="740.0" y1="86" x2="740.0" y2="500"/>
+<text class="axis" x="740.0" y="524" text-anchor="middle">71.1M</text>
+<line class="grid" x1="900.0" y1="86" x2="900.0" y2="500"/>
+<text class="axis" x="900.0" y="524" text-anchor="middle">94.8M</text>
+<line class="grid" x1="1060.0" y1="86" x2="1060.0" y2="500"/>
+<text class="axis" x="1060.0" y="524" text-anchor="middle">118.5M</text>
+<line class="axisline" x1="260" y1="500" x2="1060" y2="500"/>
+<text class="label" x="246" y="158.1" text-anchor="end">Lattice physical, 3 stages</text>
+<rect x="260" y="135.0" width="186.8" height="34.0" rx="3" fill="#14b8a6"/>
+<line class="err" x1="393.8" y1="152.0" x2="499.7" y2="152.0"/>
+<line class="err" x1="393.8" y1="142.5" x2="393.8" y2="161.5"/>
+<line class="err" x1="499.7" y1="142.5" x2="499.7" y2="161.5"/>
+<text class="value" x="454.8" y="158.1" text-anchor="start">27.7M</text>
+<text class="label" x="246" y="205.1" text-anchor="end">Disruptor physical, 3 handlers</text>
+<rect x="260" y="182.0" width="178.1" height="34.0" rx="3" fill="#f59e0b"/>
+<line class="err" x1="421.6" y1="199.0" x2="454.6" y2="199.0"/>
+<line class="err" x1="421.6" y1="189.5" x2="421.6" y2="208.5"/>
+<line class="err" x1="454.6" y1="189.5" x2="454.6" y2="208.5"/>
+<text class="value" x="446.1" y="205.1" text-anchor="start">26.4M</text>
+<text class="label" x="246" y="252.1" text-anchor="end">Lattice inline fused, 3 stages</text>
+<rect x="260" y="229.0" width="417.6" height="34.0" rx="3" fill="#0f766e"/>
+<line class="err" x1="652.4" y1="246.0" x2="702.8" y2="246.0"/>
+<line class="err" x1="652.4" y1="236.5" x2="652.4" y2="255.5"/>
+<line class="err" x1="702.8" y1="236.5" x2="702.8" y2="255.5"/>
+<text class="value" x="685.6" y="252.1" text-anchor="start">61.8M</text>
+<text class="label" x="246" y="299.1" text-anchor="end">Disruptor manual fused, copy</text>
+<rect x="260" y="276.0" width="237.7" height="34.0" rx="3" fill="#b45309"/>
+<line class="err" x1="360.9" y1="293.0" x2="634.5" y2="293.0"/>
+<line class="err" x1="360.9" y1="283.5" x2="360.9" y2="302.5"/>
+<line class="err" x1="634.5" y1="283.5" x2="634.5" y2="302.5"/>
+<text class="value" x="505.7" y="299.1" text-anchor="start">35.2M</text>
+<text class="label" x="246" y="346.1" text-anchor="end">Lattice inline fused, reference</text>
+<rect x="260" y="323.0" width="355.9" height="34.0" rx="3" fill="#0f766e"/>
+<line class="err" x1="480.5" y1="340.0" x2="751.2" y2="340.0"/>
+<line class="err" x1="480.5" y1="330.5" x2="480.5" y2="349.5"/>
+<line class="err" x1="751.2" y1="330.5" x2="751.2" y2="349.5"/>
+<text class="value" x="623.9" y="346.1" text-anchor="start">52.7M</text>
+<text class="label" x="246" y="393.1" text-anchor="end">Disruptor manual fused, ref isolated</text>
+<rect x="260" y="370.0" width="261.4" height="34.0" rx="3" fill="#b45309"/>
+<line class="err" x1="400.4" y1="387.0" x2="642.4" y2="387.0"/>
+<line class="err" x1="400.4" y1="377.5" x2="400.4" y2="396.5"/>
+<line class="err" x1="642.4" y1="377.5" x2="642.4" y2="396.5"/>
+<text class="value" x="529.4" y="393.1" text-anchor="start">38.7M</text>
+<text class="label" x="246" y="440.1" text-anchor="end">Lattice manual fused, reference</text>
+<rect x="260" y="417.0" width="621.7" height="34.0" rx="3" fill="#0e7490"/>
+<line class="err" x1="800.8" y1="434.0" x2="962.7" y2="434.0"/>
+<line class="err" x1="800.8" y1="424.5" x2="800.8" y2="443.5"/>
+<line class="err" x1="962.7" y1="424.5" x2="962.7" y2="443.5"/>
+<text class="value" x="889.7" y="440.1" text-anchor="start">92.1M</text>
+<text class="label" x="246" y="487.1" text-anchor="end">Disruptor manual fused, ref matrix</text>
+<rect x="260" y="464.0" width="297.4" height="34.0" rx="3" fill="#b45309"/>
+<line class="err" x1="526.2" y1="481.0" x2="588.5" y2="481.0"/>
+<line class="err" x1="526.2" y1="471.5" x2="526.2" y2="490.5"/>
+<line class="err" x1="588.5" y1="471.5" x2="588.5" y2="490.5"/>
+<text class="value" x="565.4" y="487.1" text-anchor="start">44.0M</text>
+<text class="axis" x="1060" y="542" text-anchor="end">score +/- JMH error, ops/s</text>
 </svg>
-

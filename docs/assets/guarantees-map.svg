@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="560" viewBox="0 0 1100 560">
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.boxtext{font-size:14px;font-weight:650}.small{font-size:12px;fill:#52616f}.box{fill:#f7f9fc;stroke:#cbd5e1;stroke-width:1.2}.accent{fill:#e6fffb;stroke:#0f766e;stroke-width:1.6}.warn{fill:#fff7ed;stroke:#b45309;stroke-width:1.4}.arrow{stroke:#475569;stroke-width:1.6;fill:none;marker-end:url(#arrow)}</style>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker></defs>
+<rect width="1100" height="560" fill="white"/>
+<text class="title" x="24" y="34">Runtime guarantee map</text>
+<text class="sub" x="24" y="56">Guarantees are local to accepted messages inside one process; external durability and exactly-once effects are intentionally out of scope.</text>
+<rect class="accent" x="60" y="105" width="210" height="92" rx="6"/>
+<text class="boxtext" x="76" y="134">Static topology</text>
+<text class="small" x="76" y="158">Graph shape is validated before start and</text>
+<text class="small" x="76" y="175">is immutable while running</text>
+<rect class="accent" x="335" y="105" width="210" height="92" rx="6"/>
+<text class="boxtext" x="351" y="134">Bounded edges</text>
+<text class="small" x="351" y="158">Every handoff has explicit capacity and</text>
+<text class="small" x="351" y="175">overflow behavior</text>
+<rect class="accent" x="610" y="105" width="210" height="92" rx="6"/>
+<text class="boxtext" x="626" y="134">Local ordering</text>
+<text class="small" x="626" y="158">SPSC preserves producer order; MPSC</text>
+<text class="small" x="626" y="175">preserves reservation order</text>
+<rect class="box" x="210" y="255" width="210" height="92" rx="6"/>
+<text class="boxtext" x="226" y="284">Backpressure</text>
+<text class="small" x="226" y="308">Block, timed block, fail-fast, loss,</text>
+<text class="small" x="226" y="325">coalesce, or redirect by policy</text>
+<rect class="box" x="485" y="255" width="210" height="92" rx="6"/>
+<text class="boxtext" x="501" y="284">Ownership</text>
+<text class="small" x="501" y="308">Single-threaded stages are invoked by one</text>
+<text class="small" x="501" y="325">worker at a time</text>
+<rect class="box" x="760" y="255" width="210" height="92" rx="6"/>
+<text class="boxtext" x="776" y="284">Lifecycle</text>
+<text class="small" x="776" y="308">Stop drains accepted work; abort is</text>
+<text class="small" x="776" y="325">fail-fast</text>
+<rect class="warn" x="335" y="405" width="210" height="92" rx="6"/>
+<text class="boxtext" x="351" y="434">Fusion</text>
+<text class="small" x="351" y="458">Eligible linear chains remove handoffs</text>
+<text class="small" x="351" y="475">while preserving logical graph visibility</text>
+<rect class="warn" x="610" y="405" width="210" height="92" rx="6"/>
+<text class="boxtext" x="626" y="434">Observability</text>
+<text class="small" x="626" y="458">Metrics, placement reports, JFR hooks, and</text>
+<text class="small" x="626" y="475">validation artifacts document behavior</text>
+<path class="arrow" d="M270,151 C302.5,151 302.5,151 335,151"/>
+<path class="arrow" d="M545,151 C577.5,151 577.5,151 610,151"/>
+<path class="arrow" d="M440,197 C385.0,197 385.0,255 330,255"/>
+<path class="arrow" d="M715,197 C655.0,197 655.0,255 595,255"/>
+<path class="arrow" d="M420,347 C430.0,347 430.0,405 440,405"/>
+<path class="arrow" d="M695,347 C705.0,347 705.0,405 715,405"/>
+</svg>

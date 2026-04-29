@@ -13,6 +13,9 @@ import java.time.Duration;
  * @param <T> pooled item type
  */
 public interface PreallocatedEmitter<T> extends AutoCloseable {
+    /**
+     * Returns the source name this emitter publishes through.
+     */
     String name();
 
     /**
@@ -52,6 +55,9 @@ public interface PreallocatedEmitter<T> extends AutoCloseable {
      */
     void discard(T item);
 
+    /**
+     * Returns the configured source pool size.
+     */
     int poolSize();
 
     /**
@@ -60,8 +66,14 @@ public interface PreallocatedEmitter<T> extends AutoCloseable {
      */
     int reuseBound();
 
+    /**
+     * Returns whether this emitter has been closed.
+     */
     boolean isClosed();
 
+    /**
+     * Closes the source and prevents further claims or emits.
+     */
     @Override
     void close();
 }

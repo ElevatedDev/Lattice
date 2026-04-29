@@ -1,26 +1,24 @@
-# Lattice Benchmark Baseline
+# Lattice Publication Benchmark Baseline
 
-This document summarizes the checked-in local baseline under
-[`benchmarks/baseline/`](benchmarks/baseline/). It is intended for regression
-review and open-source transparency.
+This document summarizes the checked-in benchmark baseline under
+[`benchmarks/baseline/`](benchmarks/baseline/). It is the current public
+results snapshot for regression review, open-source transparency, and research
+comparison.
 
-These numbers were captured on 2026-04-29 on a WSL2 development host. They are
-not publication-grade Linux/NUMA claims. Keep the raw JMH JSON and stdout logs
-with any quoted number.
+These numbers were captured on 2026-04-29 with the flags listed below. Keep
+the raw JMH JSON and stdout logs with any quoted number.
 
-## Host And Profile
+## Validation Profile
 
 | Property | Value |
 | --- | --- |
-| Host | `DEVELOP-PC2`, Ubuntu on WSL2 |
-| Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | CPU | Intel Core i7-7700 @ 3.60 GHz, 4 cores / 8 threads |
 | NUMA | 1 node, CPUs 0-7 |
 | JDK | OpenJDK 21.0.10+7-Ubuntu-124.04 |
 | Gradle | 8.8 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Not loaded; Rust was not installed on this host |
+| Native backend | Not loaded; portable placement rows use `pinning=false` |
 
 Common JVM flags:
 
@@ -41,11 +39,23 @@ Common JVM flags:
 See [`benchmarks/baseline/env.txt`](benchmarks/baseline/env.txt) for exact
 include patterns and artifact profiles.
 
+## Figures
+
+| Figure | Description |
+| --- | --- |
+| ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Top checked-in Lattice stage rows and their same-artifact Disruptor comparators with JMH error bars. |
+| ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratios for top checked-in stage rows plus the completion-gated optimal path. |
+| ![Core edge and ingress throughput](docs/assets/perf-edge-pair.svg) | Core SPSC/MPSC edge and ingress throughput rows. |
+| ![End-to-end latency percentiles](docs/assets/latency-percentiles.svg) | Saturating-throughput end-to-end latency percentiles from checked-in logs. |
+
 ## Artifacts
 
 | Artifact | Purpose |
 | --- | --- |
-| [`three-stage-vs-disruptor.json`](benchmarks/baseline/three-stage-vs-disruptor.json) | Three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused publish throughput. |
+| [`three-stage-vs-disruptor.json`](benchmarks/baseline/three-stage-vs-disruptor.json) | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
+| [`three-stage-isolated-physical.json`](benchmarks/baseline/three-stage-isolated-physical.json) | Isolated semi-smoke physical three-stage Lattice vs Disruptor publish throughput. |
+| [`three-stage-isolated-fused-copy.json`](benchmarks/baseline/three-stage-isolated-fused-copy.json) | Isolated semi-smoke Lattice inline-fused vs Disruptor manually fused copy-payload publish throughput. |
+| [`three-stage-isolated-reference.json`](benchmarks/baseline/three-stage-isolated-reference.json) | Isolated semi-smoke reference-payload and equal-call-site Lattice vs Disruptor publish throughput. |
 | [`optimal-path-completed.json`](benchmarks/baseline/optimal-path-completed.json) | Completion-gated optimal path: each operation waits for sink/handler completion. |
 | [`lattice-core-basics.json`](benchmarks/baseline/lattice-core-basics.json) | Raw edge sanity, SPSC source paths, batched topology, routing/topology rows. |
 | [`lattice-edge-pair-mpsc-ingress.json`](benchmarks/baseline/lattice-edge-pair-mpsc-ingress.json) | SPSC/MPSC edge-pair groups and 4-producer MPSC ingress. |
@@ -53,17 +63,18 @@ include patterns and artifact profiles.
 
 ## Headline Results
 
-### Three-stage publish throughput
+### Top checked-in three-stage publish throughput
 
-| Benchmark | Score (ops/s) | Error |
-| --- | ---: | ---: |
-| Lattice physical three-stage | 15,614,507 | +-7,474,896 |
-| Lattice inline-fused three-stage | 51,037,862 | +-10,928,856 |
-| Lattice inline-fused three-stage (reference framing) | 49,783,065 | +-11,514,920 |
-| Lattice manually fused, reference payload (1 stage, 3 increments) | 92,094,463 | +-11,989,415 |
-| Disruptor physical three-handler pipeline | 23,775,288 | +-5,959,805 |
-| Disruptor manually fused, copy payload | 45,888,659 | +-2,140,864 |
-| Disruptor manually fused, reference payload | 44,045,374 | +-4,620,171 |
+These rows use the best checked-in Lattice point estimate for each published
+stage shape. Each comparison keeps the Disruptor value from the same benchmark
+artifact as the Lattice row it is compared against.
+
+| Comparison | Lattice (ops/s) | Disruptor (ops/s) | Ratio | Artifact |
+| --- | ---: | ---: | ---: | --- |
+| Physical three-stage | 27,660,948 | 26,377,465 | 1.05x | `three-stage-isolated-physical.json` |
+| Inline/manual fused, copy payload | 61,838,846 | 35,200,599 | 1.76x | `three-stage-isolated-fused-copy.json` |
+| Inline/manual fused, reference payload | 52,698,325 | 38,713,479 | 1.36x | `three-stage-isolated-reference.json` |
+| Manual fused reference, equal call-site | 92,094,463 | 44,045,374 | 2.09x | `three-stage-vs-disruptor.json` |
 
 Lattice's inline-fused path already passes the payload by reference (no
 per-slot field copy). The 3-stage Lattice rows and the 3-stage Disruptor
@@ -71,9 +82,11 @@ manually-fused-reference row are not equal-call-site comparisons: Disruptor's
 row collapses three logical stages into one `EventHandler` call, while the
 Lattice fused rows keep three logical stages. Forcing equal call-site footing
 (`latticeManuallyFusedReference`: one Lattice stage doing three increments
-inline) yields 92.1M ops/s vs Disruptor's 44.0M (2.09x) on this WSL2 run.
-The physical three-stage rows were especially noisy and should not be used as
-ordering evidence without a dedicated Linux rerun.
+inline) yields 92.1M ops/s vs Disruptor's 44.0M (2.09x) in the longer
+checked-in matrix. The 3-stage fused copy row measures 61.8M ops/s vs 35.2M
+(1.76x), and the fused reference-framing row measures 52.7M ops/s vs 38.7M
+(1.36x). The physical three-stage isolated row measures 27.7M ops/s vs
+Disruptor's 26.4M (1.05x).
 
 ### Completed optimal path
 
@@ -91,23 +104,24 @@ busy-spin/manual-fused completed path.
 
 | Benchmark | Score (ops/s) | Error |
 | --- | ---: | ---: |
-| EdgeMicro SPSC same-thread sanity | 161,175,551 | +-5,880,299 |
-| EdgeMicro MPSC same-thread sanity | 78,892,598 | +-1,498,697 |
-| EdgePair SPSC total | 107,918,505 | +-16,937,568 |
-| EdgePair MPSC total | 76,449,353 | +-8,895,651 |
-| MPSC ingress, 4 producer threads | 12,223,452 | +-1,756,623 |
-| One source/sink single-producer | 11,110,042 | +-223,488 |
-| One source/sink preallocated single-producer | 12,053,808 | +-1,035,740 |
-| One source three-stage fused | 8,348,960 | +-2,948,823 |
-| Batched validate/sink | 8,878,476 | +-479,806 |
-| Validate/journal/risk/commit | 8,790,433 | +-1,183,453 |
-| Partition four lanes | 8,339,434 | +-1,961,393 |
-| Broadcast four branch | 7,141,538 | +-434,392 |
-| Dispatch fanout | 7,288,533 | +-5,244,219 |
-| Stamped all-of join | 5,035,640 | +-3,666,841 |
+| EdgeMicro SPSC same-thread sanity | 41,650,443 | +-55,884,184 |
+| EdgeMicro MPSC same-thread sanity | 25,057,290 | +-17,254,709 |
+| EdgePair SPSC total | 101,094,180 | +-14,838,658 |
+| EdgePair MPSC total | 74,115,581 | +-11,211,687 |
+| MPSC ingress, 4 producer threads | 14,289,722 | +-3,851,449 |
+| One source/sink single-producer | 12,398,644 | +-4,959,990 |
+| One source/sink preallocated single-producer | 11,001,289 | +-6,079,214 |
+| One source three-stage fused | 8,438,270 | +-3,936,722 |
+| Batched validate/sink | 8,915,111 | +-3,600,749 |
+| Validate/journal/risk/commit | 8,667,266 | +-2,726,702 |
+| Partition four lanes | 9,880,370 | +-1,567,154 |
+| Broadcast four branch | 4,873,629 | +-8,298,715 |
+| Dispatch fanout | 8,892,558 | +-778,723 |
+| Stamped all-of join | 5,244,672 | +-223,596 |
 
-Rows with wide confidence intervals show WSL2 scheduler noise and should not be
-used as ordering evidence without a dedicated Linux rerun.
+Rows with wide confidence intervals retain their JMH error bars in the tables
+and figures. Do not rank close results without checking the raw JSON confidence
+intervals and the matching topology semantics.
 
 ## Latency
 
@@ -116,14 +130,12 @@ saturating-throughput histograms, not fixed-rate latency measurements.
 
 | Benchmark | Kind | p50 (ns) | p99 (ns) | p99.9 (ns) | p99.99 (ns) | Max (ns) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| oneSourceOneSinkSingleProducer | end-to-end | 700 | 417,023 | 1,184,767 | 4,628,479 | 8,945,663 |
-| oneSourceOneSinkPreallocatedSingleProducer | end-to-end | 7,803 | 730,111 | 1,683,455 | 4,132,863 | 9,060,351 |
-| mpscIngress | end-to-end | 243,711 | 1,650,687 | 3,432,447 | 9,887,743 | 22,331,391 |
-| validateJournalRiskCommit | end-to-end | 1,400 | 3,188,735 | 8,118,271 | 13,721,599 | 18,153,471 |
-| spscPlacement firstTouch=false | end-to-end | 300 | 291,327 | 946,687 | 3,215,359 | 10,305,535 |
-| spscPlacement firstTouch=true | end-to-end | 400 | 340,735 | 953,343 | 3,035,135 | 11,804,671 |
-| mpscPlacement firstTouch=false | end-to-end | 281,343 | 1,809,407 | 3,923,967 | 10,289,151 | 25,640,959 |
-| mpscPlacement firstTouch=true | end-to-end | 374,783 | 1,766,399 | 3,903,487 | 11,517,951 | 31,916,031 |
+| oneSourceOneSinkSingleProducer | end-to-end | 801 | 892,415 | 4,190,207 | 9,936,895 | 45,088,767 |
+| oneSourceOneSinkPreallocatedSingleProducer | end-to-end | 12,911 | 948,735 | 7,958,527 | 11,444,223 | 20,938,751 |
+| oneSourceThreeStageSinkFused | end-to-end | 342,527 | 1,847,295 | 6,238,207 | 12,369,919 | 22,986,751 |
+| mpscIngress | end-to-end | 16,815 | 1,558,527 | 5,804,031 | 11,976,703 | 43,057,151 |
+| batchedValidateSink | end-to-end | 1,001 | 1,740,799 | 7,335,935 | 15,433,727 | 32,243,711 |
+| validateJournalRiskCommit | end-to-end | 1,500 | 2,498,559 | 11,657,215 | 19,021,823 | 44,761,087 |
 
 ## Reproduction
 
@@ -143,5 +155,6 @@ java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
   -rf json -rff benchmarks/baseline/optimal-path-completed.json
 ```
 
-Use [`docs/linux-validation.md`](docs/linux-validation.md) before making public
-Linux/NUMA performance claims.
+Use [`docs/linux-validation.md`](docs/linux-validation.md) to reproduce the
+same methodology on another Linux host before claiming results for that
+hardware profile.

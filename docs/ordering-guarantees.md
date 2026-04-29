@@ -2,6 +2,8 @@
 
 Lattice's ordering contract is intentionally local and explicit.
 
+![Runtime guarantee map](assets/guarantees-map.svg)
+
 ## Per-Edge
 
 - **SPSC**: producer order is preserved exactly for accepted items. Items

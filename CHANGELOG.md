@@ -83,6 +83,10 @@ state is pre-1.0.
 - `OptimalPathBenchmark`, a completion-gated Lattice-vs-Disruptor comparison
   that waits for sink/handler completion of the same sequence instead of
   measuring enqueue rate only.
+- Publication benchmark figures for throughput, latency percentiles,
+  Lattice-vs-Disruptor ratios, and runtime guarantees under `docs/assets/`,
+  including isolated stage artifacts for the Lattice-vs-Disruptor rows.
+- Generated GitHub Pages Javadocs under `docs/api/latest/`.
 
 ### Changed
 
@@ -119,11 +123,13 @@ state is pre-1.0.
   `benchmarks/baseline/` artifact set and
   `docs/benchmark-results/v1.0.0-baseline/` snapshot instead of older local
   result paths.
+- Benchmark documentation now presents the 2026-04-29 result set as the
+  current public baseline, with raw artifacts, fair-comparison scope, and JMH
+  error bars attached to the figures.
 
 ### Known Gaps
 
 - No published Maven Central artifacts yet.
 - JDK 25 and JDK 26 validation remain future release work.
 - No FFM/jextract native backend yet.
-- No publication-grade Linux/NUMA benchmark report yet.
 - No Micrometer or JMX integration yet.

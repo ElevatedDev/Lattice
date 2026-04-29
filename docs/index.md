@@ -34,6 +34,7 @@ browsing the repository, the same material is available through the root
 | [Operations Runbook](operations-runbook.md) | Startup checks, lifecycle operations, and diagnostics. |
 | [Compatibility Matrix](compatibility-matrix.md) | JDK, OS, dependency, and versioning policy. |
 | [API Reference](api.md) | Public package summary and planned Maven coordinate. |
+| [Generated Javadocs](api/latest/index.html) | Navigable generated API documentation for the current public surface. |
 | [Release Process](release.md) | Maintainer checklist for release verification and publishing. |
 
 ## Performance
@@ -43,7 +44,16 @@ browsing the repository, the same material is available through the root
 | [Performance Tuning](https://github.com/ElevatedDev/Lattice/blob/main/PERFORMANCE_TUNING.md) | Tuning guidance and benchmark methodology. |
 | [Benchmark Results](benchmark-results/README.md) | Checked-in benchmark snapshots. |
 | [Disruptor Comparison](disruptor-comparison.md) | Methodology and honest framing against LMAX Disruptor. |
-| [Linux Validation Notes](linux-validation.md) | Procedure for publication-grade Linux benchmark evidence. |
+| [Linux Validation Notes](linux-validation.md) | Procedure for reproducing benchmark evidence on another Linux host. |
+
+## Figures
+
+| Figure | Purpose |
+| --- | --- |
+| [Three-stage publish throughput](assets/perf-pipeline.svg) | Throughput bars with JMH error bars. |
+| [Lattice vs Disruptor ratios](assets/disruptor-comparison.svg) | Ratio view for the comparable Disruptor rows. |
+| [End-to-end latency percentiles](assets/latency-percentiles.svg) | Latency percentile curves from checked-in logs. |
+| [Runtime guarantee map](assets/guarantees-map.svg) | Summary of the runtime guarantees and non-goals. |
 
 ## Project Files
 
