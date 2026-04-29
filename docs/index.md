@@ -4,8 +4,10 @@ Lattice is a Java 21 runtime for bounded, low-latency, in-process processing
 graphs with static topology, explicit backpressure, and inspectable runtime
 state.
 
-This page is the GitHub Pages entry point for the documentation set. When
-browsing the repository, the same material is available through the root
+This page is prepared as the GitHub Pages entry point for the documentation
+set. Until Pages is enabled, GitHub shows these as repository files rather than
+as a rendered documentation site. When browsing the repository, the same
+material is available through the root
 [README](https://github.com/ElevatedDev/Lattice/blob/main/README.md).
 
 ## Start Here
@@ -34,7 +36,7 @@ browsing the repository, the same material is available through the root
 | [Operations Runbook](operations-runbook.md) | Startup checks, lifecycle operations, and diagnostics. |
 | [Compatibility Matrix](compatibility-matrix.md) | JDK, OS, dependency, and versioning policy. |
 | [API Reference](api.md) | Public package summary and planned Maven coordinate. |
-| [Generated Javadocs](api/latest/index.html) | Navigable generated API documentation for the current public surface. |
+| [Generated Javadocs](api/latest/index.html) | Checked-in generated Javadoc HTML. It becomes normal navigable Javadocs when served by GitHub Pages or another static host. |
 | [Release Process](release.md) | Maintainer checklist for release verification and publishing. |
 
 ## Performance
