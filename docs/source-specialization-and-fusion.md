@@ -12,10 +12,13 @@ contract:
 
 - The compiler can pick an SPSC physical ingress edge even if the user wrote
   `EdgeSpec.mpscRing(...)` for readability.
-- The producer-side hot path collapses to "abort-check + edge.offer + record"
+- The producer-side hot path collapses to "close-check + edge.offer + record"
   with no CAS.
 - Trusted-fast-path emit (`EdgeSender.emitTrustedFromSource`) is wired when
   the source is non-stamping and the message type cannot carry a slab handle.
+- Application code must externally serialize source close, graph stop, and
+  graph abort with active `emit(...)` calls in this mode. Use the default
+  `SourceMode.MULTI_PRODUCER` when foreign lifecycle calls may race producers.
 
 ## Linear Fusion
 
@@ -42,11 +45,13 @@ Implementation notes:
 - Each `LinearStageOutput` holds a `final` reference to its successor (not an
   array slot). The JIT inlines through every fused hop monomorphically.
 - Hops are specialized into `Benign` (POJO payload) and `Retaining` (slab
-  handle) variants chosen at wire time. `Benign` drops the per-hop
-  try/catch/finally frame.
+  handle) variants chosen at wire time. `Benign` drops the retain/release
+  scope and keeps exception-path attribution per fused hop.
 - Intra-fused type validation is gated by `-Dlattice.fusion.validateTypes`
   (default `false`) — the public ingress emit boundary already validates the
   user-supplied type.
+- Inline source fusion is disabled when a custom `StageExceptionHandler` is
+  installed so handler policy stays on the worker path.
 
 ## Toggles
 
@@ -58,6 +63,8 @@ Implementation notes:
 ## When Fusion Does *Not* Fire
 
 - Multi-producer sources.
+- Custom `StageExceptionHandler` when considering producer-thread inline
+  source fusion.
 - Fan-out (broadcast/partition/dispatch) inside the chain.
 - Joins inside the chain.
 - A stage opts out via `StageSpec`.

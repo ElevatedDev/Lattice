@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.LongAdder;
  * Batch and service-time histograms are opt-in through
  * {@code lattice.metrics.stageHistograms}; histogram accessors return defensive
  * copies.
+ * Runtime update methods such as {@code recordConsume()} are exposed for the
+ * runtime implementation and should not be called by applications.
  */
 public final class StageMetrics implements WaitMetrics {
 
@@ -82,90 +84,156 @@ public final class StageMetrics implements WaitMetrics {
         return name;
     }
 
+    /**
+     * Returns messages emitted by this stage when hot counters are enabled.
+     */
     public long emittedCount() {
         return emittedCount.sum();
     }
 
+    /**
+     * Returns messages consumed by this stage when hot counters are enabled.
+     */
     public long consumedCount() {
         return consumedCount.sum();
     }
 
+    /**
+     * Returns exceptions thrown by this stage's user logic.
+     */
     public long stageExceptions() {
         return stageExceptions.sum();
     }
 
+    /**
+     * Returns failed downstream output attempts.
+     */
     public long failedOutputs() {
         return failedOutputs.sum();
     }
 
+    /**
+     * Returns downstream output attempts that had to wait.
+     */
     public long blockedOutputs() {
         return blockedOutputs.sum();
     }
 
+    /**
+     * Returns total nanoseconds spent blocked on downstream output.
+     */
     public long blockedNanos() {
         return blockedNanos.sum();
     }
 
+    /**
+     * Returns wait-loop spin count when hot counters are enabled.
+     */
     public long spinCount() {
         return spinCount.sum();
     }
 
+    /**
+     * Returns wait-loop yield count when hot counters are enabled.
+     */
     public long yieldCount() {
         return yieldCount.sum();
     }
 
+    /**
+     * Returns wait-loop park count when hot counters are enabled.
+     */
     public long parkCount() {
         return parkCount.sum();
     }
 
+    /**
+     * Returns processed batch count.
+     */
     public long batchesProcessed() {
         return batchesProcessed.sum();
     }
 
+    /**
+     * Returns processed message count across single-message and batch stages.
+     */
     public long processedMessages() {
         return processedMessages.sum();
     }
 
+    /**
+     * Returns observed CPU affinity violations.
+     */
     public long affinityViolations() {
         return affinityViolations.sum();
     }
 
+    /**
+     * Returns observed NUMA placement violations.
+     */
     public long numaViolations() {
         return numaViolations.sum();
     }
 
+    /**
+     * Returns routing decisions made by dispatch, partition, or broadcast nodes.
+     */
     public long routingDecisions() {
         return routingDecisions.sum();
     }
 
+    /**
+     * Returns branch-isolation actions taken for slow broadcast branches.
+     */
     public long branchIsolationActions() {
         return branchIsolationActions.sum();
     }
 
+    /**
+     * Returns currently opened join groups as a monotonic counter input.
+     */
     public long openJoinGroups() {
         return openJoinGroups.sum();
     }
 
+    /**
+     * Returns completed join groups.
+     */
     public long completedJoinGroups() {
         return completedJoinGroups.sum();
     }
 
+    /**
+     * Returns join groups emitted or discarded after timeout.
+     */
     public long timedOutJoinGroups() {
         return timedOutJoinGroups.sum();
     }
 
+    /**
+     * Returns duplicate join stamps observed by duplicate policy.
+     */
     public long duplicateJoinStamps() {
         return duplicateJoinStamps.sum();
     }
 
+    /**
+     * Returns missing join branch observations.
+     */
     public long missingJoinBranches() {
         return missingJoinBranches.sum();
     }
 
+    /**
+     * Returns slab handles retained by this stage.
+     */
     public long retainedHandles() {
         return retainedHandles.sum();
     }
 
+    /**
+     * Returns slab handles released by this stage.
+     */
     public long releasedHandles() {
         return releasedHandles.sum();
     }
@@ -208,42 +276,72 @@ public final class StageMetrics implements WaitMetrics {
         return HISTOGRAMS_ENABLED;
     }
 
+    /**
+     * Returns the worker lifecycle state.
+     */
     public WorkerState workerState() {
         return workerState;
     }
 
+    /**
+     * Returns the latest placement status for this worker.
+     */
     public PlacementStatus placementStatus() {
         return placementStatus;
     }
 
+    /**
+     * Returns placement diagnostics for this worker.
+     */
     public String placementMessage() {
         return placementMessage;
     }
 
+    /**
+     * Returns requested CPU id, or {@code -1} when not requested.
+     */
     public int expectedCpu() {
         return expectedCpu;
     }
 
+    /**
+     * Returns observed CPU id, or {@code -1} when unavailable.
+     */
     public int observedCpu() {
         return observedCpu;
     }
 
+    /**
+     * Returns requested NUMA node, or {@code -1} when not requested.
+     */
     public int expectedNumaNode() {
         return expectedNumaNode;
     }
 
+    /**
+     * Returns observed NUMA node, or {@code -1} when unavailable.
+     */
     public int observedNumaNode() {
         return observedNumaNode;
     }
 
+    /**
+     * Returns allocation owner metadata associated with this worker.
+     */
     public String allocationOwner() {
         return allocationOwner;
     }
 
+    /**
+     * Returns stage start time, or {@code null} before start.
+     */
     public Instant startTime() {
         return startTime.get();
     }
 
+    /**
+     * Returns stage stop time, or {@code null} until stopped.
+     */
     public Instant stopTime() {
         return stopTime.get();
     }

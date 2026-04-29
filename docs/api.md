@@ -1,34 +1,34 @@
 # API Reference
 
-Release Javadoc is intended to be published to GitHub Pages for each stable
-release:
+Generated Javadocs are checked into `docs/api/latest/` so GitHub Pages and the
+repository browser can navigate the current public surface:
 
-- **Latest release**: <https://elevateddev.github.io/Lattice/api/latest/>
+- **Latest checked-in API**: [api/latest/](api/latest/index.html)
+- **Latest release URL**: <https://elevateddev.github.io/Lattice/api/latest/>
 - **By version**: `https://elevateddev.github.io/Lattice/api/<version>/`
   (e.g. `api/1.0.0/`).
 
 No stable Maven artifact has been published yet. Until the first release, build
-from source and use `./gradlew javadoc` for local API docs.
+from source and use `./gradlew docsJavadoc` to refresh the GitHub Pages copy.
 
 This page summarizes the public packages and the stability contract for each
-type. See the repository
-[`CONTRIBUTING.md`](https://github.com/ElevatedDev/Lattice/blob/main/CONTRIBUTING.md)
-for the full stable-surface list and the
+type. See the repository [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the full
+stable-surface list and the
 [Compatibility Matrix](compatibility-matrix.md) for the versioning policy.
 
 ## Public Packages
 
 | Package | Purpose | Stability |
 | --- | --- | --- |
-| `com.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphState`, `SourceMode`, `PreallocationSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
+| `com.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphPlan.Node`, `GraphPlan.Edge`, `GraphPlan.Placement`, `GraphState`, `SourceMode`, `PreallocationSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
 | `com.lattice.stage` | `StageLogic`, `BatchStageLogic`, `Output`, `StageContext`, `StageHandle`, `StageSpec`, `Emitter`, `PreallocatedEmitter`, `Batch`, `BatchPolicy`, `StageExceptionHandler`, `StageExceptionAction`. | **Stable** |
 | `com.lattice.edge` | `EdgeSpec`, `OverflowPolicy`, `BackpressureException`. | **Stable** |
-| `com.lattice.metrics` | `GraphMetrics`, `StageMetrics`, `EdgeMetrics`, `WaitMetrics`, `PlacementStatus`, `WorkerState`. | **Stable** |
+| `com.lattice.metrics` | `GraphMetrics`, `GraphMetrics.StagePlacement`, `StageMetrics`, `EdgeMetrics`, `WaitMetrics`, `PlacementStatus`, `WorkerState`. | **Stable** |
 | `com.lattice.placement` | `PinPolicy`, `MemoryMode`, related strategy types. | **Stable** |
 | `com.lattice.routing` | `dispatch` / `broadcast` / `partition` / `join` specifications. | **Stable** |
 | `com.lattice.slab` | `SlabPool`, `SlabHandle` and supporting types. | **Stable** |
 | `com.lattice.wait` | `WaitSpec`, wait-strategy primitives. | **Stable** |
-| `com.staticgraph.runtime.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
+| `com.lattice.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
 
 ## Stability Contract
 

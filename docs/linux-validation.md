@@ -1,12 +1,13 @@
-# Linux Validation Notes
+# Linux Benchmark Validation Notes
 
-Publication-grade Lattice benchmarks must be produced on Linux with the
-native backend loaded. This page documents the procedure.
+Use this procedure when reproducing the checked-in Lattice benchmark
+methodology on a dedicated Linux host, especially when placement, affinity, or
+NUMA behavior is part of the claim.
 
 ## Host Requirements
 
-- Bare-metal Linux (or a hypervisor with CPU pinning), kernel ≥ 5.15.
-- ≥ 8 isolated cores via `isolcpus=` on the kernel command line, plus
+- Bare-metal Linux (or a hypervisor with CPU pinning), kernel >= 5.15.
+- At least 8 isolated cores via `isolcpus=` on the kernel command line, plus
   `nohz_full=` and `rcu_nocbs=` covering the same range.
 - `cpupower frequency-set -g performance` on every isolated core.
 - THP set to `madvise` or `never`; SMT disabled or explicitly accounted for.
@@ -34,14 +35,14 @@ native backend loaded. This page documents the procedure.
 ```bash
 ./gradlew nativeBuildRelease
 ./gradlew jmh \
-  -PjmhInclude='com\.lattice\.jmh\..*Disruptor.*' \
+  -PjmhInclude='com\.lattice\.benchmark\..*(Disruptor|OptimalPath).*' \
   -PjmhJvmArgs='-Djava.library.path=native/static-topology-native/target/release'
 ```
 
-For warmed steady-state numbers use 3 × 10 s warmup + 5 × 10 s measurement
-(the project default in `build.gradle`). Smoke runs (1 × 3 s) are useful for
-pre-merge gating but should never be cited as performance evidence in
-documentation.
+For steady-state comparison numbers use at least the checked-in head-to-head
+profile: 3 forks, 5 x 5 s warmup, and 8 x 5 s measurement. Longer campaigns
+such as 3 x 10 s warmup and 5 x 10 s measurement are appropriate for release
+attachments and hardware-specific reports.
 
 ## What To Capture
 
@@ -54,7 +55,6 @@ For every benchmark JSON checked into `docs/benchmark-results/<version>/`:
 - A short `notes.md` with anything anomalous (thermal throttling, shared
   hardware, etc.).
 
-This procedure is the only one that produces numbers we are willing to put
-behind a "vs Disruptor" claim in the README. Smoke results from a developer
-laptop (including the `benchmarks/baseline/` set captured on WSL2) are
-explicitly labeled as orientation, not evidence.
+Use the same payload model, completion semantics, observability toggles, JVM
+flags, and Disruptor wait strategy as the checked-in baseline when extending a
+"vs Disruptor" claim to a new host.

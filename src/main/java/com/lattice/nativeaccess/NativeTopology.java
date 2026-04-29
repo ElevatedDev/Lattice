@@ -1,4 +1,4 @@
-package com.staticgraph.runtime.nativeaccess;
+package com.lattice.nativeaccess;
 
 import java.util.BitSet;
 import java.util.Objects;
@@ -11,53 +11,89 @@ public final class NativeTopology {
     private NativeTopology() {
     }
 
+    /**
+     * Returns whether the optional native topology library was loaded.
+     */
     public static boolean isLoaded() {
         return NativeTopologyNatives.loaded();
     }
 
+    /**
+     * Returns the native library load failure message, or an empty string when
+     * the library loaded.
+     */
     public static String loadFailureMessage() {
         return NativeTopologyNatives.loadFailureMessage();
     }
 
+    /**
+     * Returns the process-wide native topology snapshot.
+     */
     public static NativeTopologySnapshot snapshot() {
         return SnapshotHolder.SNAPSHOT;
     }
 
+    /**
+     * Returns capabilities reported by the loaded native library.
+     *
+     * @throws NativeTopologyUnavailableException if the library is unavailable
+     */
     public static NativeCapabilities capabilities() {
         NativeTopologyNatives.ensureLoaded();
         return NativeCapabilities.fromBits(NativeTopologyNatives.nativeCapabilities0());
     }
 
+    /**
+     * Returns the maximum CPU id scan bound reported by the native library.
+     */
     public static int maxCpuCount() {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.maxCpuCount0(), "max CPU count");
     }
 
+    /**
+     * Returns the configured CPU count for the process host.
+     */
     public static int configuredCpuCount() {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.configuredCpuCount0(), "configured CPU count");
     }
 
+    /**
+     * Returns the online CPU count for the process host.
+     */
     public static int onlineCpuCount() {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.onlineCpuCount0(), "online CPU count");
     }
 
+    /**
+     * Returns the CPU currently running this thread.
+     */
     public static int currentCpu() {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.currentCpu0(), "current CPU");
     }
 
+    /**
+     * Returns the NUMA node currently running this thread.
+     */
     public static int currentNumaNode() {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.currentNumaNode0(), "current NUMA node");
     }
 
+    /**
+     * Returns the NUMA node associated with a CPU id.
+     */
     public static int numaNodeOfCpu(final int cpu) {
         NativeTopologyNatives.ensureLoaded();
         return requireNonNegative(NativeTopologyNatives.numaNodeOfCpu0(cpu), "NUMA node of CPU " + cpu);
     }
 
+    /**
+     * Returns whether the process affinity mask allows the supplied CPU id.
+     */
     public static boolean isCpuAllowed(final int cpu) {
         NativeTopologyNatives.ensureLoaded();
         if (cpu < 0) {
@@ -70,11 +106,19 @@ public final class NativeTopology {
         throw failure("query allowed CPU " + cpu, rc);
     }
 
+    /**
+     * Pins the current Java thread to a CPU id.
+     */
     public static void pinCurrentThreadToCpu(final int cpu) {
         NativeTopologyNatives.ensureLoaded();
         requireZero(NativeTopologyNatives.pinCurrentThreadToCpu0(cpu), "pin current thread to CPU " + cpu);
     }
 
+    /**
+     * Pins the current Java thread to any CPU in a NUMA node.
+     *
+     * @return selected CPU id
+     */
     public static int pinCurrentThreadToNumaNode(final int numaNode) {
         NativeTopologyNatives.ensureLoaded();
         if (numaNode < 0) {
@@ -94,10 +138,19 @@ public final class NativeTopology {
         }
     }
 
+    /**
+     * Pins the current Java thread to a CPU set using the native CPU scan bound.
+     */
     public static void pinCurrentThreadToCpuSet(final BitSet cpus) {
         pinCurrentThreadToCpuSet(cpus, maxCpuCount());
     }
 
+    /**
+     * Pins the current Java thread to a CPU set.
+     *
+     * @param cpus non-empty CPU set
+     * @param maxCpu exclusive upper bound accepted by the native mask
+     */
     public static void pinCurrentThreadToCpuSet(final BitSet cpus, final int maxCpu) {
         Objects.requireNonNull(cpus, "cpus");
         NativeTopologyNatives.ensureLoaded();
@@ -142,6 +195,10 @@ public final class NativeTopology {
         ), "pin current thread to CPU set " + cpus);
     }
 
+    /**
+     * Requests local NUMA allocation policy for future allocations on the
+     * current thread.
+     */
     public static void setLocalAllocationPolicy() {
         NativeTopologyNatives.ensureLoaded();
         requireZero(NativeTopologyNatives.setLocalAllocationPolicy0(), "set local NUMA allocation policy");

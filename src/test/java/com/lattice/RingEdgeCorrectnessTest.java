@@ -49,6 +49,14 @@ class RingEdgeCorrectnessTest {
     }
 
     @Test
+    void spscConstructorRejectsInvalidCapacity() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new SpscRingEdge("a", "b", 0, edgeMetrics(), graphMetrics()));
+        assertThrows(IllegalArgumentException.class,
+            () -> new SpscRingEdge("a", "b", 3, edgeMetrics(), graphMetrics()));
+    }
+
+    @Test
     void mpscOnHeapSlotsAcceptConcurrentProducersWithSingleConsumer() throws Exception {
         assertMpscAcceptsConcurrentProducers(MemoryMode.onHeapSlots());
     }

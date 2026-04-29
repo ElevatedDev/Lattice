@@ -1,5 +1,6 @@
 .gradle
 .gradle-user/
+.codex
 build/
 results/
 jcstress-results-*.bin.gz

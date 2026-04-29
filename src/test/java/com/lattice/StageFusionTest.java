@@ -2,6 +2,7 @@ package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.PlacementStatus;
 import com.lattice.placement.PinPolicy;
@@ -194,6 +195,119 @@ class StageFusionTest {
     }
 
     @Test
+    void customExceptionHandlerDisablesInlineSourceFusion() throws Exception {
+        final String previousFusion = System.getProperty("lattice.fusion.enabled");
+        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
+        System.setProperty("lattice.fusion.enabled", "true");
+        System.setProperty("lattice.fusion.inlineSource", "true");
+        try {
+            final List<String> failedStages = new CopyOnWriteArrayList<>();
+            final StaticGraph graph = StaticGraph.builder("inline-custom-handler")
+                .exceptionHandler((graphName, stageName, failure, context) -> {
+                    failedStages.add(stageName);
+                    return StageExceptionAction.POISON_STAGE;
+                })
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("explode", Integer.class, Integer.class, (value, out, ctx) -> {
+                    throw new IllegalStateException("boom");
+                }, StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+                .edge("ingress", "explode", EdgeSpec.spscRing(8))
+                .edge("explode", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            ingress.emit(1);
+            ingress.close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.STOPPED, graph.state());
+            assertEquals(List.of("explode"), failedStages);
+            assertEquals(1, graph.metrics().stage("explode").stageExceptions());
+            assertTrue(graph.failure().isEmpty());
+        } finally {
+            restoreFusionProperty(previousFusion);
+            restoreInlineFusionProperty(previousInline);
+        }
+    }
+
+    @Test
+    void benignFusedChainFailureIsAttributedToDownstreamStage() throws Exception {
+        final String previous = System.getProperty("lattice.fusion.enabled");
+        System.setProperty("lattice.fusion.enabled", "true");
+        try {
+            final List<String> failedStages = new CopyOnWriteArrayList<>();
+            final StaticGraph graph = StaticGraph.builder("fusion-downstream-failure")
+                .exceptionHandler((graphName, stageName, failure, context) -> {
+                    failedStages.add(stageName);
+                    return StageExceptionAction.FAIL_GRAPH;
+                })
+                .source("ingress", Integer.class)
+                .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 1),
+                    StageSpec.singleThreaded())
+                .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .stage("enrich", Integer.class, Integer.class, (value, out, ctx) -> {
+                    throw new IllegalStateException("bad enrich");
+                }, StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+                .edge("ingress", "normalize", EdgeSpec.mpscRing(32))
+                .edge("normalize", "validate", EdgeSpec.spscRing(32))
+                .edge("validate", "enrich", EdgeSpec.spscRing(32))
+                .edge("enrich", "egress", EdgeSpec.spscRing(32))
+                .build();
+
+            graph.start();
+            graph.emitter("ingress", Integer.class).emit(1);
+            graph.emitter("ingress", Integer.class).close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.FAILED, graph.state());
+            assertEquals(List.of("enrich"), failedStages);
+            assertEquals(0, graph.metrics().stage("validate").stageExceptions());
+            assertEquals(1, graph.metrics().stage("enrich").stageExceptions());
+        } finally {
+            restoreFusionProperty(previous);
+        }
+    }
+
+    @Test
+    void benignFusedSinkFailureIsAttributedToSink() throws Exception {
+        final String previous = System.getProperty("lattice.fusion.enabled");
+        System.setProperty("lattice.fusion.enabled", "true");
+        try {
+            final List<String> failedStages = new CopyOnWriteArrayList<>();
+            final StaticGraph graph = StaticGraph.builder("fusion-sink-failure")
+                .exceptionHandler((graphName, stageName, failure, context) -> {
+                    failedStages.add(stageName);
+                    return StageExceptionAction.FAIL_GRAPH;
+                })
+                .source("ingress", Integer.class)
+                .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    throw new IllegalStateException("sink failed");
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "validate", EdgeSpec.mpscRing(32))
+                .edge("validate", "egress", EdgeSpec.spscRing(32))
+                .build();
+
+            graph.start();
+            graph.emitter("ingress", Integer.class).emit(1);
+            graph.emitter("ingress", Integer.class).close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.FAILED, graph.state());
+            assertEquals(List.of("egress"), failedStages);
+            assertEquals(0, graph.metrics().stage("validate").stageExceptions());
+            assertEquals(1, graph.metrics().stage("egress").stageExceptions());
+        } finally {
+            restoreFusionProperty(previous);
+        }
+    }
+
+    @Test
     void fusedObjectTypedChainRetainsSlabHandleUntilOwnerStageReturns() throws Exception {
         final String previous = System.getProperty("lattice.fusion.enabled");
         System.setProperty("lattice.fusion.enabled", "true");
@@ -291,6 +405,14 @@ class StageFusionTest {
             System.clearProperty("lattice.fusion.enabled");
         } else {
             System.setProperty("lattice.fusion.enabled", previous);
+        }
+    }
+
+    private static void restoreInlineFusionProperty(final String previous) {
+        if (previous == null) {
+            System.clearProperty("lattice.fusion.inlineSource");
+        } else {
+            System.setProperty("lattice.fusion.inlineSource", previous);
         }
     }
 }

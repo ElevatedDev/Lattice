@@ -10,7 +10,7 @@
 | 24 | Best-effort | Same. |
 | 25 (LTS) | Planned for 1.1 | Validation pending. |
 | 26 EA | Tracking | No known blockers. |
-| ≤ 20 | **Unsupported** | Lattice uses Java 21 language and APIs. |
+| <= 20 | **Unsupported** | Lattice uses Java 21 language and APIs. |
 
 The published jar contains:
 
@@ -37,15 +37,15 @@ classpath.
 
 ## HdrHistogram
 
-HdrHistogram 2.2.2 is a runtime dependency, used for optional stage latency
-histograms. The hot path does not call into HdrHistogram unless histograms
-are explicitly enabled.
+HdrHistogram 2.2.2 is an API dependency because public metrics accessors return
+defensive `Histogram` copies. The hot path does not call into HdrHistogram
+unless histograms are explicitly enabled.
 
 ## Versioning Policy
 
 - SemVer 2.0.0.
 - Stable contracts (the 17 types listed in repository
-  [CONTRIBUTING.md](https://github.com/ElevatedDev/Lattice/blob/main/CONTRIBUTING.md)
+  [CONTRIBUTING.md](../CONTRIBUTING.md)
   and the stable packages listed in [API Reference](api.md)) cannot break in
   MINOR or PATCH releases after 1.0.0.
 - Experimental surfaces listed in [API Reference](api.md) may break in MINOR.

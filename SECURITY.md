@@ -16,9 +16,14 @@ pre-release software.
 Do not publish suspected vulnerabilities in public issues, pull requests, or
 discussion threads before maintainers have had a chance to respond privately.
 
-Use GitHub private vulnerability reporting if it is enabled for the repository.
-If it is not enabled, contact the maintainers privately through the existing
-project channel and include "security" in the subject or opening line.
+Use GitHub private vulnerability reporting for this repository:
+
+<https://github.com/ElevatedDev/Lattice/security/advisories/new>
+
+Maintainers should enable private vulnerability reporting before making the
+repository public. If GitHub reports are temporarily unavailable, do not post
+the details publicly; open a minimal issue asking for a private maintainer
+contact without including exploit details.
 
 Useful report details include:
 

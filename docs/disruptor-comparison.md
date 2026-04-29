@@ -4,7 +4,7 @@ Lattice and [LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) both
 target low-latency in-process messaging on the JVM, but they make very
 different design choices. This page is the methodology and honest-numbers
 companion to the repository
-[Performance Snapshot](https://github.com/ElevatedDev/Lattice/blob/main/README.md#performance-snapshot).
+[Performance Snapshot](../README.md#performance-snapshot).
 
 ## Conceptual Differences
 
@@ -21,54 +21,92 @@ companion to the repository
 
 ## Methodology
 
-The checked-in snapshots under [`benchmark-results/`](benchmark-results/)
-follow these rules:
+The checked-in benchmark notes under [`benchmark-results/`](benchmark-results/)
+and [`benchmarks/baseline/`](../benchmarks/baseline/) follow these rules:
 
-- JMH 1.37 (via the `me.champeau.jmh` Gradle plugin 0.7.3).
-- JDK 21.0.10, Temurin.
+- JMH 1.36 (via the `me.champeau.jmh` Gradle plugin 0.7.3).
+- JDK 21.0.10.
 - JVM args (also set in `build.gradle`): `-Xms2g -Xmx2g -XX:+AlwaysPreTouch
-  -XX:+UseParallelGC` plus the four `-Dlattice.metrics.*=false` flags.
+  -XX:+UseParallelGC`, inline source fusion enabled, hot metrics disabled,
+  fused logical edge metrics disabled, and inline-depth tracking disabled for
+  the benchmark hot path.
 - Disruptor 4.0.0 on the JMH classpath only (never bundled in the published
   jar).
-- Single forked JVM per benchmark.
-- "Smoke" runs use 1 iteration × 3 s for a fast end-to-end signal; "warmed"
-  runs use 3 × 10 s warmup + 5 × 10 s measurement.
-- Numbers are reported in `ops/s` from the original JMH JSON, never
-  hand-massaged.
+- The longer head-to-head matrix uses 3 forks, 5 x 5 s warmup, and 8 x 5 s
+  measurement. Isolated stage groups use 2 forks, 3 x 3 s warmup, and 5 x 3 s
+  measurement. The headline table deduplicates isolated/full-matrix repeats and
+  picks the best checked-in point estimate from each side for each workload, so
+  the Disruptor column is the strongest logged Disruptor result available.
+- Broader lattice basics use 1 fork, 3 x 5 s warmup, and 5 x 5 s measurement.
+- Numbers are reported in `ops/s` from the original JMH output, never
+  hand-massaged. Raw JSON artifacts and stdout logs are checked in next to the
+  summary so the published ratios can be audited.
+
+## Current Publication Baseline
+
+The 2026-04-29 baseline records both publish-throughput and completion-gated
+comparisons. The table uses the best checked-in Lattice point estimate and the
+best checked-in Disruptor point estimate for each published workload, with
+isolated and full-matrix repeats collapsed into one row.
+
+![Three-stage publish throughput](assets/perf-pipeline.svg)
+
+![Lattice vs Disruptor ratios](assets/disruptor-comparison.svg)
+
+| Workload | Lattice | Disruptor | Ratio |
+| --- | ---: | ---: | ---: |
+| Three-stage physical publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
+| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
+| Manually fused reference payload (1 logical stage, 3 increments inline) | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
+| Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
+
+Disruptor's reference-payload benchmark collapses three increments into a
+single `EventHandler` call, so the published reference row now uses the
+equal-call-site Lattice shape: one Lattice stage doing the three increments
+inline. That row reaches 92.1M ops/s and is 2.09x the strongest logged
+Disruptor manually fused reference row. The fused copy row compares the best
+Lattice inline-fused result against the best logged Disruptor copy result and
+still measures 1.35x. The physical three-stage point estimate is also above
+parity at 1.05x.
+
+The completed optimal path is the strictest row for end-to-end operation
+completion: every benchmark operation waits until the sink/handler publishes
+completion for the same sequence. The publish-throughput rows remain useful
+for comparing enqueue/publish hot paths, but they should not be used as a
+completion-rate claim.
 
 ## What The Baseline Set Measures
 
-- **SPSC preallocated (apples-to-apples)** uses the same payload class,
-  same producer, same consumer, with Lattice's preallocated source on one
-  side and Disruptor's pre-allocated event slot on the other.
 - **3-stage pipeline (physical)** keeps Lattice's three logical stages as
-  three physical workers; Disruptor uses three sequenced handlers on one ring.
-  This is the apples-to-apples shape.
-- **3-stage pipeline (fused)** lets Lattice's compiler fuse the chain;
-  Disruptor's column shows the *manually-fused* equivalent (one handler
-  doing all three steps). This row exists to be transparent: Disruptor wins
-  this micro because manual fusion on a single ring is hard to beat.
-- **SPSC source→sink (bare)** is the bare-ring primitive shape; Disruptor's
-  ring is famously well-tuned for this exact workload.
-- **MPSC reference** is a primitive multi-producer handoff; Disruptor's
-  multi-producer ring remains stronger on this primitive shape.
+  physical workers; Disruptor uses three sequenced handlers on one ring.
+- **3-stage pipeline (fused)** lets Lattice's compiler inline-fuse the chain;
+  the copy-payload row shows a manually-fused Disruptor handler writing event
+  slot fields, and the reference row uses `latticeManuallyFusedReference` to
+  mirror Disruptor's one-call-site shape.
+- **Completed optimal path** compares Lattice inline source fusion with a
+  Disruptor busy-spin/manual-fused handler and waits for completion on both
+  sides.
 
-## Honest Framing
+## Scope
 
-Lattice is competitive with Disruptor on SPSC preallocated payloads
-(≈1.03× in the baseline) and the SPSC edge-pair primitive
-(34.4 M ops/s warmed). Disruptor remains stronger on bare-ring micros and
-manually-fused pipelines. **Lattice's value is the graph contract** —
+The checked-in notes show Lattice strongest when the benchmark uses the graph
+contract: single-producer source specialization and eligible linear fusion.
+The manually fused reference row gives Lattice the same one-call-site shape as
+Disruptor and measures a clear Lattice win. The physical three-stage row is
+above parity by point estimate, with overlapping error bars. **Lattice's value
+is the graph contract**:
 preallocated payload paths, semantic joins, deterministic backpressure, and
-fusion that preserves the logical graph — not "faster than Disruptor" on
-every shape.
+fusion that preserves the logical graph.
 
-If your workload is "one ring, many handlers, manual fan-out", use
-Disruptor. If your workload is "a fixed DAG with explicit joins, partitions,
-and backpressure", Lattice is what that DAG looks like.
+If your workload is "one ring, one hand-fused handler doing the work of many
+stages", include the one-stage Lattice row before drawing conclusions. If your
+workload is "a fixed DAG with explicit joins, partitions, and backpressure",
+Lattice is what that DAG looks like.
 
-Generated working copies may live under `benchmarks/baseline/` locally. Public
-documentation should cite the versioned snapshot under `docs/benchmark-results/`.
+Generated working copies may live under `results/` locally. Public
+documentation should cite tracked notes under `benchmarks/baseline/`, the
+versioned summary under `docs/benchmark-results/`, or raw artifacts attached to
+the matching GitHub Release.
 
-See also [Linux Validation Notes](linux-validation.md) for how to produce
-publication-grade benchmarks.
+See also [Linux Validation Notes](linux-validation.md) for how to reproduce
+the methodology on another Linux host.

@@ -1,0 +1,102 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused
+# Parameters: (waitProfile = YIELDING)
+
+# Run progress: 0.00% complete, ETA 00:01:36
+# Fork: 1 of 2
+# Warmup Iteration   1: 40000194.398 ops/s
+# Warmup Iteration   2: 40921003.536 ops/s
+# Warmup Iteration   3: 38830151.150 ops/s
+Iteration   1: 14933966.089 ops/s
+Iteration   2: 11792371.385 ops/s
+Iteration   3: 26567131.831 ops/s
+Iteration   4: 44550036.711 ops/s
+Iteration   5: 41095834.247 ops/s
+
+# Run progress: 25.00% complete, ETA 00:01:16
+# Fork: 2 of 2
+# Warmup Iteration   1: 45747274.142 ops/s
+# Warmup Iteration   2: 48213174.132 ops/s
+# Warmup Iteration   3: 45018447.956 ops/s
+Iteration   1: 41215895.224 ops/s
+Iteration   2: 47657264.125 ops/s
+Iteration   3: 47464685.648 ops/s
+Iteration   4: 45411803.345 ops/s
+Iteration   5: 31317002.641 ops/s
+
+
+Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused":
+  35200599.125 ±(99.9%) 20261740.930 ops/s [Average]
+  (min, avg, max) = (11792371.385, 35200599.125, 47657264.125), stdev = 13401887.098
+  CI (99.9%): [14938858.195, 55462340.055] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused
+
+# Run progress: 50.00% complete, ETA 00:00:50
+# Fork: 1 of 2
+# Warmup Iteration   1: 57527156.682 ops/s
+# Warmup Iteration   2: 58892757.723 ops/s
+# Warmup Iteration   3: 61600195.170 ops/s
+Iteration   1: 57136097.451 ops/s
+Iteration   2: 61132045.769 ops/s
+Iteration   3: 61053589.167 ops/s
+Iteration   4: 60856850.314 ops/s
+Iteration   5: 59343918.114 ops/s
+
+# Run progress: 75.00% complete, ETA 00:00:25
+# Fork: 2 of 2
+# Warmup Iteration   1: 62349574.612 ops/s
+# Warmup Iteration   2: 63926629.716 ops/s
+# Warmup Iteration   3: 57482098.425 ops/s
+Iteration   1: 63217759.486 ops/s
+Iteration   2: 64853842.790 ops/s
+Iteration   3: 65044272.077 ops/s
+Iteration   4: 62139510.001 ops/s
+Iteration   5: 63610578.020 ops/s
+
+
+Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused":
+  61838846.319 ±(99.9%) 3734583.957 ops/s [Average]
+  (min, avg, max) = (57136097.451, 61838846.319, 65044272.077), stdev = 2470196.057
+  CI (99.9%): [58104262.362, 65573430.276] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:01:42
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                                                  (waitProfile)   Mode  Cnt         Score          Error  Units
+ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused       YIELDING  thrpt   10  35200599.125 ± 20261740.930  ops/s
+ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused                      N/A  thrpt   10  61838846.319 ±  3734583.957  ops/s
+
+Benchmark result is saved to benchmarks/baseline/three-stage-isolated-fused-copy.json

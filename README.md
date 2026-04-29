@@ -98,9 +98,35 @@ Lattice is usually the wrong tool when topology must be created, removed, or
 rebalanced dynamically at runtime, or when work must be durable, replayable,
 distributed, or brokered between processes.
 
+## How It Works
+
+Lattice compiles a declared graph into an immutable runtime plan before any
+worker starts. The compiler validates node names, edge type compatibility,
+source producer contracts, routing shape, join stamps, placement requests, and
+preallocation/fusion eligibility. At runtime the graph executes that fixed plan
+instead of rediscovering topology or dependency structure on every message.
+
+The hot path is intentionally narrow:
+
+- Sources publish into bounded SPSC or MPSC edges, or run an eligible fused
+  chain directly on the source thread when `SourceMode.SINGLE_PRODUCER` proves
+  ownership.
+- Stages are single-owner callbacks. A stage sees one message or one batch at a
+  time and pushes through typed `Output` handles.
+- Linear SPSC chains can be fused so logical stages remain visible in the plan
+  while physical handoffs disappear.
+- Preallocated sources claim mutable payload instances from a checked pool;
+  the compiler rejects shapes where reuse would be unsafe.
+- Routing nodes (`dispatch`, `broadcast`, `partition`) and joins are graph
+  primitives rather than ad hoc queue consumers.
+- Metrics and placement diagnostics are graph/stage/edge objects, with
+  low-observability benchmark flags available for clean throughput evidence.
+
 ## Runtime Guarantees
 
 Lattice keeps its guarantees local and explicit:
+
+![Runtime guarantee map](docs/assets/guarantees-map.svg)
 
 - Static topology: graph shape is declared before startup and cannot be mutated
   while running.
@@ -121,12 +147,40 @@ See [Ordering Guarantees](docs/ordering-guarantees.md),
 
 ## Performance Snapshot
 
-The current checked-in benchmark material is orientation evidence, not a
-publication-grade Linux or NUMA performance claim. Start with the release
-snapshot index, then cite the underlying host, JVM flags, benchmark class, and
-JSON artifact for any number you quote.
+The checked-in benchmark material is the current public baseline. Start with
+the release snapshot index, then cite the underlying host, JVM flags, benchmark
+class, and JSON artifact for any number you quote. The refreshed baseline
+includes both publish-throughput rows and a completion-gated
+`OptimalPathBenchmark` so async enqueue rates are not confused with
+completed-operation throughput.
+
+The headline comparison is scoped deliberately:
+
+- The table deduplicates isolated and full-matrix repeats, then uses the best
+  checked-in Lattice point estimate and the best checked-in Disruptor point
+  estimate for each published workload.
+- The completed optimal path waits for sink/handler completion on both sides.
+- The Disruptor manually fused reference row collapses three increments into
+  one handler call; the matching Lattice row uses the best equal-call-site
+  `latticeManuallyFusedReference` result: 92.1M ops/s.
+- The physical, fused-copy, manual-reference, and completed-path rows all show
+  Lattice ahead of the strongest logged Disruptor result for the same workload.
+
+![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg)
+
+![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
+
+![End-to-end latency percentiles](docs/assets/latency-percentiles.svg)
+
+| Workload | Lattice | Disruptor | Ratio |
+| --- | ---: | ---: | ---: |
+| Three-stage physical publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
+| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
+| Manually fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
+| Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
 
 - [Benchmark Results](docs/benchmark-results/README.md)
+- [Benchmark Baseline](BENCHMARK_BASELINE.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)
@@ -194,7 +248,7 @@ The `/docs` directory is ready to use as the GitHub Pages source. Start at
 | Graph model | [Graph DSL](docs/graph-dsl.md), [Architecture](docs/architecture.md), [Source Specialization and Fusion](docs/source-specialization-and-fusion.md) |
 | Runtime contract | [Edge Semantics](docs/edge-semantics.md), [Ordering Guarantees](docs/ordering-guarantees.md), [Backpressure](docs/backpressure.md), [Failure Modes](docs/failure-modes.md) |
 | Operations | [Observability](docs/observability.md), [Operations Runbook](docs/operations-runbook.md), [Compatibility Matrix](docs/compatibility-matrix.md) |
-| Release | [API Reference](docs/api.md), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
+| Release | [API Reference](docs/api.md), [Generated Javadocs](docs/api/latest/index.html), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
 
 ## Project Policies
 

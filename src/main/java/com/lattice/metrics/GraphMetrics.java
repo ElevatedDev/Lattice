@@ -16,6 +16,8 @@ import java.util.concurrent.atomic.LongAdder;
  * ({@link #overloaded()}, {@link #startTime()}, {@link #stopTime()}). The stage
  * and edge maps are immutable views of the graph topology; the metric objects
  * inside those maps continue to update while the graph runs.
+ * Runtime update methods such as {@code recordEmit()} are exposed for the
+ * runtime implementation and should not be called by applications.
  */
 public final class GraphMetrics {
     private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
@@ -80,42 +82,72 @@ public final class GraphMetrics {
         return failedOffers.sum();
     }
 
+    /**
+     * Returns how many offers had to wait for capacity.
+     */
     public long blockedOffers() {
         return blockedOffers.sum();
     }
 
+    /**
+     * Returns total nanoseconds spent under producer backpressure.
+     */
     public long backpressureNanos() {
         return backpressureNanos.sum();
     }
 
+    /**
+     * Returns total stage exceptions observed by the graph.
+     */
     public long stageExceptions() {
         return stageExceptions.sum();
     }
 
+    /**
+     * Returns whether any overload policy currently marks the graph overloaded.
+     */
     public boolean overloaded() {
         return overloaded.get();
     }
 
+    /**
+     * Returns how often graph overload was activated.
+     */
     public long overloadActivations() {
         return overloadActivations.sum();
     }
 
+    /**
+     * Returns messages dropped by lossy policies.
+     */
     public long droppedMessages() {
         return droppedMessages.sum();
     }
 
+    /**
+     * Returns messages redirected by overflow policy.
+     */
     public long redirectedMessages() {
         return redirectedMessages.sum();
     }
 
+    /**
+     * Returns offers coalesced by coalescing overflow policy.
+     */
     public long coalescedMessages() {
         return coalescedMessages.sum();
     }
 
+    /**
+     * Returns graph start time, or {@code null} before start.
+     */
     public Instant startTime() {
         return startTime.get();
     }
 
+    /**
+     * Returns graph stop time, or {@code null} until stopped.
+     */
     public Instant stopTime() {
         return stopTime.get();
     }

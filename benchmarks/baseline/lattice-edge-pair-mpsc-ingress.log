@@ -1,0 +1,166 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 2 threads (1 group; 1x "mpscOffer", 1x "mpscPoll" in each group), will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EdgePairBenchmark.mpscPair
+
+# Run progress: 0.00% complete, ETA 00:02:00
+# Fork: 1 of 1
+# Warmup Iteration   1: 70732637.150 ops/s
+# Warmup Iteration   2: 70332014.244 ops/s
+# Warmup Iteration   3: 73728548.642 ops/s
+Iteration   1: 70265904.200 ops/s
+                 mpscOffer: 28096981.781 ops/s
+                 mpscPoll:  42168922.419 ops/s
+
+Iteration   2: 75782213.379 ops/s
+                 mpscOffer: 28325379.773 ops/s
+                 mpscPoll:  47456833.606 ops/s
+
+Iteration   3: 76463300.999 ops/s
+                 mpscOffer: 26571906.095 ops/s
+                 mpscPoll:  49891394.904 ops/s
+
+Iteration   4: 76355694.997 ops/s
+                 mpscOffer: 29079204.062 ops/s
+                 mpscPoll:  47276490.935 ops/s
+
+Iteration   5: 71710792.790 ops/s
+                 mpscOffer: 28458137.443 ops/s
+                 mpscPoll:  43252655.347 ops/s
+
+
+
+Result "com.lattice.benchmark.EdgePairBenchmark.mpscPair":
+  74115581.273 ±(99.9%) 11211687.440 ops/s [Average]
+  (min, avg, max) = (70265904.200, 74115581.273, 76463300.999), stdev = 2911639.624
+  CI (99.9%): [62903893.833, 85327268.714] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscOffer":
+  28106321.831 ±(99.9%) 3587913.459 ops/s [Average]
+  (min, avg, max) = (26571906.095, 28106321.831, 29079204.062), stdev = 931769.731
+  CI (99.9%): [24518408.372, 31694235.290] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscPoll":
+  46009259.442 ±(99.9%) 12346010.105 ops/s [Average]
+  (min, avg, max) = (42168922.419, 46009259.442, 49891394.904), stdev = 3206219.618
+  CI (99.9%): [33663249.337, 58355269.548] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 2 threads (1 group; 1x "spscOffer", 1x "spscPoll" in each group), will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EdgePairBenchmark.spscPair
+
+# Run progress: 33.33% complete, ETA 00:01:21
+# Fork: 1 of 1
+# Warmup Iteration   1: 99260237.753 ops/s
+# Warmup Iteration   2: 105422995.943 ops/s
+# Warmup Iteration   3: 96277179.220 ops/s
+Iteration   1: 98907415.142 ops/s
+                 spscOffer: 47716860.454 ops/s
+                 spscPoll:  51190554.688 ops/s
+
+Iteration   2: 100505268.660 ops/s
+                 spscOffer: 47360990.758 ops/s
+                 spscPoll:  53144277.902 ops/s
+
+Iteration   3: 98473163.604 ops/s
+                 spscOffer: 48203137.783 ops/s
+                 spscPoll:  50270025.821 ops/s
+
+Iteration   4: 99740437.948 ops/s
+                 spscOffer: 46280378.298 ops/s
+                 spscPoll:  53460059.650 ops/s
+
+Iteration   5: 107844614.208 ops/s
+                 spscOffer: 52660695.772 ops/s
+                 spscPoll:  55183918.436 ops/s
+
+
+
+Result "com.lattice.benchmark.EdgePairBenchmark.spscPair":
+  101094179.912 ±(99.9%) 14838658.052 ops/s [Average]
+  (min, avg, max) = (98473163.604, 101094179.912, 107844614.208), stdev = 3853552.374
+  CI (99.9%): [86255521.861, 115932837.964] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.EdgePairBenchmark.spscPair:spscOffer":
+  48444412.613 ±(99.9%) 9475525.749 ops/s [Average]
+  (min, avg, max) = (46280378.298, 48444412.613, 52660695.772), stdev = 2460763.946
+  CI (99.9%): [38968886.864, 57919938.362] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.EdgePairBenchmark.spscPair:spscPoll":
+  52649767.299 ±(99.9%) 7485395.123 ops/s [Average]
+  (min, avg, max) = (50270025.821, 52649767.299, 55183918.436), stdev = 1943933.343
+  CI (99.9%): [45164372.176, 60135162.422] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false -Dlattice.benchmark.latency=true
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 5 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.MpscIngressBenchmark.mpscIngress
+
+# Run progress: 66.67% complete, ETA 00:00:40
+# Fork: 1 of 1
+# Warmup Iteration   1: 9189772.446 ops/s
+# Warmup Iteration   2: 8360305.547 ops/s
+# Warmup Iteration   3: 10186428.872 ops/s
+Iteration   1: 15498126.541 ops/s
+Iteration   2: 14042631.720 ops/s
+Iteration   3: 14157032.559 ops/s
+Iteration   4: 14904842.104 ops/s
+Iteration   5: mpscIngress enqueue latency nanos p50=200 p99=1298 p99.9=2699 p99.99=48543 max=32325631 samples=496054094
+mpscIngress endToEnd latency nanos p50=16815 p99=1558527 p99.9=5804031 p99.99=11976703 max=43057151 samples=496054094
+12845977.238 ops/s
+
+
+Result "com.lattice.benchmark.MpscIngressBenchmark.mpscIngress":
+  14289722.033 ±(99.9%) 3851449.259 ops/s [Average]
+  (min, avg, max) = (12845977.238, 14289722.033, 15498126.541), stdev = 1000209.142
+  CI (99.9%): [10438272.774, 18141171.292] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:02:03
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                              Mode  Cnt          Score          Error  Units
+EdgePairBenchmark.mpscPair            thrpt    5   74115581.273 ± 11211687.440  ops/s
+EdgePairBenchmark.mpscPair:mpscOffer  thrpt    5   28106321.831 ±  3587913.459  ops/s
+EdgePairBenchmark.mpscPair:mpscPoll   thrpt    5   46009259.442 ± 12346010.105  ops/s
+EdgePairBenchmark.spscPair            thrpt    5  101094179.912 ± 14838658.052  ops/s
+EdgePairBenchmark.spscPair:spscOffer  thrpt    5   48444412.613 ±  9475525.749  ops/s
+EdgePairBenchmark.spscPair:spscPoll   thrpt    5   52649767.299 ±  7485395.123  ops/s
+MpscIngressBenchmark.mpscIngress      thrpt    5   14289722.033 ±  3851449.259  ops/s
+
+Benchmark result is saved to benchmarks/baseline/lattice-edge-pair-mpsc-ingress.json

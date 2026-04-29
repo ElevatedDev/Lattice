@@ -3,6 +3,7 @@ package com.lattice;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.StageMetrics;
@@ -133,8 +134,8 @@ class RuntimeRegressionTest {
     @Test
     void anyOfDuplicateFailRejectsLaterSourceForAlreadyEmittedStamp() throws Exception {
         final StaticGraph graph = StaticGraph.builder("any-duplicate-fail")
-            .stampedSource("left", String.class)
-            .stampedSource("right", String.class)
+            .source("left", Stamped.class)
+            .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource())
                 .duplicates(JoinSpec.DuplicatePolicy.FAIL), StageSpec.singleThreaded())
             .sink("egress", String.class, ignored -> { }, StageSpec.singleThreaded())
@@ -144,10 +145,12 @@ class RuntimeRegressionTest {
             .build();
 
         graph.start();
-        graph.emitter("left", String.class).emit("l0");
-        graph.emitter("right", String.class).emit("r0");
-        graph.emitter("left", String.class).close();
-        graph.emitter("right", String.class).close();
+        final Emitter<Stamped> left = graph.emitter("left", Stamped.class);
+        final Emitter<Stamped> right = graph.emitter("right", Stamped.class);
+        left.emit(Stamped.of(7L, "l0"));
+        right.emit(Stamped.of(7L, "r0"));
+        left.close();
+        right.close();
 
         assertTrue(graph.awaitTermination(Duration.ofSeconds(1)));
         assertEquals(GraphState.FAILED, graph.state());
@@ -218,6 +221,89 @@ class RuntimeRegressionTest {
     }
 
     @Test
+    void quiesceDoesNotReturnWhileInlineSourceFusionIsProcessingItem() throws Exception {
+        final String previousFusion = System.getProperty("lattice.fusion.enabled");
+        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
+        System.setProperty("lattice.fusion.enabled", "true");
+        System.setProperty("lattice.fusion.inlineSource", "true");
+        try {
+            final CountDownLatch sinkEntered = new CountDownLatch(1);
+            final CountDownLatch releaseSink = new CountDownLatch(1);
+            final StaticGraph graph = StaticGraph.builder("quiesce-inline-active")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    sinkEntered.countDown();
+                    await(releaseSink);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "identity", EdgeSpec.spscRing(8))
+                .edge("identity", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            final CompletableFuture<Void> emitting = CompletableFuture.runAsync(() -> ingress.emit(1));
+            assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+
+            final CompletableFuture<Boolean> quiesced = CompletableFuture.supplyAsync(
+                () -> graph.quiesce(Duration.ofSeconds(5)));
+
+            Thread.sleep(100);
+            assertFalse(quiesced.isDone());
+            releaseSink.countDown();
+            assertTrue(quiesced.get(5, TimeUnit.SECONDS));
+            emitting.get(5, TimeUnit.SECONDS);
+            ingress.close();
+            graph.stop(Duration.ofSeconds(5));
+        } finally {
+            restoreFusionProperty(previousFusion);
+            restoreInlineFusionProperty(previousInline);
+        }
+    }
+
+    @Test
+    void stopWaitsForInlineSourceFusionInFlightWork() throws Exception {
+        final String previousFusion = System.getProperty("lattice.fusion.enabled");
+        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
+        System.setProperty("lattice.fusion.enabled", "true");
+        System.setProperty("lattice.fusion.inlineSource", "true");
+        try {
+            final CountDownLatch sinkEntered = new CountDownLatch(1);
+            final CountDownLatch releaseSink = new CountDownLatch(1);
+            final StaticGraph graph = StaticGraph.builder("stop-inline-active")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    sinkEntered.countDown();
+                    await(releaseSink);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "identity", EdgeSpec.spscRing(8))
+                .edge("identity", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            final CompletableFuture<Void> emitting = CompletableFuture.runAsync(() -> ingress.emit(1));
+            assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+
+            final CompletableFuture<Boolean> stopped = CompletableFuture.supplyAsync(
+                () -> graph.stop(Duration.ofSeconds(5)));
+
+            Thread.sleep(100);
+            assertFalse(stopped.isDone());
+            releaseSink.countDown();
+            assertTrue(stopped.get(5, TimeUnit.SECONDS));
+            emitting.get(5, TimeUnit.SECONDS);
+            assertEquals(GraphState.STOPPED, graph.state());
+        } finally {
+            restoreFusionProperty(previousFusion);
+            restoreInlineFusionProperty(previousInline);
+        }
+    }
+
+    @Test
     void abortWhileOutputIsBackpressuredDoesNotFailGraph() throws Exception {
         final String previousFusion = System.getProperty("lattice.fusion.enabled");
         System.setProperty("lattice.fusion.enabled", "false");
@@ -272,8 +358,8 @@ class RuntimeRegressionTest {
         throws Exception {
         final List<String> joined = Collections.synchronizedList(new ArrayList<>());
         final StaticGraph graph = StaticGraph.builder("any-duplicate-" + policy.name().toLowerCase())
-            .stampedSource("left", String.class)
-            .stampedSource("right", String.class)
+            .source("left", Stamped.class)
+            .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource() + ":" + group.stamp())
                 .duplicates(policy), StageSpec.singleThreaded())
             .sink("egress", String.class, joined::add, StageSpec.singleThreaded())
@@ -283,13 +369,15 @@ class RuntimeRegressionTest {
             .build();
 
         graph.start();
-        graph.emitter("left", String.class).emit("l0");
-        graph.emitter("right", String.class).emit("r0");
-        graph.emitter("left", String.class).close();
-        graph.emitter("right", String.class).close();
+        final Emitter<Stamped> left = graph.emitter("left", Stamped.class);
+        final Emitter<Stamped> right = graph.emitter("right", Stamped.class);
+        left.emit(Stamped.of(7L, "l0"));
+        right.emit(Stamped.of(7L, "r0"));
+        left.close();
+        right.close();
 
         assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
-        assertEquals(List.of("left:0"), List.copyOf(joined));
+        assertEquals(List.of("left:7"), List.copyOf(joined));
         assertEquals(duplicates, graph.metrics().stage("join").duplicateJoinStamps());
     }
 
@@ -299,6 +387,22 @@ class RuntimeRegressionTest {
         } catch (final InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AssertionError(ex);
+        }
+    }
+
+    private static void restoreFusionProperty(final String previous) {
+        if (previous == null) {
+            System.clearProperty("lattice.fusion.enabled");
+        } else {
+            System.setProperty("lattice.fusion.enabled", previous);
+        }
+    }
+
+    private static void restoreInlineFusionProperty(final String previous) {
+        if (previous == null) {
+            System.clearProperty("lattice.fusion.inlineSource");
+        } else {
+            System.setProperty("lattice.fusion.inlineSource", previous);
         }
     }
 

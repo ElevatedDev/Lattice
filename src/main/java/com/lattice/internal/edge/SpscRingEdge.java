@@ -7,6 +7,7 @@ import com.lattice.routing.Stamped;
 import com.lattice.slab.SlabHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.Objects;
 import java.util.function.Function;
 
 public final class SpscRingEdge implements MessageEdge {
@@ -15,8 +16,6 @@ public final class SpscRingEdge implements MessageEdge {
     private static final VarHandle CLOSED;
     private static final VarHandle ELEMENT;
     private static final Object DROPPED = new Object();
-    private static final long CLOSED_TAIL_BIT = Long.MIN_VALUE;
-    private static final long TAIL_SEQUENCE_MASK = Long.MAX_VALUE;
 
     static {
         try {
@@ -76,13 +75,16 @@ public final class SpscRingEdge implements MessageEdge {
         final GraphMetrics graphMetrics,
         final boolean plainClaim
     ) {
-        this.from = from;
-        this.to = to;
+        validateCapacity(capacity);
+        final MemoryMode.MemoryKind selectedMemoryKind =
+            Objects.requireNonNull(memoryMode, "memoryMode").kind();
+        this.from = Objects.requireNonNull(from, "from");
+        this.to = Objects.requireNonNull(to, "to");
         this.capacity = capacity;
         this.mask = capacity - 1;
-        this.memoryKind = memoryMode.kind();
-        this.metrics = metrics;
-        this.graphMetrics = graphMetrics;
+        this.memoryKind = selectedMemoryKind;
+        this.metrics = Objects.requireNonNull(metrics, "metrics");
+        this.graphMetrics = Objects.requireNonNull(graphMetrics, "graphMetrics");
         this.plainClaim = plainClaim;
     }
 
@@ -98,11 +100,10 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean offer(final Object item) {
-        final long currentTailRaw = (long) CURSOR.getOpaque(tail);
-        if (tailClosed(currentTailRaw) || closed()) {
+        if (closed()) {
             return false;
         }
-        final long currentTail = tailSequence(currentTailRaw);
+        final long currentTail = (long) CURSOR.getOpaque(tail);
         final long wrapPoint = currentTail - capacity;
         final PaddedLongCache producerHeadCacheBoxLocal = producerHeadCacheBox;
         if (producerHeadCacheBoxLocal.value <= wrapPoint) {
@@ -133,7 +134,7 @@ public final class SpscRingEdge implements MessageEdge {
         final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
         long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
-            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            currentTail = (long) CURSOR.getAcquire(tail);
             consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
@@ -176,7 +177,7 @@ public final class SpscRingEdge implements MessageEdge {
         final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
         long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
-            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            currentTail = (long) CURSOR.getAcquire(tail);
             consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
@@ -242,7 +243,7 @@ public final class SpscRingEdge implements MessageEdge {
         final PaddedLongCache consumerTailCacheBoxLocal = consumerTailCacheBox;
         long currentTail = consumerTailCacheBoxLocal.value;
         if (currentHead >= currentTail) {
-            currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+            currentTail = (long) CURSOR.getAcquire(tail);
             consumerTailCacheBoxLocal.value = currentTail;
         }
         if (currentHead >= currentTail) {
@@ -292,7 +293,7 @@ public final class SpscRingEdge implements MessageEdge {
     @Override
     public Object dropOldest() {
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final long currentTail = (long) CURSOR.getAcquire(tail);
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         for (long sequence = currentHead; sequence < currentTail; sequence++) {
@@ -313,7 +314,7 @@ public final class SpscRingEdge implements MessageEdge {
         }
         final Object key = keyExtractor.apply(item);
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final long currentTail = (long) CURSOR.getAcquire(tail);
         final Object[] localBuffer = buffer;
         final int localMask = mask;
         for (long sequence = currentHead; sequence < currentTail; sequence++) {
@@ -355,13 +356,13 @@ public final class SpscRingEdge implements MessageEdge {
 
     @Override
     public boolean isEmpty() {
-        return (long) CURSOR.getAcquire(head) >= tailSequence((long) CURSOR.getAcquire(tail));
+        return (long) CURSOR.getAcquire(head) >= (long) CURSOR.getAcquire(tail);
     }
 
     @Override
     public int inFlight() {
         final long currentHead = (long) CURSOR.getAcquire(head);
-        final long currentTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final long currentTail = (long) CURSOR.getAcquire(tail);
         final long depth = Math.max(0L, currentTail - currentHead);
         return depth > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) depth;
     }
@@ -377,9 +378,17 @@ public final class SpscRingEdge implements MessageEdge {
     }
 
     @Override
-    public void abort() {
+    public void releaseRemainingAfterQuiescence() {
         closeFlag();
         drainAndRelease();
+    }
+
+    /**
+     * Kept for direct edge tests and older internal callers. Runtime cleanup should use
+     * releaseRemainingAfterQuiescence() so the quiescence invariant is visible at call sites.
+     */
+    public void abort() {
+        releaseRemainingAfterQuiescence();
     }
 
     @Override
@@ -407,7 +416,7 @@ public final class SpscRingEdge implements MessageEdge {
         if (buffer == null) {
             return;
         }
-        final long targetTail = tailSequence((long) CURSOR.getAcquire(tail));
+        final long targetTail = (long) CURSOR.getAcquire(tail);
         while (true) {
             final long currentHead = (long) CURSOR.getOpaque(head);
             if (currentHead >= targetTail) {
@@ -438,7 +447,7 @@ public final class SpscRingEdge implements MessageEdge {
         final LongAccess localPublishTimes = publishTimes;
         while (true) {
             final long currentHead = (long) CURSOR.getAcquire(head);
-            if (currentHead >= tailSequence((long) CURSOR.getAcquire(tail))) {
+            if (currentHead >= (long) CURSOR.getAcquire(tail)) {
                 return;
             }
             final int index = (int) currentHead & mask;
@@ -456,32 +465,20 @@ public final class SpscRingEdge implements MessageEdge {
     }
 
     private boolean closed() {
-        return (boolean) CLOSED.getVolatile(closed);
+        return (boolean) CLOSED.getAcquire(closed);
     }
 
     private void closeFlag() {
-        CLOSED.setVolatile(closed, true);
-        closeTail();
+        CLOSED.setRelease(closed, true);
     }
 
-    private void closeTail() {
-        while (true) {
-            final long currentTail = (long) CURSOR.getVolatile(tail);
-            if (tailClosed(currentTail)) {
-                return;
-            }
-            if (CURSOR.compareAndSet(tail, currentTail, currentTail | CLOSED_TAIL_BIT)) {
-                return;
-            }
+    private static void validateCapacity(final int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("SPSC edge capacity must be positive");
         }
-    }
-
-    private static long tailSequence(final long tailValue) {
-        return tailValue & TAIL_SEQUENCE_MASK;
-    }
-
-    private static boolean tailClosed(final long tailValue) {
-        return (tailValue & CLOSED_TAIL_BIT) != 0L;
+        if (Integer.bitCount(capacity) != 1) {
+            throw new IllegalArgumentException("SPSC edge capacity must be a power of two: " + capacity);
+        }
     }
 
     private static void releaseIfHandle(final Object item) {

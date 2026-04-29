@@ -86,9 +86,11 @@ public final class JoinSpec<O> {
     /**
      * Emits on the first input branch for each stamp.
      * <p>
-     * Later duplicate branches for that stamp are handled by the duplicate
-     * policy. The default stamp extractor expects {@link Stamped} inputs and
-     * uses their primitive long stamp.
+     * Later arrivals for that stamp are handled by the duplicate policy while
+     * the stamp remains open. Once every branch has been seen, the runtime
+     * releases the retained first-arrival value and forgets the stamp.
+     * The default stamp extractor expects {@link Stamped} inputs and uses their
+     * primitive long stamp.
      */
     public static <O> JoinSpec<O> anyOf(final Function<JoinGroup, ? extends O> combiner) {
         return new JoinSpec<>(

@@ -74,15 +74,30 @@ state is pre-1.0.
   `docs/_config.yml`.
 - GitHub-recognized project metadata files: `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, `NOTICE`, and `.editorconfig`.
+- Open-source repository scaffolding: GitHub Actions CI/release artifact
+  workflows, issue template, pull request template, Dependabot config, and
+  `.gitattributes`.
 - `-Dlattice.fusion.validateTypes` (default `false`) to re-enable defensive
   per-event runtime type assertions inside fused chains while developing
   custom stage logic.
+- `OptimalPathBenchmark`, a completion-gated Lattice-vs-Disruptor comparison
+  that waits for sink/handler completion of the same sequence instead of
+  measuring enqueue rate only.
+- Publication benchmark figures for throughput, latency percentiles,
+  Lattice-vs-Disruptor ratios, and runtime guarantees under `docs/assets/`,
+  including isolated stage artifacts for the Lattice-vs-Disruptor rows.
+- Generated GitHub Pages Javadocs under `docs/api/latest/`.
 
 ### Changed
 
 - Root `README.md` rewritten around the public contract, quick start,
   verification commands, native placement, benchmark caveats, and the new docs
   index.
+- Maven coordinates are aligned to `io.github.elevateddev:lattice`, and
+  `HdrHistogram` is exposed as an API dependency because histogram types appear
+  in public metrics accessors.
+- Optional native access classes moved from the old `com.staticgraph.*`
+  namespace to `com.lattice.nativeaccess` before the first public release.
 - `CONTRIBUTING.md` expanded with scope, hot-path, test, documentation, and
   security expectations for public contributions.
 - `SECURITY.md` rewritten for pre-1.0 support status and private vulnerability
@@ -104,14 +119,17 @@ state is pre-1.0.
 
 - Documentation now avoids claims about public stability annotation classes
   that do not exist in the current module.
-- Benchmark documentation now points at the checked-in
+- Benchmark documentation now points at the refreshed checked-in
+  `benchmarks/baseline/` artifact set and
   `docs/benchmark-results/v1.0.0-baseline/` snapshot instead of older local
   result paths.
+- Benchmark documentation now presents the 2026-04-29 result set as the
+  current public baseline, with raw artifacts, fair-comparison scope, and JMH
+  error bars attached to the figures.
 
 ### Known Gaps
 
 - No published Maven Central artifacts yet.
 - JDK 25 and JDK 26 validation remain future release work.
 - No FFM/jextract native backend yet.
-- No publication-grade Linux/NUMA benchmark report yet.
 - No Micrometer or JMX integration yet.

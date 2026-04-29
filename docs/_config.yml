@@ -1,0 +1,9 @@
+title: Lattice
+description: Static topology Java runtime for bounded, low-latency processing graphs.
+theme: jekyll-theme-minimal
+show_downloads: false
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: true

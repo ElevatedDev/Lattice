@@ -14,6 +14,11 @@ import com.lattice.wait.WaitSpec;
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.BusySpinWaitStrategy;
+import com.lmax.disruptor.LiteBlockingWaitStrategy;
+import com.lmax.disruptor.SleepingWaitStrategy;
+import com.lmax.disruptor.WaitStrategy;
 import com.lmax.disruptor.YieldingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.EventHandlerGroup;
@@ -29,6 +34,7 @@ import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -119,6 +125,16 @@ public class ApplesToApplesDisruptorBenchmark {
 
     @Benchmark
     public void latticeThreeStagePipelineFused(final LatticePipelineFusedState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void latticeThreeStagePipelineFusedReference(final LatticePipelineFusedState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void latticeManuallyFusedReference(final LatticeManuallyFusedReferenceState state) {
         state.emitter.emit(state.nextSignal());
     }
 
@@ -311,8 +327,50 @@ public class ApplesToApplesDisruptorBenchmark {
         }
     }
 
+    @State(Scope.Benchmark)
+    public static class LatticeManuallyFusedReferenceState extends PooledSignals {
+        long consumed;
+        StaticGraph graph;
+        Emitter<Signal> emitter;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            final String previousFusion = System.getProperty("lattice.fusion.enabled");
+            final String previousInline = System.getProperty("lattice.fusion.inlineSource");
+            System.setProperty("lattice.fusion.enabled", "true");
+            System.setProperty("lattice.fusion.inlineSource", "true");
+            try {
+                graph = StaticGraph.builder("aa-lattice-manually-fused-reference")
+                    .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                    .stage(
+                        "tripleIncrement",
+                        Signal.class,
+                        Signal.class,
+                        ApplesToApplesDisruptorBenchmark::tripleIncrement,
+                        STAGE
+                    )
+                    .sink("egress", Signal.class, signal -> consumed++, STAGE)
+                    .edge("ingress", "tripleIncrement", SPSC_FUSIBLE)
+                    .edge("tripleIncrement", "egress", SPSC_FUSIBLE)
+                    .build();
+            } finally {
+                restoreFusion(previousFusion);
+                restoreInlineFusion(previousInline);
+            }
+            graph.start();
+            emitter = graph.emitter("ingress", Signal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeManuallyFusedReference", consumed);
+        }
+    }
+
     public abstract static class LatticePipelineState extends PooledSignals {
-        final AtomicLong consumed = new AtomicLong();
+        long consumed;
         StaticGraph graph;
         Emitter<Signal> emitter;
 
@@ -320,14 +378,18 @@ public class ApplesToApplesDisruptorBenchmark {
 
         void setup(final boolean fused) {
             final String previousFusion = System.getProperty("lattice.fusion.enabled");
+            final String previousInline = System.getProperty("lattice.fusion.inlineSource");
             setFusion(fused);
+            if (fused) {
+                System.setProperty("lattice.fusion.inlineSource", "true");
+            }
             try {
                 graph = StaticGraph.builder("aa-lattice-pipeline-" + (fused ? "fused" : "physical"))
                     .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
                     .stage("normalize", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
                     .stage("risk", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
                     .stage("validate", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
-                    .sink("egress", Signal.class, signal -> consumed.incrementAndGet(), STAGE)
+                    .sink("egress", Signal.class, signal -> consumed++, STAGE)
                     .edge("ingress", "normalize", SPSC_FUSIBLE)
                     .edge("normalize", "risk", SPSC_FUSIBLE)
                     .edge("risk", "validate", SPSC_FUSIBLE)
@@ -335,6 +397,7 @@ public class ApplesToApplesDisruptorBenchmark {
                     .build();
             } finally {
                 restoreFusion(previousFusion);
+                restoreInlineFusion(previousInline);
             }
             graph.start();
             emitter = graph.emitter("ingress", Signal.class);
@@ -351,12 +414,14 @@ public class ApplesToApplesDisruptorBenchmark {
     @State(Scope.Benchmark)
     public static class DisruptorPipelineState extends PooledSignals {
         final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
         Disruptor<ValueEvent> disruptor;
         RingBuffer<ValueEvent> ringBuffer;
 
         @Setup(Level.Trial)
         public void setup() {
-            disruptor = disruptor("aa-disruptor-pipeline", ProducerType.SINGLE);
+            disruptor = disruptor("aa-disruptor-pipeline", ProducerType.SINGLE, waitProfile);
             disruptor.handleEventsWith(incrementHandler())
                 .then(incrementHandler())
                 .then(incrementHandler())
@@ -374,12 +439,14 @@ public class ApplesToApplesDisruptorBenchmark {
     @State(Scope.Benchmark)
     public static class DisruptorFusedPipelineState extends PooledSignals {
         final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
         Disruptor<ValueEvent> disruptor;
         RingBuffer<ValueEvent> ringBuffer;
 
         @Setup(Level.Trial)
         public void setup() {
-            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE);
+            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE, waitProfile);
             disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
                 event.value++;
                 event.value++;
@@ -434,7 +501,7 @@ public class ApplesToApplesDisruptorBenchmark {
             graph = StaticGraph.builder("aa-lattice-dependency-join")
                 .source("ingress", ImmutableSignal.class, SourceMode.SINGLE_PRODUCER)
                 .stage("validate", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
-                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(), STAGE)
+                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(signal -> signal), STAGE)
                 .stage("journal", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
                 .stage("risk", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
                 .join("join", ImmutableSignal.class, JoinSpec.<ImmutableSignal>allOf(group ->
@@ -540,14 +607,57 @@ public class ApplesToApplesDisruptorBenchmark {
         Signal signal;
     }
 
+    public enum DisruptorWaitProfile {
+        YIELDING {
+            @Override
+            WaitStrategy create() {
+                return new YieldingWaitStrategy();
+            }
+        },
+        BUSY_SPIN {
+            @Override
+            WaitStrategy create() {
+                return new BusySpinWaitStrategy();
+            }
+        },
+        SLEEPING {
+            @Override
+            WaitStrategy create() {
+                return new SleepingWaitStrategy();
+            }
+        },
+        BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new BlockingWaitStrategy();
+            }
+        },
+        LITE_BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new LiteBlockingWaitStrategy();
+            }
+        };
+
+        abstract WaitStrategy create();
+    }
+
     private static Disruptor<ValueEvent> disruptor(final String threadName, final ProducerType producerType) {
+        return disruptor(threadName, producerType, DisruptorWaitProfile.YIELDING);
+    }
+
+    private static Disruptor<ValueEvent> disruptor(
+        final String threadName,
+        final ProducerType producerType,
+        final DisruptorWaitProfile waitProfile
+    ) {
         final EventFactory<ValueEvent> factory = ValueEvent::new;
         return new Disruptor<>(
             factory,
             RING_SIZE,
             namedThreadFactory(threadName),
             producerType,
-            new YieldingWaitStrategy()
+            waitProfile.create()
         );
     }
 
@@ -568,6 +678,12 @@ public class ApplesToApplesDisruptorBenchmark {
         }
     }
 
+    private static void requireConsumed(final String benchmark, final long consumed) {
+        if (consumed == 0L) {
+            throw new IllegalStateException(benchmark + " did not consume any events");
+        }
+    }
+
     private static ThreadFactory namedThreadFactory(final String name) {
         return runnable -> {
             final Thread thread = Thread.ofPlatform().unstarted(runnable);
@@ -578,6 +694,17 @@ public class ApplesToApplesDisruptorBenchmark {
     }
 
     private static void increment(final Signal signal, final com.lattice.stage.Output<Signal> out, final Object ctx) {
+        signal.value++;
+        out.push(signal);
+    }
+
+    private static void tripleIncrement(
+        final Signal signal,
+        final com.lattice.stage.Output<Signal> out,
+        final Object ctx
+    ) {
+        signal.value++;
+        signal.value++;
         signal.value++;
         out.push(signal);
     }
@@ -603,7 +730,7 @@ public class ApplesToApplesDisruptorBenchmark {
         if (fused) {
             System.setProperty("lattice.fusion.enabled", "true");
         } else {
-            System.clearProperty("lattice.fusion.enabled");
+            System.setProperty("lattice.fusion.enabled", "false");
         }
     }
 
@@ -612,6 +739,14 @@ public class ApplesToApplesDisruptorBenchmark {
             System.clearProperty("lattice.fusion.enabled");
         } else {
             System.setProperty("lattice.fusion.enabled", previousFusion);
+        }
+    }
+
+    private static void restoreInlineFusion(final String previousInline) {
+        if (previousInline == null) {
+            System.clearProperty("lattice.fusion.inlineSource");
+        } else {
+            System.setProperty("lattice.fusion.inlineSource", previousInline);
         }
     }
 }

@@ -270,11 +270,11 @@ public final class DefaultStaticGraph implements StaticGraph {
         interruptWorkers();
         try {
             final boolean terminated = awaitTermination(Duration.ofSeconds(5));
-            for (int i = 0; i < edges.length; i++) {
-                edges[i].abort();
-            }
             if (!terminated) {
                 return;
+            }
+            for (int i = 0; i < edges.length; i++) {
+                edges[i].releaseRemainingAfterQuiescence();
             }
         } catch (final InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -414,6 +414,10 @@ public final class DefaultStaticGraph implements StaticGraph {
             final T[] pool = spec.fixedPool();
             validatePreallocationPoolSize(sourceName, pool.length, reuseBound);
             for (int i = 0; i < pool.length; i++) {
+                if (pool[i] == null) {
+                    throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
+                        + " must not be null");
+                }
                 if (!type.isInstance(pool[i])) {
                     throw new GraphBuildException("preallocated pool item " + i + " for source " + sourceName
                             + " is " + pool[i].getClass().getName() + ", expected " + type.getName());
@@ -1031,6 +1035,9 @@ public final class DefaultStaticGraph implements StaticGraph {
                 final Set<String> elidedEdges
         ) {
             if (!Boolean.parseBoolean(System.getProperty(INLINE_SOURCE_FUSION_PROPERTY, "true"))) {
+                return Map.of();
+            }
+            if (compiled.customExceptionHandler()) {
                 return Map.of();
             }
             final Map<String, String> mapping = new LinkedHashMap<>();

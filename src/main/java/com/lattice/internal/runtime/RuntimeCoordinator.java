@@ -73,11 +73,8 @@ class RuntimeCoordinator {
     }
 
     boolean hasInFlightWork() {
-        final SourceEmitter<?>[] currentSources = sources;
-        for (int i = 0; i < currentSources.length; i++) {
-            if (currentSources[i].pendingInline() > 0L) {
-                return true;
-            }
+        if (hasInFlightInlineWork()) {
+            return true;
         }
         final StageWorker[] currentWorkers = workers;
         for (int i = 0; i < currentWorkers.length; i++) {
@@ -88,6 +85,15 @@ class RuntimeCoordinator {
         return false;
     }
 
+    boolean hasInFlightInlineWork() {
+        final SourceEmitter<?>[] currentSources = sources;
+        for (int i = 0; i < currentSources.length; i++) {
+            if (currentSources[i].pendingInline() > 0L) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     void workerBootstrapped() {
         bootstrapLatch.countDown();
@@ -165,7 +171,7 @@ class RuntimeCoordinator {
         JfrEvents.stageException(graphName, stageName, cause);
         if (inputs != null) {
             for (int i = 0; i < inputs.length; i++) {
-                inputs[i].abort();
+                inputs[i].close();
             }
         }
         if (outputs != null) {
@@ -179,7 +185,7 @@ class RuntimeCoordinator {
         if (remainingWorkers.decrementAndGet() == 0) {
             final MessageEdge[] currentEdges = edges;
             for (int i = 0; i < currentEdges.length; i++) {
-                currentEdges[i].abort();
+                currentEdges[i].releaseRemainingAfterQuiescence();
             }
             metrics.markStopped();
             state.compareAndSet(GraphState.RUNNING, GraphState.STOPPED);

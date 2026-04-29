@@ -14,7 +14,7 @@ Required for Java development:
 Optional for Linux placement work:
 
 - Rust and Cargo.
-- A Linux host or WSL environment for the JNI backend.
+- A Linux host for the JNI backend.
 - A production-like multi-NUMA host for placement benchmark claims.
 
 Run the core checks before opening a change:
@@ -58,8 +58,20 @@ stable product contracts:
 - `StageContext`
 - `StageHandle`
 - `GraphPlan`
+- `GraphPlan.Node`
+- `GraphPlan.Edge`
+- `GraphPlan.Placement`
+- `GraphState`
+- `SourceMode`
+- `PreallocationSpec`
+- `PreallocatedEmitter`
 - `GraphMetrics`
+- `GraphMetrics.StagePlacement`
 - `StageMetrics`
+- `EdgeMetrics`
+- `WaitMetrics`
+- `PlacementStatus`
+- `WorkerState`
 - `EdgeSpec`
 - `StageSpec`
 - `PinPolicy`
@@ -67,6 +79,14 @@ stable product contracts:
 - `OverflowPolicy`
 - `BatchPolicy`
 - `MemoryMode`
+- `DispatchSpec`
+- `BroadcastSpec`
+- `PartitionSpec`
+- `JoinSpec`
+- `JoinGroup`
+- `Stamped`
+- `SlabPool`
+- `SlabHandle`
 
 Unsupported options should fail with clear diagnostics instead of silently
 degrading, except where fallback behavior is explicitly part of the contract
@@ -100,13 +120,13 @@ Match test depth to the behavioral risk:
 
 Benchmark numbers in documentation should identify the host, JVM, native
 library path, CPU topology, command line, warmup/measurement configuration, and
-whether the result is a smoke check or release evidence.
+the exact raw artifact that produced the quoted number.
 
 ## Documentation
 
 User-visible behavior changes should update the relevant guide under `docs/`.
 Keep documentation explicit about what is implemented, what is planned, and
-what has only been smoke-tested.
+what remains outside the current public contract.
 
 The `/docs` directory is the GitHub Pages source. Keep `docs/index.md` usable
 as the Pages entry point and `docs/README.md` usable as the GitHub directory

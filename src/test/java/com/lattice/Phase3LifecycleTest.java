@@ -6,7 +6,7 @@ import com.lattice.graph.GraphState;
 import com.lattice.graph.StaticGraph;
 import com.lattice.placement.PinPolicy;
 import com.lattice.stage.StageSpec;
-import com.staticgraph.runtime.nativeaccess.NativeTopology;
+import com.lattice.nativeaccess.NativeTopology;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
