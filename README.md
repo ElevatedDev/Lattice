@@ -255,6 +255,11 @@ browsing the repository.
 | Operations | [Observability](docs/observability.md), [Operations Runbook](docs/operations-runbook.md), [Compatibility Matrix](docs/compatibility-matrix.md) |
 | Release | [API Reference](docs/api.md), [Generated Javadocs HTML](docs/api/latest/index.html), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
 
+## Contact
+
+For questions or feedback, contact Leonidas Kanarelis at
+[leonidaskanarelis@gmail.com](mailto:leonidaskanarelis@gmail.com).
+
 ## Project Policies
 
 - [Changelog](CHANGELOG.md)
