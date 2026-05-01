@@ -2,7 +2,7 @@
 
 ![Lattice](docs/assets/logo.svg)
 
-Lattice is a Java 21 runtime for bounded, low-latency, in-process processing
+Lattice is a Java 25 runtime for bounded, low-latency, in-process processing
 graphs whose topology is known before startup. Applications declare sources,
 stages, routing nodes, joins, sinks, and edges; Lattice validates the graph and
 compiles it into dedicated workers connected by bounded SPSC and MPSC rings.
@@ -20,7 +20,7 @@ fixed Java graphs with explicit backpressure and observable failure semantics.
 
 - Pre-1.0. Build from source until the first Maven Central release is
   published.
-- Java 21 is the build baseline.
+- Java 25 is the build baseline.
 - The JPMS module name is `com.lattice`.
 - The core runtime is Java. The optional native backend is Rust JNI for
   placement and topology diagnostics.
@@ -30,7 +30,7 @@ fixed Java graphs with explicit backpressure and observable failure semantics.
 
 Requirements:
 
-- JDK 21.
+- JDK 25.
 - The checked-in Gradle wrapper.
 - Rust and Cargo only if you need the optional native placement backend.
 
