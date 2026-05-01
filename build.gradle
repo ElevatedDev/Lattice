@@ -19,7 +19,7 @@ def releaseLicenseDistribution = providers.gradleProperty('releaseLicenseDistrib
 java {
     modularity.inferModulePath = true
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
     withSourcesJar()
     withJavadocJar()
@@ -58,7 +58,7 @@ configurations {
 dependencies {
     api 'org.hdrhistogram:HdrHistogram:2.2.2'
 
-    testImplementation platform('org.junit:junit-bom:5.14.2')
+    testImplementation platform('org.junit:junit-bom:6.0.3')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
@@ -82,7 +82,7 @@ test {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 21
+    options.release = 25
 }
 
 tasks.named('compileJava', JavaCompile) {
