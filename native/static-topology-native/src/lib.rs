@@ -188,7 +188,7 @@ fn parse_cpu_list_selector(selector: &str) -> Option<CpuListSelector> {
 
 fn cpu_list_selector_matches(selector: &CpuListSelector, offset: usize) -> bool {
     match selector {
-        CpuListSelector::Stride(stride) => offset % stride == 0,
+        CpuListSelector::Stride(stride) => offset.is_multiple_of(*stride),
         CpuListSelector::Group { used, group } => offset % group < *used,
     }
 }
@@ -198,7 +198,7 @@ fn preferred_cpu(candidates: &[JInt], current_cpu: JInt, seed: usize) -> Option<
     if candidates.is_empty() {
         return None;
     }
-    if current_cpu >= 0 && candidates.iter().any(|candidate| *candidate == current_cpu) {
+    if current_cpu >= 0 && candidates.contains(&current_cpu) {
         return Some(current_cpu);
     }
     Some(candidates[seed % candidates.len()])
@@ -207,8 +207,8 @@ fn preferred_cpu(candidates: &[JInt], current_cpu: JInt, seed: usize) -> Option<
 #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
 mod platform {
     use super::{
-        cpu_list_contains, preferred_cpu, JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU,
-        CAP_FIRST_TOUCH, CAP_LINUX, CAP_LOCAL_MEM_POLICY, CAP_NUMA_QUERY, JNI_WORD_COUNT,
+        CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, CAP_LINUX, CAP_LOCAL_MEM_POLICY,
+        CAP_NUMA_QUERY, JInt, JLong, JNI_WORD_COUNT, cpu_list_contains, preferred_cpu,
     };
     use core::ffi::{c_int, c_long, c_ulong};
     use core::ptr;
@@ -248,14 +248,14 @@ mod platform {
         bits: [usize; CPU_WORD_COUNT],
     }
 
-    extern "C" {
-        fn sched_setaffinity(pid: c_int, cpusetsize: usize, mask: *const CpuSet) -> c_int;
-        fn sched_getaffinity(pid: c_int, cpusetsize: usize, mask: *mut CpuSet) -> c_int;
-        fn sched_getcpu() -> c_int;
-        fn sysconf(name: c_int) -> c_long;
-        fn syscall(num: c_long, ...) -> c_long;
-        fn __errno_location() -> *mut c_int;
-        fn getpagesize() -> c_int;
+    unsafe extern "C" {
+        unsafe fn sched_setaffinity(pid: c_int, cpusetsize: usize, mask: *const CpuSet) -> c_int;
+        unsafe fn sched_getaffinity(pid: c_int, cpusetsize: usize, mask: *mut CpuSet) -> c_int;
+        unsafe fn sched_getcpu() -> c_int;
+        unsafe fn sysconf(name: c_int) -> c_long;
+        unsafe fn syscall(num: c_long, ...) -> c_long;
+        unsafe fn __errno_location() -> *mut c_int;
+        unsafe fn getpagesize() -> c_int;
     }
 
     pub fn native_capabilities() -> u64 {
@@ -284,11 +284,7 @@ mod platform {
 
     pub fn current_cpu() -> JInt {
         let cpu = unsafe { sched_getcpu() };
-        if cpu >= 0 {
-            cpu
-        } else {
-            -last_errno()
-        }
+        if cpu >= 0 { cpu } else { -last_errno() }
     }
 
     pub fn current_numa_node() -> JInt {
@@ -316,11 +312,7 @@ mod platform {
         }
 
         let cpu = current_cpu();
-        if cpu < 0 {
-            cpu
-        } else {
-            numa_node_of_cpu(cpu)
-        }
+        if cpu < 0 { cpu } else { numa_node_of_cpu(cpu) }
     }
 
     pub fn numa_node_of_cpu(cpu: JInt) -> JInt {
@@ -467,11 +459,7 @@ mod platform {
                     0 as c_ulong,
                 )
             };
-            if rc == 0 {
-                0
-            } else {
-                -last_errno()
-            }
+            if rc == 0 { 0 } else { -last_errno() }
         }
 
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
@@ -532,21 +520,13 @@ mod platform {
 
     fn set_affinity(set: &CpuSet) -> JInt {
         let rc = unsafe { sched_setaffinity(0, core::mem::size_of::<CpuSet>(), set) };
-        if rc == 0 {
-            0
-        } else {
-            -last_errno()
-        }
+        if rc == 0 { 0 } else { -last_errno() }
     }
 
     fn current_allowed_affinity() -> Result<CpuSet, JInt> {
         let mut set = empty_cpu_set();
         let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut set) };
-        if rc == 0 {
-            Ok(set)
-        } else {
-            Err(-last_errno())
-        }
+        if rc == 0 { Ok(set) } else { Err(-last_errno()) }
     }
 
     fn empty_cpu_set() -> CpuSet {
@@ -619,11 +599,7 @@ mod platform {
         }
 
         let cpu = current_cpu();
-        if cpu >= 0 {
-            cpu as usize
-        } else {
-            0
-        }
+        if cpu >= 0 { cpu as usize } else { 0 }
     }
 
     fn last_errno() -> JInt {
@@ -646,8 +622,7 @@ mod platform {
     #[cfg(test)]
     mod tests {
         use super::{
-            cpu_set_contains, cpu_set_insert, cpu_set_non_empty, empty_cpu_set,
-            intersect_cpu_sets,
+            cpu_set_contains, cpu_set_insert, cpu_set_non_empty, empty_cpu_set, intersect_cpu_sets,
         };
 
         #[test]
@@ -685,7 +660,7 @@ mod platform {
 
 #[cfg(all(windows, target_pointer_width = "64"))]
 mod platform {
-    use super::{JInt, JLong, CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, JNI_WORD_COUNT};
+    use super::{CAP_AFFINITY, CAP_CURRENT_CPU, CAP_FIRST_TOUCH, JInt, JLong, JNI_WORD_COUNT};
     use core::ffi::c_void;
     use core::mem;
     use core::ptr;
@@ -927,11 +902,7 @@ mod platform {
 
     fn set_thread_group_affinity(affinity: GroupAffinity) -> JInt {
         let rc = unsafe { SetThreadGroupAffinity(GetCurrentThread(), &affinity, ptr::null_mut()) };
-        if rc != 0 {
-            0
-        } else {
-            -last_error()
-        }
+        if rc != 0 { 0 } else { -last_error() }
     }
 
     fn page_size() -> usize {
@@ -1002,7 +973,7 @@ mod platform {
 
 #[cfg(all(target_os = "macos", target_pointer_width = "64"))]
 mod platform {
-    use super::{JInt, JLong, CAP_FIRST_TOUCH, JNI_WORD_COUNT};
+    use super::{CAP_FIRST_TOUCH, JInt, JLong, JNI_WORD_COUNT};
     use core::ffi::{c_char, c_int, c_void};
     use core::ptr;
 
