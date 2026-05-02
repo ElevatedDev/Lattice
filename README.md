@@ -185,8 +185,8 @@ The checked-in benchmark material is the current public baseline. Start with
 the release snapshot index, then cite the underlying host, JVM flags, benchmark
 class, and JSON artifact for any number you quote. The 2026-05-02 refresh
 includes scoped publish-throughput rows, completion-gated end-to-end rows,
-an optimal-path sample-time latency pass, and a GC-profiler pass for the
-optimal path.
+an optimal-path sample-time latency pass with physical, fused, native-pinned,
+and source-inline variants, and a GC-profiler pass for the optimal path.
 
 The headline comparison is scoped deliberately:
 
@@ -214,6 +214,7 @@ The headline comparison is scoped deliberately:
 
 - [Benchmark Results](docs/benchmark-results/README.md)
 - [Benchmark Baseline](BENCHMARK_BASELINE.md)
+- [Benchmark Devices](docs/devices.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)

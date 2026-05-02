@@ -1,51 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="540" viewBox="0 0 1120 540">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="610" viewBox="0 0 1180 610">
 <style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:12px;fill:#52616f}.series{font-size:11px;fill:#52616f}.value{font-size:12px;font-weight:700}.small{font-size:11px;fill:#52616f}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}.line{fill:none;stroke-width:2.6}.dot{stroke:white;stroke-width:1.4}</style>
-<rect width="1120" height="540" fill="white"/>
+<rect width="1180" height="610" fill="white"/>
 <text class="title" x="24" y="34">Optimal-path latency percentiles</text>
 <text class="sub" x="24" y="58">Same parse/enrich/risk/serialize completed workload; JMH sample-time mode, lower is better</text>
-<line class="grid" x1="100" y1="450.0" x2="820" y2="450.0"/>
-<text class="axis" x="88" y="454.0" text-anchor="end">10 ns</text>
-<line class="grid" x1="100" y1="359.5" x2="820" y2="359.5"/>
-<text class="axis" x="88" y="363.5" text-anchor="end">100 ns</text>
-<line class="grid" x1="100" y1="269.0" x2="820" y2="269.0"/>
-<text class="axis" x="88" y="273.0" text-anchor="end">1.00 us</text>
-<line class="grid" x1="100" y1="178.5" x2="820" y2="178.5"/>
-<text class="axis" x="88" y="182.5" text-anchor="end">10.00 us</text>
+<line class="grid" x1="100" y1="486.0" x2="820" y2="486.0"/>
+<text class="axis" x="88" y="490.0" text-anchor="end">10 ns</text>
+<line class="grid" x1="100" y1="386.5" x2="820" y2="386.5"/>
+<text class="axis" x="88" y="390.5" text-anchor="end">100 ns</text>
+<line class="grid" x1="100" y1="287.0" x2="820" y2="287.0"/>
+<text class="axis" x="88" y="291.0" text-anchor="end">1.00 us</text>
+<line class="grid" x1="100" y1="187.5" x2="820" y2="187.5"/>
+<text class="axis" x="88" y="191.5" text-anchor="end">10.00 us</text>
 <line class="grid" x1="100" y1="88.0" x2="820" y2="88.0"/>
 <text class="axis" x="88" y="92.0" text-anchor="end">100.00 us</text>
-<line class="grid" x1="100.0" y1="88" x2="100.0" y2="450"/>
-<text class="axis" x="100.0" y="478" text-anchor="middle">p50</text>
-<line class="grid" x1="340.0" y1="88" x2="340.0" y2="450"/>
-<text class="axis" x="340.0" y="478" text-anchor="middle">p90</text>
-<line class="grid" x1="580.0" y1="88" x2="580.0" y2="450"/>
-<text class="axis" x="580.0" y="478" text-anchor="middle">p99</text>
-<line class="grid" x1="820.0" y1="88" x2="820.0" y2="450"/>
-<text class="axis" x="820.0" y="478" text-anchor="middle">p99.9</text>
-<line class="axisline" x1="100" y1="450" x2="820" y2="450"/>
-<line class="axisline" x1="100" y1="88" x2="100" y2="450"/>
-<polyline class="line" points="100.0,316.8 340.0,312.0 580.0,280.9 820.0,168.4" stroke="#2563eb"/>
-<circle class="dot" cx="100.0" cy="316.8" r="4" fill="#2563eb"/>
-<circle class="dot" cx="340.0" cy="312.0" r="4" fill="#2563eb"/>
-<circle class="dot" cx="580.0" cy="280.9" r="4" fill="#2563eb"/>
-<circle class="dot" cx="820.0" cy="168.4" r="4" fill="#2563eb"/>
-<rect x="870" y="100" width="14" height="14" rx="2" fill="#2563eb"/>
-<text class="label" x="894" y="112">Lattice fused owner worker</text>
-<text class="small" x="894" y="130">p50 296 ns · p99 738 ns · p99.9 12.94 us</text>
-<polyline class="line" points="100.0,406.8 340.0,395.5 580.0,380.9 820.0,317.7" stroke="#0f766e"/>
-<circle class="dot" cx="100.0" cy="406.8" r="4" fill="#0f766e"/>
-<circle class="dot" cx="340.0" cy="395.5" r="4" fill="#0f766e"/>
-<circle class="dot" cx="580.0" cy="380.9" r="4" fill="#0f766e"/>
-<circle class="dot" cx="820.0" cy="317.7" r="4" fill="#0f766e"/>
-<rect x="870" y="152" width="14" height="14" rx="2" fill="#0f766e"/>
-<text class="label" x="894" y="164">Lattice source-inline elided</text>
-<text class="small" x="894" y="182">p50 30 ns · p99 58 ns · p99.9 290 ns</text>
-<polyline class="line" points="100.0,324.6 340.0,315.0 580.0,297.0 820.0,174.1" stroke="#b45309"/>
-<circle class="dot" cx="100.0" cy="324.6" r="4" fill="#b45309"/>
-<circle class="dot" cx="340.0" cy="315.0" r="4" fill="#b45309"/>
-<circle class="dot" cx="580.0" cy="297.0" r="4" fill="#b45309"/>
-<circle class="dot" cx="820.0" cy="174.1" r="4" fill="#b45309"/>
-<rect x="870" y="204" width="14" height="14" rx="2" fill="#b45309"/>
-<text class="label" x="894" y="216">Disruptor manual fused</text>
-<text class="small" x="894" y="234">p50 243 ns · p99 491 ns · p99.9 11.17 us</text>
-<text class="axis" x="820" y="510" text-anchor="end">ns/op, logarithmic scale</text>
+<line class="grid" x1="100.0" y1="88" x2="100.0" y2="486"/>
+<text class="axis" x="100.0" y="514" text-anchor="middle">p50</text>
+<line class="grid" x1="340.0" y1="88" x2="340.0" y2="486"/>
+<text class="axis" x="340.0" y="514" text-anchor="middle">p90</text>
+<line class="grid" x1="580.0" y1="88" x2="580.0" y2="486"/>
+<text class="axis" x="580.0" y="514" text-anchor="middle">p99</text>
+<line class="grid" x1="820.0" y1="88" x2="820.0" y2="486"/>
+<text class="axis" x="820.0" y="514" text-anchor="middle">p99.9</text>
+<line class="axisline" x1="100" y1="486" x2="820" y2="486"/>
+<line class="axisline" x1="100" y1="88" x2="100" y2="486"/>
+<polyline class="line" points="100.0,298.7 340.0,293.9 580.0,260.5 820.0,150.8" stroke="#64748b"/>
+<circle class="dot" cx="100.0" cy="298.7" r="4" fill="#64748b"/>
+<circle class="dot" cx="340.0" cy="293.9" r="4" fill="#64748b"/>
+<circle class="dot" cx="580.0" cy="260.5" r="4" fill="#64748b"/>
+<circle class="dot" cx="820.0" cy="150.8" r="4" fill="#64748b"/>
+<rect x="870" y="100" width="14" height="14" rx="2" fill="#64748b"/>
+<text class="label" x="894" y="112">Lattice physical path</text>
+<text class="small" x="894" y="130">p50 762 ns / p99 1.85 us / p99.9 23.36 us</text>
+<polyline class="line" points="100.0,340.3 340.0,334.8 580.0,300.1 820.0,172.0" stroke="#2563eb"/>
+<circle class="dot" cx="100.0" cy="340.3" r="4" fill="#2563eb"/>
+<circle class="dot" cx="340.0" cy="334.8" r="4" fill="#2563eb"/>
+<circle class="dot" cx="580.0" cy="300.1" r="4" fill="#2563eb"/>
+<circle class="dot" cx="820.0" cy="172.0" r="4" fill="#2563eb"/>
+<rect x="870" y="164" width="14" height="14" rx="2" fill="#2563eb"/>
+<text class="label" x="894" y="176">Lattice fused owner worker</text>
+<text class="small" x="894" y="194">p50 291 ns / p99 739 ns / p99.9 14.31 us</text>
+<polyline class="line" points="100.0,343.3 340.0,336.4 580.0,302.8 820.0,178.9" stroke="#7c3aed"/>
+<circle class="dot" cx="100.0" cy="343.3" r="4" fill="#7c3aed"/>
+<circle class="dot" cx="340.0" cy="336.4" r="4" fill="#7c3aed"/>
+<circle class="dot" cx="580.0" cy="302.8" r="4" fill="#7c3aed"/>
+<circle class="dot" cx="820.0" cy="178.9" r="4" fill="#7c3aed"/>
+<rect x="870" y="228" width="14" height="14" rx="2" fill="#7c3aed"/>
+<text class="label" x="894" y="240">Lattice native-pinned fused</text>
+<text class="small" x="894" y="258">p50 272 ns / p99 693 ns / p99.9 12.19 us</text>
+<polyline class="line" points="100.0,438.5 340.0,427.2 580.0,413.1 820.0,341.5" stroke="#0f766e"/>
+<circle class="dot" cx="100.0" cy="438.5" r="4" fill="#0f766e"/>
+<circle class="dot" cx="340.0" cy="427.2" r="4" fill="#0f766e"/>
+<circle class="dot" cx="580.0" cy="413.1" r="4" fill="#0f766e"/>
+<circle class="dot" cx="820.0" cy="341.5" r="4" fill="#0f766e"/>
+<rect x="870" y="292" width="14" height="14" rx="2" fill="#0f766e"/>
+<text class="label" x="894" y="304">Lattice source-inline elided</text>
+<text class="small" x="894" y="322">p50 30 ns / p99 54 ns / p99.9 283 ns</text>
+<polyline class="line" points="100.0,349.9 340.0,339.6 580.0,324.4 820.0,187.4" stroke="#b45309"/>
+<circle class="dot" cx="100.0" cy="349.9" r="4" fill="#b45309"/>
+<circle class="dot" cx="340.0" cy="339.6" r="4" fill="#b45309"/>
+<circle class="dot" cx="580.0" cy="324.4" r="4" fill="#b45309"/>
+<circle class="dot" cx="820.0" cy="187.4" r="4" fill="#b45309"/>
+<rect x="870" y="356" width="14" height="14" rx="2" fill="#b45309"/>
+<text class="label" x="894" y="368">Disruptor manual fused</text>
+<text class="small" x="894" y="386">p50 233 ns / p99 421 ns / p99.9 10.02 us</text>
+<text class="axis" x="820" y="576" text-anchor="end">ns/op, logarithmic scale</text>
 </svg>

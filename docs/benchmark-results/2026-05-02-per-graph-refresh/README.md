@@ -4,6 +4,9 @@ This snapshot refreshes the public comparison figures after moving fusion,
 metrics, placement, and diagnostics controls from process-global runtime flags
 to per-graph builder specs.
 
+See the [device comparison page](../../devices.md) for this host alongside the
+older i7 publication baseline.
+
 ## Validation Profile
 
 | Property | Value |
@@ -13,7 +16,7 @@ to per-graph builder specs.
 | JDK | OpenJDK 21.0.10+7-Ubuntu-124.04 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Not loaded |
+| Native backend | Loaded only for `latticePinnedFusedCompleted` in the latency artifact |
 | JVM flags | `-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC` |
 
 ## Artifacts
@@ -26,7 +29,7 @@ Raw JMH JSON and stdout logs are checked in under
 | `three-stage-scoped-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measurement | Three-stage publish rows: physical, inline/manual fused, and equal-call-site reference. |
 | `end-to-end-scoped-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measurement | Completed-operation source/sink, pipeline, broadcast, and dependency shapes. |
 | `optimal-path-completed-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measurement | Completion-gated optimal path used for the README headline row. |
-| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measurement, JMH sample-time mode | JMH latency percentiles for Lattice fused, Lattice source-inline, and Disruptor manual-fused optimal paths. |
+| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measurement, JMH sample-time mode | JMH latency percentiles for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
 | `optimal-path-gc-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measurement, `-prof gc` | Allocation rate, normalized allocation, and GC count for the optimal path. |
 
 ## Figures
@@ -71,9 +74,11 @@ parse/enrich/risk/serialize optimal-path workload.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice fused owner worker | 296 | 335 | 738 | 12,944 |
-| Lattice source-inline elided | 30 | 40 | 58 | 290 |
-| Disruptor manual fused | 243 | 310 | 491 | 11,172 |
+| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
+| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
+| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
+| Lattice source-inline elided | 30 | 39 | 54 | 283 |
+| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
 
 The p99.9 values are more sensitive to sampling length and host noise than the
 p50/p99 values. Treat them as a checked-in run artifact, not as a platform

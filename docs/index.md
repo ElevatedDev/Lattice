@@ -45,6 +45,7 @@ material is available through the root
 | --- | --- |
 | [Performance Tuning](https://github.com/ElevatedDev/Lattice/blob/main/PERFORMANCE_TUNING.md) | Tuning guidance and benchmark methodology. |
 | [Benchmark Results](benchmark-results/README.md) | Checked-in benchmark snapshots. |
+| [Benchmark Devices](devices.md) | Device-specific benchmark snapshots and cross-device caveats. |
 | [Disruptor Comparison](disruptor-comparison.md) | Methodology and honest framing against LMAX Disruptor. |
 | [Linux Validation Notes](linux-validation.md) | Procedure for reproducing benchmark evidence on another Linux host. |
 
@@ -54,7 +55,7 @@ material is available through the root
 | --- | --- |
 | [Three-stage publish throughput](assets/perf-pipeline.svg) | Throughput bars with JMH error bars. |
 | [Lattice vs Disruptor ratios](assets/disruptor-comparison.svg) | Ratio view for the comparable Disruptor rows. |
-| [Optimal-path latency percentiles](assets/latency-percentiles.svg) | JMH sample-time latency curve for Lattice fused, Lattice source-inline, and Disruptor manual-fused optimal paths. |
+| [Optimal-path latency percentiles](assets/latency-percentiles.svg) | JMH sample-time latency curve for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
 | [End-to-end throughput matrix](assets/end-to-end-throughput.svg) | Completed-operation throughput across source/sink, pipeline, fanout, and dependency shapes. |
 | [Optimal path allocation and GC](assets/optimal-path-gc.svg) | JMH GC-profiler allocation and GC-count summary for the optimal path. |
 | [Runtime guarantee map](assets/guarantees-map.svg) | Summary of the runtime guarantees and non-goals. |

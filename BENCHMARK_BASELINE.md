@@ -19,7 +19,7 @@ the raw JMH JSON and stdout logs with any quoted number.
 | Gradle | 8.8 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Not loaded |
+| Native backend | Loaded only for `latticePinnedFusedCompleted` in the latency artifact |
 
 Common JVM flags:
 
@@ -36,13 +36,15 @@ are only the heap/GC profile.
 
 See [`benchmarks/baseline/env.txt`](benchmarks/baseline/env.txt) for exact
 include patterns and artifact profiles.
+See [`docs/devices.md`](docs/devices.md) for the current i9 snapshot alongside
+the older i7 publication baseline.
 
 ## Figures
 
 | Figure | Description |
 | --- | --- |
 | ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Scoped headline publish rows plus the completion-gated optimal path with JMH error bars. |
-| ![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for Lattice fused, Lattice source-inline, and Disruptor manual-fused optimal paths. |
+| ![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
 | ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratio view for the scoped headline rows. |
 | ![End-to-end throughput matrix](docs/assets/end-to-end-throughput.svg) | Completion-gated source/sink, pipeline, broadcast, and dependency shapes. |
 | ![Optimal path allocation and GC](docs/assets/optimal-path-gc.svg) | GC-profiler normalized allocation and GC count for the optimal path. |
@@ -115,9 +117,11 @@ parse, enrich, risk, serialize, then publish completion for the same sequence.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice fused owner worker | 296 | 335 | 738 | 12,944 |
-| Lattice source-inline elided | 30 | 40 | 58 | 290 |
-| Disruptor manual fused | 243 | 310 | 491 | 11,172 |
+| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
+| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
+| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
+| Lattice source-inline elided | 30 | 39 | 54 | 283 |
+| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
 
 ## Allocation And GC
 
@@ -138,7 +142,7 @@ Representative command:
 
 ```bash
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
-  "com.lattice.benchmark.OptimalPathBenchmark.*" \
+  "com.lattice.benchmark.OptimalPathBenchmark.(latticeInlineFusedCompleted|disruptorManualFusedCompleted)$" \
   -f 3 -wi 5 -i 8 -w 5s -r 5s -bm thrpt -tu s \
   -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC" \
   -rf json -rff benchmarks/baseline/optimal-path-completed-2026-05-02.json
@@ -147,3 +151,12 @@ java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
 Use [`docs/linux-validation.md`](docs/linux-validation.md) to reproduce the
 same methodology on another Linux host before claiming results for that
 hardware profile.
+
+The native-pinned latency row additionally requires:
+
+```bash
+./gradlew nativeBuildRelease
+```
+
+and a latency invocation that passes
+`-Dlattice.native.library.path=native/static-topology-native/target/release/libstatic_topology_native.so`.

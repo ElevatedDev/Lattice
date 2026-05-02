@@ -25,7 +25,7 @@ profile, JVM flags, and exact include patterns.
 | `three-stage-scoped-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Current scoped three-stage Lattice physical/inline-fused/reference vs Disruptor physical/manual-fused/reference publish rows. |
 | `end-to-end-scoped-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure | Current completion-gated source/sink, pipeline, broadcast, and dependency rows. |
 | `optimal-path-completed-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Current completion-gated optimal path headline row. |
-| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measure, sample-time mode | Current JMH latency percentiles for Lattice fused, Lattice source-inline, and Disruptor manual-fused optimal paths. |
+| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measure, sample-time mode | Current JMH latency percentiles for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
 | `optimal-path-gc-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure, `-prof gc` | Current optimal-path allocation and GC profiler rows. |
 | `three-stage-vs-disruptor.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
 | `three-stage-isolated-physical.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated Lattice physical three-stage vs Disruptor physical three-handler publish throughput. |
@@ -86,9 +86,11 @@ Rows from `optimal-path-latency-2026-05-02.json` in JMH sample-time mode.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice fused owner worker | 296 | 335 | 738 | 12,944 |
-| Lattice source-inline elided | 30 | 40 | 58 | 290 |
-| Disruptor manual fused | 243 | 310 | 491 | 11,172 |
+| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
+| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
+| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
+| Lattice source-inline elided | 30 | 39 | 54 | 283 |
+| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
 
 ## Allocation And GC
 
@@ -107,5 +109,6 @@ Rows from `optimal-path-gc-2026-05-02.json`.
   `OptimalPathBenchmark` when completed-operation throughput matters.
 - The completed-path benchmark avoids comparing synchronous inline completion
   with asynchronous enqueue-only rates.
-- Native placement and cross-socket behavior are not part of this portable
-  baseline because the placement rows use `pinning=false`.
+- Native placement is used only by `latticePinnedFusedCompleted` in the
+  optimal-path latency artifact. The throughput and GC rows remain portable
+  rows without native placement.
