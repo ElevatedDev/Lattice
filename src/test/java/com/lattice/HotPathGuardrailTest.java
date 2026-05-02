@@ -2,6 +2,7 @@ package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.FusionSpec;
+import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.MpscRingEdge;
@@ -11,6 +12,7 @@ import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
 import com.lattice.placement.MemoryMode;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.PreallocatedEmitter;
 import com.lattice.stage.StageSpec;
 import com.lattice.wait.WaitSpec;
 import java.lang.management.ManagementFactory;
@@ -162,6 +164,30 @@ class HotPathGuardrailTest {
     }
 
     @Test
+    void preallocatedGraphClaimEmitSteadyStateDoesNotAllocate() {
+        final com.sun.management.ThreadMXBean bean = allocationBean();
+        if (bean == null) {
+            return;
+        }
+
+        final RunningPreallocatedGraph graph = startPreallocatedGraph("guardrail-preallocated-emit");
+        try {
+            preallocatedEmitRange(graph, 0, GRAPH_WARMUP_EMITS);
+            awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS - 1L);
+
+            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+            preallocatedEmitRange(graph, GRAPH_WARMUP_EMITS, GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS);
+            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+
+            awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS - 1L);
+            assertTrue(allocated <= GRAPH_EMIT_ALLOCATION_LIMIT,
+                "steady-state preallocated source claim/emit path allocated " + allocated + " bytes");
+        } finally {
+            graph.close();
+        }
+    }
+
+    @Test
     void hotPathPackagesDoNotUseReflectionOrLogging() throws Exception {
         final Path root = Path.of("src", "main", "java", "com", "lattice", "internal");
         try (Stream<Path> files = Files.walk(root)) {
@@ -296,6 +322,22 @@ class HotPathGuardrailTest {
                 .build();
     }
 
+    private static RunningPreallocatedGraph startPreallocatedGraph(final String graphName) {
+        final AtomicLong consumed = new AtomicLong(-1L);
+        final StaticGraph graph = StaticGraph.builder(graphName)
+                .preallocatedSource("ingress", Signal.class,
+                    PreallocationSpec.pool(ignored -> new Signal()).poolSize(GRAPH_RING_CAPACITY << 1))
+                .sink("egress", Signal.class, signal -> consumed.lazySet(signal.sequence), GRAPH_STAGE)
+                .edge("ingress", "egress", GRAPH_SPSC)
+                .build();
+        graph.start();
+        return new RunningPreallocatedGraph(
+            graph,
+            graph.preallocatedEmitter("ingress", Signal.class),
+            consumed
+        );
+    }
+
     private static void emitRange(
         final RunningGraph graph,
         final long startInclusive,
@@ -307,6 +349,19 @@ class HotPathGuardrailTest {
             if (requireInlineCompletion && graph.consumed().get() != sequence) {
                 throw new AssertionError("inline fused emit returned before consuming sequence " + sequence);
             }
+        }
+    }
+
+    private static void preallocatedEmitRange(
+        final RunningPreallocatedGraph graph,
+        final long startInclusive,
+        final long endExclusive
+    ) {
+        for (long sequence = startInclusive; sequence < endExclusive; sequence++) {
+            final Signal signal = graph.emitter().claim();
+            signal.sequence = sequence;
+            signal.value = sequence;
+            graph.emitter().emit(signal);
         }
     }
 
@@ -438,6 +493,20 @@ class HotPathGuardrailTest {
         Emitter<Signal> emitter,
         AtomicLong consumed,
         SignalPool pool
+    ) implements AutoCloseable {
+        @Override
+        public void close() {
+            if (!emitter.isClosed()) {
+                emitter.close();
+            }
+            assertTrue(graph.stop(GRAPH_STOP_TIMEOUT), "guardrail graph did not stop: " + graph.plan().name());
+        }
+    }
+
+    private record RunningPreallocatedGraph(
+        StaticGraph graph,
+        PreallocatedEmitter<Signal> emitter,
+        AtomicLong consumed
     ) implements AutoCloseable {
         @Override
         public void close() {

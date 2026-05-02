@@ -365,6 +365,9 @@ public final class DefaultStaticGraph implements StaticGraph {
     }
 
     private void closeSources() {
+        for (final PreallocatedSourceEmitter<?> emitter : preallocatedEmitters.values()) {
+            emitter.close();
+        }
         final SourceEmitter<?>[] sources = sourceEmitterArray;
         for (int i = 0; i < sources.length; i++) {
             sources[i].close();

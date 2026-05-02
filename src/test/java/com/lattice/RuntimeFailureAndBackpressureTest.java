@@ -9,6 +9,9 @@ import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.StageSpec;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -74,6 +77,47 @@ class RuntimeFailureAndBackpressureTest {
         releaseSink.countDown();
         ingress.close();
         assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+    }
+
+    @Test
+    void blockForOverflowThrowsOnEmitTimeoutAndGraphDrainsAcceptedWork() throws Exception {
+        final CountDownLatch sinkEntered = new CountDownLatch(1);
+        final CountDownLatch releaseSink = new CountDownLatch(1);
+        final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
+        final StaticGraph graph = graph("block-for-backpressure")
+            .source("ingress", Integer.class)
+            .sink("egress", Integer.class, value -> {
+                sinkEntered.countDown();
+                try {
+                    assertTrue(releaseSink.await(5, TimeUnit.SECONDS));
+                } catch (final InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(ex);
+                }
+                consumed.add(value);
+            }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(2).overflow(OverflowPolicy.blockFor(Duration.ofMillis(10))))
+            .build();
+
+        graph.start();
+        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+        ingress.emit(1);
+        assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+        ingress.emit(2);
+        ingress.emit(3);
+
+        assertThrows(BackpressureException.class, () -> ingress.emit(4));
+        assertEquals(GraphState.RUNNING, graph.state());
+        assertTrue(graph.metrics().overloadActivations() > 0);
+        assertTrue(graph.metrics().stage("ingress").blockedOutputs() > 0);
+        assertTrue(graph.metrics().edge("ingress", "egress").blockedOffers() > 0);
+        assertTrue(graph.metrics().backpressureNanos() > 0);
+
+        releaseSink.countDown();
+        ingress.close();
+        assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+        assertEquals(GraphState.STOPPED, graph.state());
+        assertEquals(List.of(1, 2, 3), List.copyOf(consumed));
     }
 
     private static void assertEventually(final java.util.function.BooleanSupplier condition, final Duration timeout)

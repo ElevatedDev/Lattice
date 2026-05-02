@@ -37,6 +37,9 @@ public final class SlabHandle<T> implements AutoCloseable {
      * count.
      */
     public SlabHandle<T> retain() {
+        if (released.get()) {
+            throw new IllegalStateException("slab handle is already released");
+        }
         while (true) {
             final int current = references.get();
             if (current <= 0) {

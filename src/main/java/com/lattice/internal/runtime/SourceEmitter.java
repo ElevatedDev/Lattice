@@ -266,6 +266,7 @@ final class SourceEmitter<T> implements Emitter<T> {
     private RuntimeException pushInlineFailure(final Throwable ex) {
         if (ex instanceof StageWorker.FusedStageException fused) {
             final Throwable cause = fused.getCause() != null ? fused.getCause() : fused;
+            fused.metrics().recordException();
             coordinator.fail(fused.stageName(), cause);
             return publicEmitFailure(fused.stageName(), cause);
         }
