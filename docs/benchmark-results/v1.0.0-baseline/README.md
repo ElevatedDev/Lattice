@@ -29,9 +29,9 @@ the equivalent behavior per graph with `FusionSpec`, `MetricsSpec`,
 
 ## Figures
 
-- [Three-stage publish throughput](../../assets/perf-pipeline.svg)
-- [Lattice vs Disruptor ratios](../../assets/disruptor-comparison.svg)
-- [End-to-end latency percentiles](../../assets/latency-percentiles.svg)
+The shared figures under `docs/assets/` now reflect the newer
+2026-05-02 per-graph API refresh. This page keeps the older 2026-04-29
+numbers below for audit history.
 
 ## Headline Rows
 

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="390" viewBox="0 0 980 390">
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:12px;fill:#52616f}.series{font-size:11px;fill:#52616f}.value{font-size:12px;font-weight:700}.small{font-size:11px;fill:#52616f}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}.line{fill:none;stroke-width:2.6}.dot{stroke:white;stroke-width:1.4}</style>
+<rect width="980" height="390" fill="white"/>
+<text class="title" x="24" y="34">Optimal path allocation and GC</text>
+<text class="sub" x="24" y="58">JMH GC profiler pass; normalized allocation is log-scale B/op, lower is better</text>
+<line class="grid" x1="330.0" y1="84" x2="330.0" y2="250"/>
+<text class="axis" x="330.0" y="276" text-anchor="middle">0.000001</text>
+<line class="grid" x1="513.3" y1="84" x2="513.3" y2="250"/>
+<text class="axis" x="513.3" y="276" text-anchor="middle">0.00001</text>
+<line class="grid" x1="696.7" y1="84" x2="696.7" y2="250"/>
+<text class="axis" x="696.7" y="276" text-anchor="middle">0.0001</text>
+<line class="grid" x1="880.0" y1="84" x2="880.0" y2="250"/>
+<text class="axis" x="880.0" y="276" text-anchor="middle">0.001</text>
+<text class="label" x="310" y="126" text-anchor="end">Lattice source-inline elided</text>
+<rect x="330.0" y="108" width="129.8" height="28" rx="3" fill="#0f766e"/>
+<text class="value" x="468.8" y="127">5.108e-06 B/op</text>
+<text class="small" x="330" y="155">0.000377733 MB/s alloc rate, GC count 0</text>
+<text class="label" x="310" y="190" text-anchor="end">Disruptor manual fused</text>
+<rect x="330.0" y="172" width="459.5" height="28" rx="3" fill="#b45309"/>
+<text class="value" x="755.0" y="191">0.000320832 B/op</text>
+<text class="small" x="330" y="219">0.00106952 MB/s alloc rate, GC count 0</text>
+<line class="axisline" x1="330" y1="250" x2="880" y2="250"/>
+<text class="axis" x="880" y="340" text-anchor="end">Both rows measured zero GC events during the profiled pass.</text>
+</svg>

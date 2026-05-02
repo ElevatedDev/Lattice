@@ -54,7 +54,9 @@ material is available through the root
 | --- | --- |
 | [Three-stage publish throughput](assets/perf-pipeline.svg) | Throughput bars with JMH error bars. |
 | [Lattice vs Disruptor ratios](assets/disruptor-comparison.svg) | Ratio view for the comparable Disruptor rows. |
-| [End-to-end latency percentiles](assets/latency-percentiles.svg) | Latency percentile curves from checked-in logs. |
+| [Optimal-path latency percentiles](assets/latency-percentiles.svg) | JMH sample-time latency curve for Lattice fused, Lattice source-inline, and Disruptor manual-fused optimal paths. |
+| [End-to-end throughput matrix](assets/end-to-end-throughput.svg) | Completed-operation throughput across source/sink, pipeline, fanout, and dependency shapes. |
+| [Optimal path allocation and GC](assets/optimal-path-gc.svg) | JMH GC-profiler allocation and GC-count summary for the optimal path. |
 | [Runtime guarantee map](assets/guarantees-map.svg) | Summary of the runtime guarantees and non-goals. |
 
 ## Project Files

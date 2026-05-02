@@ -1,0 +1,517 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted
+
+# Run progress: 0.00% complete, ETA 00:12:00
+# Fork: 1 of 2
+# Warmup Iteration   1: 3639977.882 ops/s
+# Warmup Iteration   2: 3629844.614 ops/s
+# Warmup Iteration   3: 3707710.421 ops/s
+# Warmup Iteration   4: 3754763.646 ops/s
+# Warmup Iteration   5: 3821615.697 ops/s
+Iteration   1: 3721702.301 ops/s
+Iteration   2: 3755132.464 ops/s
+Iteration   3: 3739745.879 ops/s
+Iteration   4: 3715807.134 ops/s
+Iteration   5: 3833481.873 ops/s
+Iteration   6: 3841202.465 ops/s
+Iteration   7: 3743881.978 ops/s
+
+# Run progress: 5.00% complete, ETA 00:11:31
+# Fork: 2 of 2
+# Warmup Iteration   1: 3447335.641 ops/s
+# Warmup Iteration   2: 3591946.357 ops/s
+# Warmup Iteration   3: 3703588.648 ops/s
+# Warmup Iteration   4: 3649917.877 ops/s
+# Warmup Iteration   5: 3669196.873 ops/s
+Iteration   1: 3622487.325 ops/s
+Iteration   2: 3572462.009 ops/s
+Iteration   3: 3598293.520 ops/s
+Iteration   4: 3601378.568 ops/s
+Iteration   5: 3659494.199 ops/s
+Iteration   6: 3728127.233 ops/s
+Iteration   7: 3679492.176 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted":
+  3700906.366 ±(99.9%) 93968.450 ops/s [Average]
+  (min, avg, max) = (3572462.009, 3700906.366, 3841202.465), stdev = 83300.583
+  CI (99.9%): [3606937.916, 3794874.816] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted
+
+# Run progress: 10.00% complete, ETA 00:10:54
+# Fork: 1 of 2
+# Warmup Iteration   1: 2411284.082 ops/s
+# Warmup Iteration   2: 2422658.802 ops/s
+# Warmup Iteration   3: 2331746.102 ops/s
+# Warmup Iteration   4: 2430971.747 ops/s
+# Warmup Iteration   5: 2485216.536 ops/s
+Iteration   1: 2479338.794 ops/s
+Iteration   2: 2455764.957 ops/s
+Iteration   3: 2515335.246 ops/s
+Iteration   4: 2494091.717 ops/s
+Iteration   5: 2509490.609 ops/s
+Iteration   6: 2356657.062 ops/s
+Iteration   7: 2424674.928 ops/s
+
+# Run progress: 15.00% complete, ETA 00:10:17
+# Fork: 2 of 2
+# Warmup Iteration   1: 2244228.705 ops/s
+# Warmup Iteration   2: 2329163.756 ops/s
+# Warmup Iteration   3: 2329889.545 ops/s
+# Warmup Iteration   4: 2289819.431 ops/s
+# Warmup Iteration   5: 2314442.291 ops/s
+Iteration   1: 2322037.640 ops/s
+Iteration   2: 2308790.791 ops/s
+Iteration   3: 2310982.384 ops/s
+Iteration   4: 2227342.254 ops/s
+Iteration   5: 2303005.737 ops/s
+Iteration   6: 2330783.399 ops/s
+Iteration   7: 2305928.592 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted":
+  2381730.294 ±(99.9%) 106808.356 ops/s [Average]
+  (min, avg, max) = (2227342.254, 2381730.294, 2515335.246), stdev = 94682.826
+  CI (99.9%): [2274921.937, 2488538.650] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted
+
+# Run progress: 20.00% complete, ETA 00:09:40
+# Fork: 1 of 2
+# Warmup Iteration   1: 4260151.266 ops/s
+# Warmup Iteration   2: 4355357.952 ops/s
+# Warmup Iteration   3: 4298086.680 ops/s
+# Warmup Iteration   4: 4185485.401 ops/s
+# Warmup Iteration   5: 4242747.355 ops/s
+Iteration   1: 4262527.496 ops/s
+Iteration   2: 4459539.993 ops/s
+Iteration   3: 4431688.923 ops/s
+Iteration   4: 4399428.131 ops/s
+Iteration   5: 4350599.315 ops/s
+Iteration   6: 4370249.736 ops/s
+Iteration   7: 4376082.134 ops/s
+
+# Run progress: 25.00% complete, ETA 00:09:04
+# Fork: 2 of 2
+# Warmup Iteration   1: 4574622.339 ops/s
+# Warmup Iteration   2: 4710406.210 ops/s
+# Warmup Iteration   3: 4635151.831 ops/s
+# Warmup Iteration   4: 4519571.295 ops/s
+# Warmup Iteration   5: 4395670.463 ops/s
+Iteration   1: 4501287.246 ops/s
+Iteration   2: 4409122.610 ops/s
+Iteration   3: 4368086.030 ops/s
+Iteration   4: 4405713.139 ops/s
+Iteration   5: 4386709.416 ops/s
+Iteration   6: 4452606.731 ops/s
+Iteration   7: 4418317.263 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted":
+  4399425.583 ±(99.9%) 64129.925 ops/s [Average]
+  (min, avg, max) = (4262527.496, 4399425.583, 4501287.246), stdev = 56849.508
+  CI (99.9%): [4335295.658, 4463555.508] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted
+
+# Run progress: 30.00% complete, ETA 00:08:28
+# Fork: 1 of 2
+# Warmup Iteration   1: 1746809.673 ops/s
+# Warmup Iteration   2: 1706065.995 ops/s
+# Warmup Iteration   3: 1714532.191 ops/s
+# Warmup Iteration   4: 1754848.752 ops/s
+# Warmup Iteration   5: 1757205.352 ops/s
+Iteration   1: 1738342.261 ops/s
+Iteration   2: 1705535.670 ops/s
+Iteration   3: 1706309.156 ops/s
+Iteration   4: 1819693.954 ops/s
+Iteration   5: 1804264.857 ops/s
+Iteration   6: 1805242.342 ops/s
+Iteration   7: 1779261.156 ops/s
+
+# Run progress: 35.00% complete, ETA 00:07:51
+# Fork: 2 of 2
+# Warmup Iteration   1: 1628193.680 ops/s
+# Warmup Iteration   2: 1669289.786 ops/s
+# Warmup Iteration   3: 1639898.183 ops/s
+# Warmup Iteration   4: 1617147.942 ops/s
+# Warmup Iteration   5: 1673509.196 ops/s
+Iteration   1: 1576861.696 ops/s
+Iteration   2: 1542238.566 ops/s
+Iteration   3: 1591998.041 ops/s
+Iteration   4: 1672988.633 ops/s
+Iteration   5: 1670594.255 ops/s
+Iteration   6: 1720185.545 ops/s
+Iteration   7: 1690676.679 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted":
+  1701728.058 ±(99.9%) 97873.303 ops/s [Average]
+  (min, avg, max) = (1542238.566, 1701728.058, 1819693.954), stdev = 86762.134
+  CI (99.9%): [1603854.755, 1799601.361] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted
+
+# Run progress: 40.00% complete, ETA 00:07:15
+# Fork: 1 of 2
+# Warmup Iteration   1: 5584471.962 ops/s
+# Warmup Iteration   2: 5473430.482 ops/s
+# Warmup Iteration   3: 5594086.401 ops/s
+# Warmup Iteration   4: 5490302.333 ops/s
+# Warmup Iteration   5: 5548523.423 ops/s
+Iteration   1: 5513161.901 ops/s
+Iteration   2: 5619927.643 ops/s
+Iteration   3: 5262010.004 ops/s
+Iteration   4: 5191799.361 ops/s
+Iteration   5: 5240387.797 ops/s
+Iteration   6: 5108588.541 ops/s
+Iteration   7: 5291220.041 ops/s
+
+# Run progress: 45.00% complete, ETA 00:06:39
+# Fork: 2 of 2
+# Warmup Iteration   1: 5255057.809 ops/s
+# Warmup Iteration   2: 5279529.663 ops/s
+# Warmup Iteration   3: 5317095.865 ops/s
+# Warmup Iteration   4: 5306439.951 ops/s
+# Warmup Iteration   5: 5305359.324 ops/s
+Iteration   1: 5134543.692 ops/s
+Iteration   2: 5343589.927 ops/s
+Iteration   3: 5449760.006 ops/s
+Iteration   4: 5320992.121 ops/s
+Iteration   5: 5457591.614 ops/s
+Iteration   6: 5254445.135 ops/s
+Iteration   7: 5359624.645 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted":
+  5324831.602 ±(99.9%) 164126.158 ops/s [Average]
+  (min, avg, max) = (5108588.541, 5324831.602, 5619927.643), stdev = 145493.564
+  CI (99.9%): [5160705.444, 5488957.760] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted
+
+# Run progress: 50.00% complete, ETA 00:06:02
+# Fork: 1 of 2
+# Warmup Iteration   1: 2157638.739 ops/s
+# Warmup Iteration   2: 2064832.785 ops/s
+# Warmup Iteration   3: 2152974.598 ops/s
+# Warmup Iteration   4: 2146476.067 ops/s
+# Warmup Iteration   5: 2121331.033 ops/s
+Iteration   1: 2134928.415 ops/s
+Iteration   2: 2154070.133 ops/s
+Iteration   3: 2069448.239 ops/s
+Iteration   4: 2113731.172 ops/s
+Iteration   5: 2138358.852 ops/s
+Iteration   6: 2213902.379 ops/s
+Iteration   7: 2112469.882 ops/s
+
+# Run progress: 55.00% complete, ETA 00:05:26
+# Fork: 2 of 2
+# Warmup Iteration   1: 2086009.372 ops/s
+# Warmup Iteration   2: 2113736.825 ops/s
+# Warmup Iteration   3: 2180933.929 ops/s
+# Warmup Iteration   4: 2133171.758 ops/s
+# Warmup Iteration   5: 2112138.005 ops/s
+Iteration   1: 2142281.089 ops/s
+Iteration   2: 2145375.861 ops/s
+Iteration   3: 2175615.771 ops/s
+Iteration   4: 2086207.037 ops/s
+Iteration   5: 2125339.407 ops/s
+Iteration   6: 2182756.063 ops/s
+Iteration   7: 2107947.234 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted":
+  2135887.967 ±(99.9%) 43288.428 ops/s [Average]
+  (min, avg, max) = (2069448.239, 2135887.967, 2213902.379), stdev = 38374.063
+  CI (99.9%): [2092599.539, 2179176.394] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted
+
+# Run progress: 60.00% complete, ETA 00:04:50
+# Fork: 1 of 2
+# Warmup Iteration   1: 1359611.242 ops/s
+# Warmup Iteration   2: 1413323.521 ops/s
+# Warmup Iteration   3: 1427497.422 ops/s
+# Warmup Iteration   4: 1413825.079 ops/s
+# Warmup Iteration   5: 1424575.139 ops/s
+Iteration   1: 1425434.774 ops/s
+Iteration   2: 1413994.241 ops/s
+Iteration   3: 1378216.393 ops/s
+Iteration   4: 1396370.817 ops/s
+Iteration   5: 1326911.382 ops/s
+Iteration   6: 1372284.448 ops/s
+Iteration   7: 1368325.055 ops/s
+
+# Run progress: 65.00% complete, ETA 00:04:14
+# Fork: 2 of 2
+# Warmup Iteration   1: 1277051.589 ops/s
+# Warmup Iteration   2: 1300584.219 ops/s
+# Warmup Iteration   3: 1304427.442 ops/s
+# Warmup Iteration   4: 1296602.949 ops/s
+# Warmup Iteration   5: 1306967.830 ops/s
+Iteration   1: 1330559.093 ops/s
+Iteration   2: 1343387.685 ops/s
+Iteration   3: 1334853.091 ops/s
+Iteration   4: 1323631.734 ops/s
+Iteration   5: 1348777.179 ops/s
+Iteration   6: 1364754.347 ops/s
+Iteration   7: 1352781.488 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted":
+  1362877.266 ±(99.9%) 36148.673 ops/s [Average]
+  (min, avg, max) = (1323631.734, 1362877.266, 1425434.774), stdev = 32044.857
+  CI (99.9%): [1326728.594, 1399025.939] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted
+
+# Run progress: 70.00% complete, ETA 00:03:37
+# Fork: 1 of 2
+# Warmup Iteration   1: 74680045.533 ops/s
+# Warmup Iteration   2: 75251974.948 ops/s
+# Warmup Iteration   3: 75611295.355 ops/s
+# Warmup Iteration   4: 75953032.595 ops/s
+# Warmup Iteration   5: 76013768.122 ops/s
+Iteration   1: 77719526.598 ops/s
+Iteration   2: 78770796.853 ops/s
+Iteration   3: 78710620.025 ops/s
+Iteration   4: 79999127.366 ops/s
+Iteration   5: 79549384.971 ops/s
+Iteration   6: 78118307.398 ops/s
+Iteration   7: 78220979.607 ops/s
+
+# Run progress: 75.00% complete, ETA 00:03:01
+# Fork: 2 of 2
+# Warmup Iteration   1: 75819014.883 ops/s
+# Warmup Iteration   2: 75631548.230 ops/s
+# Warmup Iteration   3: 78447799.313 ops/s
+# Warmup Iteration   4: 77402645.374 ops/s
+# Warmup Iteration   5: 77810772.193 ops/s
+Iteration   1: 76371685.715 ops/s
+Iteration   2: 76759868.097 ops/s
+Iteration   3: 77583862.230 ops/s
+Iteration   4: 77330222.448 ops/s
+Iteration   5: 78537216.187 ops/s
+Iteration   6: 78070657.074 ops/s
+Iteration   7: 77774277.211 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted":
+  78108323.699 ±(99.9%) 1111855.204 ops/s [Average]
+  (min, avg, max) = (76371685.715, 78108323.699, 79999127.366), stdev = 985630.678
+  CI (99.9%): [76996468.494, 79220178.903] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted
+
+# Run progress: 80.00% complete, ETA 00:02:25
+# Fork: 1 of 2
+# Warmup Iteration   1: 1187787.359 ops/s
+# Warmup Iteration   2: 1235966.491 ops/s
+# Warmup Iteration   3: 1231062.860 ops/s
+# Warmup Iteration   4: 1234337.121 ops/s
+# Warmup Iteration   5: 1214224.569 ops/s
+Iteration   1: 1193259.658 ops/s
+Iteration   2: 1210443.665 ops/s
+Iteration   3: 1223240.984 ops/s
+Iteration   4: 1170772.056 ops/s
+Iteration   5: 1231920.909 ops/s
+Iteration   6: 1238846.372 ops/s
+Iteration   7: 1247121.031 ops/s
+
+# Run progress: 85.00% complete, ETA 00:01:48
+# Fork: 2 of 2
+# Warmup Iteration   1: 1227530.782 ops/s
+# Warmup Iteration   2: 1246205.204 ops/s
+# Warmup Iteration   3: 1243495.187 ops/s
+# Warmup Iteration   4: 1225912.726 ops/s
+# Warmup Iteration   5: 1207203.829 ops/s
+Iteration   1: 1218580.363 ops/s
+Iteration   2: 1237079.917 ops/s
+Iteration   3: 1201533.995 ops/s
+Iteration   4: 1237556.962 ops/s
+Iteration   5: 1257374.715 ops/s
+Iteration   6: 1251783.907 ops/s
+Iteration   7: 1295661.196 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted":
+  1229655.409 ±(99.9%) 34617.795 ops/s [Average]
+  (min, avg, max) = (1170772.056, 1229655.409, 1295661.196), stdev = 30687.774
+  CI (99.9%): [1195037.614, 1264273.204] (assumes normal distribution)
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted
+
+# Run progress: 90.00% complete, ETA 00:01:12
+# Fork: 1 of 2
+# Warmup Iteration   1: 3604999.416 ops/s
+# Warmup Iteration   2: 3563749.041 ops/s
+# Warmup Iteration   3: 3640763.802 ops/s
+# Warmup Iteration   4: 3669817.422 ops/s
+# Warmup Iteration   5: 3696933.765 ops/s
+Iteration   1: 3663766.669 ops/s
+Iteration   2: 3579046.610 ops/s
+Iteration   3: 3528695.308 ops/s
+Iteration   4: 3527254.440 ops/s
+Iteration   5: 3560678.295 ops/s
+Iteration   6: 3546043.427 ops/s
+Iteration   7: 3462608.583 ops/s
+
+# Run progress: 95.00% complete, ETA 00:00:36
+# Fork: 2 of 2
+# Warmup Iteration   1: 4105738.631 ops/s
+# Warmup Iteration   2: 4243014.662 ops/s
+# Warmup Iteration   3: 4145896.872 ops/s
+# Warmup Iteration   4: 4284345.424 ops/s
+# Warmup Iteration   5: 4197297.912 ops/s
+Iteration   1: 4250017.613 ops/s
+Iteration   2: 4188754.971 ops/s
+Iteration   3: 4094353.440 ops/s
+Iteration   4: 4248039.150 ops/s
+Iteration   5: 4323040.871 ops/s
+Iteration   6: 4155723.301 ops/s
+Iteration   7: 4062909.356 ops/s
+
+
+Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted":
+  3870780.859 ±(99.9%) 382046.131 ops/s [Average]
+  (min, avg, max) = (3462608.583, 3870780.859, 4323040.871), stdev = 338673.944
+  CI (99.9%): [3488734.729, 4252826.990] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:12:06
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                                       Mode  Cnt         Score         Error  Units
+EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted   thrpt   14   3700906.366 ±   93968.450  ops/s
+EndToEndPathBenchmark.disruptorDependencyGraphCompleted        thrpt   14   2381730.294 ±  106808.356  ops/s
+EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted  thrpt   14   4399425.583 ±   64129.925  ops/s
+EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted       thrpt   14   1701728.058 ±   97873.303  ops/s
+EndToEndPathBenchmark.disruptorSourceSinkCompleted             thrpt   14   5324831.602 ±  164126.158  ops/s
+EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted       thrpt   14   2135887.967 ±   43288.428  ops/s
+EndToEndPathBenchmark.latticeDependencyJoinCompleted           thrpt   14   1362877.266 ±   36148.673  ops/s
+EndToEndPathBenchmark.latticePipelineInlineFusedCompleted      thrpt   14  78108323.699 ± 1111855.204  ops/s
+EndToEndPathBenchmark.latticePipelinePhysicalCompleted         thrpt   14   1229655.409 ±   34617.795  ops/s
+EndToEndPathBenchmark.latticeSourceSinkCompleted               thrpt   14   3870780.859 ±  382046.131  ops/s
+
+Benchmark result is saved to benchmarks/baseline/end-to-end-scoped-2026-05-02.json

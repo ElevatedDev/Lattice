@@ -1,0 +1,255 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
+
+# Run progress: 0.00% complete, ETA 00:02:24
+# Fork: 1 of 2
+# Warmup Iteration   1: 3356989.015 ops/s
+# Warmup Iteration   2: 3348906.485 ops/s
+# Warmup Iteration   3: 3483693.994 ops/s
+# Warmup Iteration   4: 3431804.888 ops/s
+# Warmup Iteration   5: 3516419.862 ops/s
+Iteration   1: 3630267.917 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   2: 3586377.385 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   3: 3641228.383 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   4: 3545237.540 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   5: 3584120.964 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   6: 3553787.094 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   7: 3604962.845 ops/s
+                 ·gc.alloc.rate:      0.007 MB/sec
+                 ·gc.alloc.rate.norm: 0.002 B/op
+                 ·gc.count:           ≈ 0 counts
+
+
+# Run progress: 25.00% complete, ETA 00:01:49
+# Fork: 2 of 2
+# Warmup Iteration   1: 3435854.833 ops/s
+# Warmup Iteration   2: 3476456.296 ops/s
+# Warmup Iteration   3: 3578450.933 ops/s
+# Warmup Iteration   4: 3540549.184 ops/s
+# Warmup Iteration   5: 3551228.858 ops/s
+Iteration   1: 3529169.176 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   2: 3574089.094 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   3: 3603916.253 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   4: 3496993.204 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   5: 3585802.905 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   6: 3577879.381 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁴ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   7: 3377689.507 ops/s
+                 ·gc.alloc.rate:      0.007 MB/sec
+                 ·gc.alloc.rate.norm: 0.002 B/op
+                 ·gc.count:           ≈ 0 counts
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
+  3563680.118 ±(99.9%) 74151.844 ops/s [Average]
+  (min, avg, max) = (3377689.507, 3563680.118, 3641228.383), stdev = 65733.678
+  CI (99.9%): [3489528.274, 3637831.961] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate":
+  0.001 ±(99.9%) 0.003 MB/sec [Average]
+  (min, avg, max) = (≈ 10⁻⁴, 0.001, 0.007), stdev = 0.002
+  CI (99.9%): [≈ 0, 0.004] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate.norm":
+  ≈ 10⁻³ B/op
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.count":
+  ≈ 0 counts
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 7 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
+
+# Run progress: 50.00% complete, ETA 00:01:12
+# Fork: 1 of 2
+# Warmup Iteration   1: 76092679.721 ops/s
+# Warmup Iteration   2: 78083171.735 ops/s
+# Warmup Iteration   3: 80209640.199 ops/s
+# Warmup Iteration   4: 81493174.637 ops/s
+# Warmup Iteration   5: 82296662.916 ops/s
+Iteration   1: 78568477.430 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   2: 79333837.909 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   3: 79124754.952 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   4: 78747234.984 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   5: 77436770.596 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   6: 78085669.943 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   7: 78255089.670 ops/s
+                 ·gc.alloc.rate:      0.002 MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁵ B/op
+                 ·gc.count:           ≈ 0 counts
+
+
+# Run progress: 75.00% complete, ETA 00:00:36
+# Fork: 2 of 2
+# Warmup Iteration   1: 76040677.808 ops/s
+# Warmup Iteration   2: 77165964.543 ops/s
+# Warmup Iteration   3: 77471108.644 ops/s
+# Warmup Iteration   4: 76319654.433 ops/s
+# Warmup Iteration   5: 78092814.847 ops/s
+Iteration   1: 77571152.559 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   2: 80076066.044 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   3: 73668250.310 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   4: 77463948.606 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   5: 79019838.089 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   6: 77130453.821 ops/s
+                 ·gc.alloc.rate:      ≈ 10⁻⁴ MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁶ B/op
+                 ·gc.count:           ≈ 0 counts
+
+Iteration   7: 76525482.656 ops/s
+                 ·gc.alloc.rate:      0.002 MB/sec
+                 ·gc.alloc.rate.norm: ≈ 10⁻⁵ B/op
+                 ·gc.count:           ≈ 0 counts
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
+  77929073.398 ±(99.9%) 1763223.042 ops/s [Average]
+  (min, avg, max) = (73668250.310, 77929073.398, 80076066.044), stdev = 1563051.300
+  CI (99.9%): [76165850.356, 79692296.440] (assumes normal distribution)
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate":
+  ≈ 10⁻³ MB/sec
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate.norm":
+  ≈ 10⁻⁵ B/op
+
+Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.count":
+  ≈ 0 counts
+
+
+# Run complete. Total time: 00:02:25
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                                                Mode  Cnt         Score         Error   Units
+OptimalPathBenchmark.disruptorManualFusedCompleted                      thrpt   14   3563680.118 ±   74151.844   ops/s
+OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate       thrpt   14         0.001 ±       0.003  MB/sec
+OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate.norm  thrpt   14        ≈ 10⁻³                  B/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.count            thrpt   14           ≈ 0                counts
+OptimalPathBenchmark.latticeInlineFusedCompleted                        thrpt   14  77929073.398 ± 1763223.042   ops/s
+OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate         thrpt   14        ≈ 10⁻³                MB/sec
+OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate.norm    thrpt   14        ≈ 10⁻⁵                  B/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.count              thrpt   14           ≈ 0                counts
+
+Benchmark result is saved to benchmarks/baseline/optimal-path-gc-2026-05-02.json

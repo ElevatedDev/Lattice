@@ -165,10 +165,10 @@ contract the application explicitly opted in to), the runtime does not infer
 producer-thread ownership. Do not enable source inline if the producer thread
 must remain isolated from stage/sink work.
 
-The current checked-in isolated stage baseline records
-`latticeThreeStagePipelineFused` at 61,838,846 ops/s,
-`latticeThreeStagePipelineFusedReference` at 52,698,325 ops/s, and
-`latticeThreeStagePipelinePhysical` at 27,660,948 ops/s. The completed optimal
+The current checked-in 2026-05-02 stage baseline records
+`latticeThreeStagePipelineFused` at 127,875,286 ops/s,
+`latticeManuallyFusedReference` at 209,168,722 ops/s, and
+`latticeThreeStagePipelinePhysical` at 31,938,529 ops/s. The completed optimal
 path is tracked separately so publish throughput is not confused with
 completed-operation throughput.
 
@@ -400,9 +400,11 @@ For Disruptor comparisons:
 ## Current Data Scope
 
 The current public result set under
-[`docs/benchmark-results/v1.0.0-baseline/`](docs/benchmark-results/v1.0.0-baseline/)
-is a JDK 21 data set refreshed on 2026-04-29. It shows the architectural value
-of source specialization, equal-call-site manual fusion, and inline fusion.
+[`docs/benchmark-results/2026-05-02-per-graph-refresh/`](docs/benchmark-results/2026-05-02-per-graph-refresh/)
+is a JDK 21 data set refreshed after the per-graph runtime API migration. It
+shows the architectural value of source specialization, equal-call-site manual
+fusion, inline fusion, completion-gated comparison, and the allocation profile
+of the optimal path.
 
 Scope rules:
 
@@ -411,14 +413,14 @@ Scope rules:
 - Apples-to-apples benchmark rows are only fair when the payload model and
   dependency semantics match the claim.
 - Publish-throughput rows are not completed-operation rows. Use
-  `optimal-path-completed.json` when completion matters.
+  `optimal-path-completed-2026-05-02.json` when completion matters.
 - Treat single-producer Disruptor rows as baseline context for shared-ring
   workloads, not as proof about every static graph shape.
 
 The practical reading of the current data is that Lattice is strongest when the
-compiler can specialize and inline a static topology. The isolated physical,
-inline-fused, reference-framed, equal-call-site reference, and completion-gated
-rows all put Lattice ahead by point estimate; the physical row has overlapping
-JMH error bars, while the fused and completion-gated rows are clearer. Disruptor
-remains a strong baseline for a single shared sequence domain, so keep the raw
-artifacts and topology semantics attached to any comparison.
+compiler can specialize and inline a static topology. The headline physical,
+inline-fused, equal-call-site reference, and completion-gated rows put Lattice
+ahead by point estimate. The broader end-to-end matrix is mixed: physical
+source/sink and routing-heavy shapes can favor Disruptor, while the eligible
+static linear pipeline is the Lattice fast path. Keep the raw artifacts and
+topology semantics attached to any comparison.

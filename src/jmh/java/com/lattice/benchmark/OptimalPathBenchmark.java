@@ -42,6 +42,14 @@ public class OptimalPathBenchmark {
     private static final long[] SIDE_TABLE = sideTable();
 
     @Benchmark
+    public long latticeFusedCompleted(final LatticeFusedState state) {
+        final Order order = state.nextOrder();
+        state.emitter.emit(order);
+        awaitCompleted(state.completedSequence, order.sequence);
+        return order.checksum;
+    }
+
+    @Benchmark
     public long latticeInlineFusedCompleted(final LatticeInlineFusedState state) {
         final Order order = state.nextOrder();
         state.emitter.emit(order);
@@ -63,18 +71,42 @@ public class OptimalPathBenchmark {
     }
 
     @State(Scope.Benchmark)
-    public static class LatticeInlineFusedState extends PooledOrders {
+    public static class LatticeFusedState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-fused",
+                FusionSpec.defaults(),
+                "latticeFusedCompleted"
+            );
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeInlineFusedState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-inline-fused",
+                FusionSpec.defaults()
+                    .inlineSources(true)
+                    .elideInlineSourcePhysicalPath(true),
+                "latticeInlineFusedCompleted"
+            );
+        }
+    }
+
+    public abstract static class LatticeState extends PooledOrders {
         final AtomicLong completedSequence = new AtomicLong(-1L);
         StaticGraph graph;
         Emitter<Order> emitter;
+        String benchmarkName;
 
-        @Setup(Level.Trial)
-        public void setup() {
+        void setup(final String graphName, final FusionSpec fusionSpec, final String benchmarkName) {
             try {
-                graph = StaticGraph.builder("optimal-lattice-inline-fused")
-                    .fusion(FusionSpec.defaults()
-                        .inlineSources(true)
-                        .elideInlineSourcePhysicalPath(true))
+                this.benchmarkName = benchmarkName;
+                graph = StaticGraph.builder(graphName)
+                    .fusion(fusionSpec)
                     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
                     .stage("parse", Order.class, Order.class, OptimalPathBenchmark::parse, STAGE)
                     .stage("enrich", Order.class, Order.class, OptimalPathBenchmark::enrich, STAGE)
@@ -105,7 +137,7 @@ public class OptimalPathBenchmark {
                     graph.stop(STOP_TIMEOUT);
                 }
             } finally {
-                requireCompleted("latticeInlineFusedCompleted", completedSequence);
+                requireCompleted(benchmarkName, completedSequence);
             }
         }
     }

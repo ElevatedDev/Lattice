@@ -183,35 +183,34 @@ See [Ordering Guarantees](docs/ordering-guarantees.md),
 
 The checked-in benchmark material is the current public baseline. Start with
 the release snapshot index, then cite the underlying host, JVM flags, benchmark
-class, and JSON artifact for any number you quote. The refreshed baseline
-includes both publish-throughput rows and a completion-gated
-`OptimalPathBenchmark` so async enqueue rates are not confused with
-completed-operation throughput.
+class, and JSON artifact for any number you quote. The 2026-05-02 refresh
+includes scoped publish-throughput rows, completion-gated end-to-end rows,
+an optimal-path sample-time latency pass, and a GC-profiler pass for the
+optimal path.
 
 The headline comparison is scoped deliberately:
 
-- The table deduplicates isolated and full-matrix repeats, then uses the best
-  checked-in Lattice point estimate and the best checked-in Disruptor point
-  estimate for each published workload.
+- The table uses the matching scoped JMH artifact for each workload rather
+  than mixing older isolated and full-matrix runs.
 - The completed optimal path waits for sink/handler completion on both sides.
 - The Disruptor manually fused reference row collapses three increments into
   one handler call; the matching Lattice row uses the best equal-call-site
-  `latticeManuallyFusedReference` result: 92.1M ops/s.
-- The physical, fused-copy, manual-reference, and completed-path rows all show
-  Lattice ahead of the strongest logged Disruptor result for the same workload.
-
-![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg)
+  `latticeManuallyFusedReference` result: 209.2M ops/s.
+- The physical publish, fused publish, equal-call-site reference, and optimal
+  completed rows all show Lattice ahead for the same workload. Broader
+  end-to-end topology rows are documented separately and include cases where
+  the physical/router shapes favor Disruptor.
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
 
-![End-to-end latency percentiles](docs/assets/latency-percentiles.svg)
+![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg)
 
 | Workload | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
-| Three-stage physical publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
-| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
-| Manually fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
-| Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
+| Three-stage physical publish throughput | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
+| Three-stage inline/manual fused publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
+| Manually fused reference payload, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
+| Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 
 - [Benchmark Results](docs/benchmark-results/README.md)
 - [Benchmark Baseline](BENCHMARK_BASELINE.md)

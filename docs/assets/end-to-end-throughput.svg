@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="620" viewBox="0 0 1180 620">
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:12px;fill:#52616f}.series{font-size:11px;fill:#52616f}.value{font-size:12px;font-weight:700}.small{font-size:11px;fill:#52616f}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}.line{fill:none;stroke-width:2.6}.dot{stroke:white;stroke-width:1.4}</style>
+<rect width="1180" height="620" fill="white"/>
+<text class="title" x="24" y="34">End-to-end completed-operation throughput</text>
+<text class="sub" x="24" y="58">Scoped JMH throughput rows; log-scale x-axis, each operation waits for completion</text>
+<line class="grid" x1="380.0" y1="82" x2="380.0" y2="530"/>
+<text class="axis" x="380.0" y="558" text-anchor="middle">1.0M</text>
+<line class="grid" x1="486.9" y1="82" x2="486.9" y2="530"/>
+<text class="axis" x="486.9" y="558" text-anchor="middle">2.0M</text>
+<line class="grid" x1="628.1" y1="82" x2="628.1" y2="530"/>
+<text class="axis" x="628.1" y="558" text-anchor="middle">5.0M</text>
+<line class="grid" x1="735.0" y1="82" x2="735.0" y2="530"/>
+<text class="axis" x="735.0" y="558" text-anchor="middle">10.0M</text>
+<line class="grid" x1="841.9" y1="82" x2="841.9" y2="530"/>
+<text class="axis" x="841.9" y="558" text-anchor="middle">20.0M</text>
+<line class="grid" x1="983.1" y1="82" x2="983.1" y2="530"/>
+<text class="axis" x="983.1" y="558" text-anchor="middle">50.0M</text>
+<line class="grid" x1="1090.0" y1="82" x2="1090.0" y2="530"/>
+<text class="axis" x="1090.0" y="558" text-anchor="middle">100.0M</text>
+<line class="axisline" x1="380" y1="530" x2="1090" y2="530"/>
+<text class="label" x="24" y="96">Source/sink</text>
+<text class="series" x="350" y="124" text-anchor="end">Lattice</text>
+<rect x="380.0" y="108" width="208.7" height="22" rx="3" fill="#0f766e"/>
+<text class="value" x="597.7" y="124">3.9M</text>
+<text class="series" x="350" y="154" text-anchor="end">Disruptor</text>
+<rect x="380.0" y="138" width="257.8" height="22" rx="3" fill="#b45309"/>
+<text class="value" x="646.8" y="154">5.3M</text>
+<text class="label" x="24" y="194">Physical pipeline</text>
+<text class="series" x="350" y="222" text-anchor="end">Lattice</text>
+<rect x="380.0" y="206" width="31.9" height="22" rx="3" fill="#0f766e"/>
+<text class="value" x="420.9" y="222">1.2M</text>
+<text class="series" x="350" y="252" text-anchor="end">Disruptor</text>
+<rect x="380.0" y="236" width="82.0" height="22" rx="3" fill="#b45309"/>
+<text class="value" x="471.0" y="252">1.7M</text>
+<text class="label" x="24" y="292">Inline/manual fused pipeline</text>
+<text class="series" x="350" y="320" text-anchor="end">Lattice</text>
+<rect x="380.0" y="304" width="671.9" height="22" rx="3" fill="#0f766e"/>
+<text class="value" x="1005.0" y="320">78.1M</text>
+<text class="series" x="350" y="350" text-anchor="end">Disruptor</text>
+<rect x="380.0" y="334" width="228.4" height="22" rx="3" fill="#b45309"/>
+<text class="value" x="617.4" y="350">4.4M</text>
+<text class="label" x="24" y="390">Broadcast two-branch</text>
+<text class="series" x="350" y="418" text-anchor="end">Lattice</text>
+<rect x="380.0" y="402" width="117.0" height="22" rx="3" fill="#0f766e"/>
+<text class="value" x="506.0" y="418">2.1M</text>
+<text class="series" x="350" y="448" text-anchor="end">Disruptor</text>
+<rect x="380.0" y="432" width="201.7" height="22" rx="3" fill="#b45309"/>
+<text class="value" x="590.7" y="448">3.7M</text>
+<text class="label" x="24" y="488">Dependency/join</text>
+<text class="series" x="350" y="516" text-anchor="end">Lattice</text>
+<rect x="380.0" y="500" width="47.7" height="22" rx="3" fill="#0f766e"/>
+<text class="value" x="436.7" y="516">1.4M</text>
+<text class="series" x="350" y="546" text-anchor="end">Disruptor</text>
+<rect x="380.0" y="530" width="133.8" height="22" rx="3" fill="#b45309"/>
+<text class="value" x="522.8" y="546">2.4M</text>
+<text class="axis" x="1090" y="590" text-anchor="end">ops/s, logarithmic scale</text>
+</svg>
