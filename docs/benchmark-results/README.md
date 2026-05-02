@@ -1,11 +1,12 @@
 # Benchmark Results
 
-Tracked benchmark summaries captured for each release.
+Tracked benchmark summaries captured for public baselines and release
+candidates.
 
 | Snapshot | Profile | Host | Notes |
 | --- | --- | --- | --- |
 | [`2026-05-02-per-graph-refresh/`](2026-05-02-per-graph-refresh/) | Per-graph runtime API refresh | Intel i9-14900HX under WSL2, JDK 21.0.10 | Scoped three-stage, end-to-end completion, isolated sample-time latency, and optimal-path GC-profiler artifacts. |
-| [`v1.0.0-baseline/`](v1.0.0-baseline/) | Historical publication baseline | Intel i7-7700, JDK 21.0.10 | Tracks the 2026-04-29 artifact set retained for audit history. |
+| [`v1.0.0-baseline/`](v1.0.0-baseline/) | Pre-release 1.0 hardening baseline | Intel i7-7700, JDK 21.0.10 | Tracks the 2026-04-29 artifact set retained for audit history. |
 
 For a side-by-side device view, see [Benchmark Devices](../devices.md).
 

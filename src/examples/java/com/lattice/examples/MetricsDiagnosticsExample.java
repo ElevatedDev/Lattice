@@ -1,6 +1,7 @@
 package com.lattice.examples;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
@@ -19,6 +20,11 @@ public final class MetricsDiagnosticsExample {
     public static void main(final String[] args) throws Exception {
         final CountDownLatch consumed = new CountDownLatch(2);
         final StaticGraph graph = StaticGraph.builder("example-metrics-diagnostics")
+            .metrics(MetricsSpec.off()
+                .hotCounters(true)
+                .stageHistograms(true)
+                .residenceTiming(true)
+                .fusedLogicalEdgeCounters(true))
             .source("ingress", String.class)
             .stage("parse", String.class, Integer.class, (value, out, ctx) ->
                 out.push(Integer.parseInt(value)), StageSpec.singleThreaded())
@@ -47,7 +53,8 @@ public final class MetricsDiagnosticsExample {
         System.out.printf("edge=ingress->parse highWaterMark=%d blockedOffers=%d parks=%d%n",
             ingressToParse.highWaterMark(), ingressToParse.blockedOffers(), ingressToParse.parkCount());
         System.out.printf("diagnosticFlags hotCounters=%s stageHistograms=%s residenceTiming=%s%n",
-            StageMetrics.hotCountersEnabled(), StageMetrics.histogramsEnabled(), EdgeMetrics.residenceTimingEnabled());
+            metrics.hotCounters(), parse.histograms(), ingressToParse.residenceTiming());
+        System.out.printf("placementReport=%s%n", metrics.placementReport());
     }
 
     private static void await(

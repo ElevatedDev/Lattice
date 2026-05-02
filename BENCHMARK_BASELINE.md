@@ -70,10 +70,11 @@ the older i7 publication baseline.
 
 ## Headline Results
 
-### Top checked-in head-to-head rows
+### Top checked-in publish rows
 
 These rows use the matching 2026-05-02 scoped artifact for each published
-workload.
+workload. Each operation publishes one item; these rows are not
+completed-operation throughput.
 
 | Comparison | Lattice (ops/s) | Lattice source | Disruptor (ops/s) | Disruptor source | Ratio |
 | --- | ---: | --- | ---: | --- | ---: |
@@ -86,7 +87,7 @@ The reference row uses equal call-site footing:
 increments inline as the Disruptor manually fused handler. Lattice is ahead in
 the scoped headline rows.
 
-### Completed optimal path
+### Source-inline completed path
 
 | Benchmark | Score (ops/s) | Error |
 | --- | ---: | ---: |
@@ -96,7 +97,9 @@ the scoped headline rows.
 This benchmark closes the async publish-rate loophole: every operation waits
 until the sink/handler confirms completion for the same sequence. On this host,
 the Lattice inline-fused completed path measured 21.51x the Disruptor
-busy-spin/manual-fused completed path.
+busy-spin/manual-fused completed path. The Lattice path is source-inline
+specialized: the eligible fused chain runs on the producer thread and the
+physical source edge is removed.
 
 ### Broader end-to-end topology rows
 
@@ -108,9 +111,9 @@ busy-spin/manual-fused completed path.
 | Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
 | Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
-Rows with wide confidence intervals retain their JMH error bars in the tables
-and figures. Do not rank close results without checking the raw JSON confidence
-intervals and the matching topology semantics.
+The raw JSON contains JMH error bars and confidence intervals. Do not rank
+close results without checking those intervals and the matching topology
+semantics.
 
 ## Latency
 

@@ -15,8 +15,10 @@ Lattice's ordering contract is intentionally local and explicit.
 ## Across The Graph
 
 - A linear chain `source → stage₁ → ... → sink` preserves per-source order
-  end-to-end whether the chain runs physically (one edge per hop) or fused
-  (chain runs on the producer thread).
+  end-to-end whether the chain runs physically (one edge per hop), through
+  normal downstream fusion (eligible stage/sink chain runs on the owner
+  worker), or through source-inline fusion (eligible chain runs on the producer
+  thread after `FusionSpec.inlineSources(true)`).
 - A `broadcast` node replicates each item to every downstream branch in the
   same logical order; the *physical* arrival order at sinks across branches
   is independent.
@@ -39,4 +41,3 @@ Lattice's ordering contract is intentionally local and explicit.
 See [Edge Semantics](edge-semantics.md) for the memory-ordering primitives that
 back these claims, and [Failure Modes](failure-modes.md) for what happens when
 ordering interacts with abort and fail-stop.
-

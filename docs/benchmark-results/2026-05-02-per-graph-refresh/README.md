@@ -42,18 +42,20 @@ Raw JMH JSON and stdout logs are checked in under
 - [End-to-end throughput matrix](../../assets/end-to-end-throughput.svg)
 - [Optimal path allocation and GC](../../assets/optimal-path-gc.svg)
 
-## Headline Rows
+## Scoped Headline Rows
 
-| Workload | Lattice | Disruptor | Ratio |
+| Scoped headline row | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
 | Three-stage physical publish throughput | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
 | Three-stage inline/manual fused publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
 | Manually fused reference payload, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
-| Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
+| Source-inline completed path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 
 The first three rows are publish-throughput measurements from
 `ApplesToApplesDisruptorBenchmark`. The optimal-path row is stricter: each
-operation waits until the sink/handler completes the same sequence.
+operation waits until the sink/handler completes the same sequence. The
+Lattice side of that row is source-inline elided: the eligible fused chain runs
+on the producer thread and the physical source edge is removed.
 
 ## End-To-End Throughput
 
@@ -69,7 +71,7 @@ The broader matrix is intentionally not a single winner-takes-all claim.
 Physical source/sink and routing-heavy shapes still favor Disruptor on this
 host, while the inline-fused static pipeline is the Lattice fast path.
 
-## Optimal-Path Latency
+## Isolated End-To-End Latency
 
 JMH sample-time rows report completed-operation latency in `ns/op` for the same
 parse/enrich/risk/serialize workload. See

@@ -67,8 +67,12 @@ steady-state allocation is part of the performance budget.
 
 The current v1 contract is intentionally narrow: single-producer, non-stamped,
 linear, blocking, on-heap, single-message source domains. Routing, broadcast,
-partition, joins, redirects, lossy overflow, and edge batch policy are rejected
-inside the preallocated reuse domain.
+partition, joins, redirects, drop/coalesce overflow, and edge batch policy are
+rejected inside the preallocated reuse domain.
+
+That narrowness is the point. Lattice should either prove payload reuse is safe
+for the compiled graph or reject the graph at build time; it should not depend
+on every stage author remembering an informal ownership rule.
 
 Pool sizing should exceed the maximum in-flight window of the compiled
 physical plan. Fusion matters here: elided internal edges do not add to the
@@ -165,7 +169,9 @@ contract the application explicitly opted in to), the runtime does not infer
 producer-thread ownership. Do not enable source inline if the producer thread
 must remain isolated from stage/sink work.
 
-The current checked-in 2026-05-02 stage baseline records
+The current checked-in 2026-05-02 stage baseline from
+`three-stage-scoped-2026-05-02.json` records publish throughput with 3 forks,
+5x5s warmup, and 8x5s measurement:
 `latticeThreeStagePipelineFused` at 127,875,286 ops/s,
 `latticeManuallyFusedReference` at 209,168,722 ops/s, and
 `latticeThreeStagePipelinePhysical` at 31,938,529 ops/s. The completed optimal
@@ -339,6 +345,11 @@ StaticGraph.builder("orders")
 -XX:+UseG1GC
 -XX:+DisableExplicitGC
 ```
+
+The checked-in public baseline uses `-XX:+UseParallelGC`, not the production
+profile examples above. Do not compare a G1GC or different-heap run with the
+published ParallelGC baseline without rerunning both sides under the same JVM
+profile.
 
 Observability and diagnostics run:
 

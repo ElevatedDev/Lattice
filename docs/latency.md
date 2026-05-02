@@ -5,7 +5,7 @@ This page summarizes the isolated end-to-end latency comparison from
 `parse`, `enrich`, `risk`, and `serialize`, then waits for the final completion
 sequence before returning.
 
-The numbers are JMH sample-time `ns/op` percentiles from isolated trusted
+The numbers are JMH sample-time `ns/op` percentiles from isolated checked-in
 2026-05-02 runs. Lower is better. These are checked-in benchmark artifacts, not
 portable latency guarantees.
 
@@ -53,10 +53,20 @@ portable latency guarantees.
 
 Lattice wins the best end-to-end p99 comparison in this run:
 `51 ns` for source-inline elided versus `393 ns` for Disruptor manual fused.
+That Lattice row is intentionally specialized: there is no physical source
+ring and no source-edge backpressure in that mode; the caller runs the eligible
+fused chain synchronously.
 
 Lattice also has the lower physical p99 in the strict-topology profile:
 `1,434 ns` versus `3,632 ns` for Disruptor physical in isolated runs.
+The physical comparison is mixed, not a clean sweep: Disruptor physical is
+lower at mean, p50, and p90, while Lattice strict topology is lower at p99 and
+p99.9 in this isolated run.
 
 The explicit Lattice CPU-pinned physical row is retained as a Lattice placement
 reference. It is not the headline row; strict topology is the better Lattice
 physical p99 profile in this run.
+
+The p99.9 and maximum samples are more sensitive to host noise, sampling
+length, and WSL2 scheduling than p50/p90/p99. Treat them as checked-in
+evidence for this run, not a portable latency guarantee.

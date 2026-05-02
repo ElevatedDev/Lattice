@@ -53,11 +53,13 @@ stage performs the same three increments inline as Disruptor's manually fused
 handler. The physical three-stage point estimate remains above parity, and the
 completed path is the strict end-to-end row below.
 
-## Completed Optimal Path
+## Source-Inline Completed Path
 
 Rows from `optimal-path-completed-2026-05-02.json`. Unlike the publish-throughput rows,
 each benchmark operation waits until the sink/handler publishes completion for
-the same sequence number.
+the same sequence number. The Lattice row is source-inline specialized: the
+eligible fused chain runs on the producer thread and the physical source edge
+is removed.
 
 | Benchmark | Score (ops/s) | Error | Notes |
 | --- | ---: | ---: | --- |
@@ -78,9 +80,8 @@ Rows from `end-to-end-scoped-2026-05-02.json`.
 | Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
 | Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
-Rows with very wide error bars retain their JMH error bars in the table. Do
-not rank close results without checking the raw JSON confidence intervals and
-matching topology semantics.
+The raw JSON contains JMH error bars and confidence intervals. Do not rank
+close results without checking those intervals and matching topology semantics.
 
 ## Isolated End-To-End Latency Excerpts
 

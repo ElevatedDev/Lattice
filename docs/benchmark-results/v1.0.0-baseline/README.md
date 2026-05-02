@@ -1,4 +1,4 @@
-# v1.0.0 Baseline Summary
+# Pre-Release 1.0 Baseline Summary
 
 Summary of the tracked [`benchmarks/baseline/`](../../../benchmarks/baseline/)
 artifact set refreshed on 2026-04-29 for the 1.0.0 open-source hardening pass.
@@ -40,7 +40,7 @@ numbers below for audit history.
 | Physical three-stage publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
 | Inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
 | Manual fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
-| Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
+| Source-inline completed path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
 
 The rows above deduplicate isolated and full-matrix repeats, then use the best
 checked-in point estimate from each side for each published workload. The
@@ -48,7 +48,7 @@ checked-in point estimate from each side for each published workload. The
 footing and measures 2.09x the strongest logged Disruptor manually fused
 reference row.
 
-The completed optimal path waits for sink/handler completion for the same
+The source-inline completed path waits for sink/handler completion for the same
 sequence number. It should be used when comparing end-to-end operation
 completion rather than enqueue/publish rate.
 

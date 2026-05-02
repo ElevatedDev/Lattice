@@ -11,7 +11,7 @@ companion to the repository
 | Concern | Disruptor | Lattice |
 | --- | --- | --- |
 | Topology shape | One ring with sequence barriers; multicast & dependency are barrier patterns. | Explicit DAG of nodes (source / stage / route / join / sink) connected by point-to-point edges. |
-| Backpressure | `WaitStrategy` on the ring. | Per-edge `OverflowPolicy` (block, timed, fail-fast, lossy, coalescing, redirect). |
+| Producer pressure | Bounded ring capacity and gating sequences; `WaitStrategy` controls how processors wait on sequences. | Per-edge `OverflowPolicy` (block, timed, fail-fast, drop-latest, drop-oldest, coalescing, redirect). |
 | Ordering | Single global sequence domain. | Local per-edge ordering. |
 | Payloads | Pre-allocated event slots, mutated in place. | Either user-owned POJOs or slab-pool handles. |
 | Routing | Application code consumes a slice of the ring. | DSL primitives: `dispatch`, `broadcast`, `partition`. |
@@ -26,16 +26,18 @@ and [`benchmarks/baseline/`](../benchmarks/baseline/) follow these rules:
 
 - JMH 1.36 (via the `me.champeau.jmh` Gradle plugin 0.7.3).
 - JDK 21.0.10.
-- JVM args: `-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UseParallelGC`.
+- JVM args:
+  `-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC`.
   Fusion, source inline, source-path elision, metrics, placement, and JFR are
   configured per benchmark graph through `FusionSpec`, `MetricsSpec`,
   `GraphPlacementSpec`, and `DiagnosticsSpec`.
-- Disruptor 4.0.0 on the JMH classpath only (never bundled in the published
-  jar).
+- Disruptor 4.0.0 on the JMH classpath only (never bundled in the Lattice
+  release jar).
 - The 2026-05-02 three-stage and optimal-path headline rows use 3 forks, 5 x
   5 s warmup, and 8 x 5 s measurement. The broader end-to-end matrix uses 2
-  forks, 5 x 3 s warmup, and 7 x 3 s measurement. Sample-time latency uses 2
-  forks, 5 x 3 s warmup, and 5 x 3 s measurement.
+  forks, 5 x 3 s warmup, and 7 x 3 s measurement. The retained optimal-path
+  latency subset uses 2 forks; the isolated latency rows used for the public
+  latency page use 3 forks, 5 x 3 s warmup, and 5 x 3 s measurement.
 - Numbers are reported in `ops/s` from the original JMH output, never
   hand-massaged. Raw JSON artifacts and stdout logs are checked in next to the
   summary so the published ratios can be audited.
@@ -50,12 +52,12 @@ scoped artifacts for each workload.
 
 ![Lattice vs Disruptor ratios](assets/disruptor-comparison.svg)
 
-| Workload | Lattice | Disruptor | Ratio |
+| Scoped headline row | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
 | Three-stage physical publish throughput | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
 | Three-stage inline/manual fused publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
 | Manually fused reference payload (1 logical stage, 3 increments inline) | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
-| Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
+| Source-inline completed path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 
 Disruptor's reference-payload benchmark collapses three increments into a
 single `EventHandler` call, so the published reference row now uses the
@@ -65,11 +67,13 @@ manually fused reference row. The fused publish row compares Lattice inline
 fusion against a manually fused Disruptor copy-payload handler and measures
 3.58x. The physical three-stage point estimate is also above parity at 1.47x.
 
-The completed optimal path is the strictest row for end-to-end operation
+The source-inline completed path is the strictest row for end-to-end operation
 completion: every benchmark operation waits until the sink/handler publishes
 completion for the same sequence. The publish-throughput rows remain useful
 for comparing enqueue/publish hot paths, but they should not be used as a
-completion-rate claim.
+completion-rate claim. The Lattice side of the completed headline is an
+optimized source-inline graph-specialization path: the eligible fused chain
+runs on the producer thread and the physical source edge is removed.
 
 The broader end-to-end matrix is more mixed:
 
@@ -95,9 +99,21 @@ pipeline is the Lattice fast path.
   the copy-payload row shows a manually-fused Disruptor handler writing event
   slot fields, and the reference row uses `latticeManuallyFusedReference` to
   mirror Disruptor's one-call-site shape.
-- **Completed optimal path** compares Lattice inline source fusion with a
+- **Source-inline completed path** compares Lattice inline source fusion with a
   Disruptor busy-spin/manual-fused handler and waits for completion on both
   sides.
+
+## Choosing Between Them
+
+Choose Disruptor when the application is naturally one ordered stream with
+preallocated event slots, clear sequence-barrier dependencies, and a team that
+already understands the Disruptor operational model.
+
+Choose Lattice when the application is a fixed typed DAG and the runtime
+contract matters as much as the queue primitive: local overflow policy per
+edge, declared routing and stamp-correlated joins, graph-local fusion, metrics
+and placement settings, inspectable plan and metrics, and compiler-checked
+payload reuse.
 
 ## Scope
 

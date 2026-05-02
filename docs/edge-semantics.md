@@ -6,10 +6,10 @@ single-producer/single-consumer (SPSC) or multi-producer/single-consumer
 
 ## Capacity
 
-- Capacity is power-of-two; the builder rounds up if needed.
-- The compiler may shrink an edge's physical buffer to zero slots when
-  [linear fusion](source-specialization-and-fusion.md) runs the chain on the
-  producer thread.
+- Capacity must be a power of two; graph build fails with
+  `GraphBuildException` if it is not. MPSC capacity must be at least `2`.
+- The compiler may remove physical buffers for eligible fused internal edges,
+  and may remove the source ingress edge for eligible source-inline elision.
 - Capacity is per-edge. There is no global queue domain.
 
 ## SPSC
@@ -46,7 +46,7 @@ single-producer/single-consumer (SPSC) or multi-producer/single-consumer
 
 The producer side observes capacity. When the ring is full, the configured
 [`OverflowPolicy`](backpressure.md) decides what happens: block, time-bounded
-block, fail-fast, lossy, coalesce, or redirect.
+block, fail-fast, drop-latest, drop-oldest, coalesce, or redirect.
 
 ## Closing & Draining
 

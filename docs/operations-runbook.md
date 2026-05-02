@@ -10,7 +10,7 @@ Day-2 guidance for running Lattice graphs in production.
    JFR events.
 2. If using the native backend, confirm `java.library.path` resolves
    `libstatic_topology_native.{so,dylib,dll}` and that
-   `graph.metrics().placementStatus()` reports the requested CPU sets.
+   `graph.metrics().placementReport()` reports the requested CPU/NUMA ids.
 3. Use `GraphPlacementSpec.off().strict(true)` in production when affinity is
    required; otherwise placement requests are advisory.
 4. Verify edge capacities are power-of-two and slab pools are sized per
@@ -18,13 +18,15 @@ Day-2 guidance for running Lattice graphs in production.
 
 ## Healthy Steady-State Signals
 
-- `EdgeMetrics.queueDepthSample()` stays well below capacity.
-- `EdgeMetrics.rejected()` / `dropped()` / `redirected()` flat or growing
-  proportionally to known load.
-- `WaitMetrics.parks()` consistent with the configured wait strategy.
-- `StageMetrics.exceptions()` flat.
-- `PlacementStatus.effectiveCpuSet()` matches `requestedCpuSet()` on every
-  worker (when strict placement is enabled).
+- `EdgeMetrics.depth()` and `highWaterMark()` stay well below capacity.
+- `EdgeMetrics.failedOffers()`, `droppedLatest()`, `droppedOldest()`, and
+  `redirectedOffers()` are flat or growing proportionally to known load.
+- Stage `spinCount()`, `yieldCount()`, and `parkCount()` are consistent with
+  the configured wait strategy.
+- `StageMetrics.stageExceptions()` stays flat.
+- `GraphMetrics.placementReport()` shows the expected CPU/NUMA ids, observed
+  CPU/NUMA ids, and zero affinity/NUMA violations when strict placement is
+  enabled.
 
 ## Lifecycle Operations
 
@@ -32,7 +34,7 @@ Day-2 guidance for running Lattice graphs in production.
 | --- | --- | --- |
 | Graceful stop | `graph.close()` | Closes sources, drains accepted items, awaits workers. |
 | Drain wait | `graph.awaitTermination(Duration)` | Blocks until workers stop or deadline elapses. |
-| Quiesce / resume | `graph.quiesce()` / `graph.resume()` | Pauses worker progress without tearing down. |
+| Quiesce / resume | `graph.quiesce(Duration)` / `graph.resume()` | Pauses source acceptance and waits for in-flight work to drain, then resumes without rebuilding. |
 | Fail-stop | automatic on stage exception | Workers transition to `FAILED`; metrics record cause. |
 | Abort | `graph.abort()` | Closes edges, interrupts workers, awaits termination, *then* drains. No drain promise. |
 
@@ -47,7 +49,7 @@ Day-2 guidance for running Lattice graphs in production.
 
 ## Diagnostics
 
-- `graph.metrics().placementStatus()` — placement / NUMA / native lib
+- `graph.metrics().placementReport()` — placement / NUMA / native lib
   reporting.
 - `DiagnosticsSpec.off().jfr(true)` plus async-profiler / Mission Control for
   hot-path visibility.

@@ -47,7 +47,7 @@ StaticGraph graph = StaticGraph.builder("orders")
         (order, out, ctx) -> { if (order.valid()) out.push(new ValidOrder(order.id())); },
         StageSpec.singleThreaded())
     .sink("egress", ValidOrder.class, order -> { /* persist */ }, StageSpec.singleThreaded())
-    .edge("ingress",  "validate", EdgeSpec.mpscRing(1024))
+    .edge("ingress",  "validate", EdgeSpec.spscRing(1024))
     .edge("validate", "egress",   EdgeSpec.spscRing(1024))
     .build();
 
@@ -60,6 +60,10 @@ ingress.close();
 graph.awaitTermination(Duration.ofSeconds(5));
 ```
 
+`SourceMode.SINGLE_PRODUCER` is a correctness contract: at most one
+application thread may call the emitter at a time. Use the default source mode
+and an MPSC ingress edge when producers are concurrent.
+
 ## What To Read Next
 
 - [Graph DSL](graph-dsl.md) - every builder method.
@@ -70,4 +74,3 @@ graph.awaitTermination(Duration.ofSeconds(5));
 - [Observability](observability.md) - metrics, JFR events, placement reports.
 - [Architecture](architecture.md) - how Lattice compiles your graph.
 - [Examples Overview](examples/README.md) - runnable, JMH-grade examples.
-

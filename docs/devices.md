@@ -22,11 +22,11 @@ Both snapshots use JMH 1.36, Java 21, `-Xms2g -Xmx2g`,
 | i9-14900HX, 2026-05-02 | Physical three-stage publish | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
 | i9-14900HX, 2026-05-02 | Inline/manual fused copy publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
 | i9-14900HX, 2026-05-02 | Manual fused reference, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
-| i9-14900HX, 2026-05-02 | Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
+| i9-14900HX, 2026-05-02 | Source-inline completed path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 | i7-7700, 2026-04-29 | Physical three-stage publish | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
 | i7-7700, 2026-04-29 | Inline/manual fused copy publish | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
 | i7-7700, 2026-04-29 | Manual fused reference, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
-| i7-7700, 2026-04-29 | Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
+| i7-7700, 2026-04-29 | Source-inline completed path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
 
 The i7 rows are derived from the previously published
 [v1.0.0 baseline](benchmark-results/v1.0.0-baseline/README.md). That artifact
@@ -51,6 +51,10 @@ The native placement rows use explicit CPU pinning or
 `GraphPlacementSpec.topologyAware(true).strict(true).firstTouch(true)` with the
 Linux native topology library. Each latency row is from an isolated JMH
 invocation.
+
+The physical latency comparison is mixed on this host: Disruptor physical is
+lower at mean, p50, and p90; Lattice strict topology is lower at p99 and
+p99.9.
 
 ## Reading The Page
 
