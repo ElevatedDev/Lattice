@@ -9,6 +9,8 @@ plan.
 | Method | Purpose |
 | --- | --- |
 | `.source(id, payloadType, SourceMode)` | Declares an external entry. `SINGLE_PRODUCER` is a correctness contract: at most one application thread emits at a time. `MULTI_PRODUCER` allows concurrent emitters. |
+| `.preallocatedSource(id, payloadType, PreallocationSpec)` | Declares a single-producer source whose payload objects come from a checked reuse pool. |
+| `.stampedSource(id, payloadType, SourceMode)` | Declares a source that wraps emissions in `Stamped` values for joins. |
 | `.stage(id, in, out, StageLogic, StageSpec)` | A user computation. `StageSpec.singleThreaded()` pins to a single worker. |
 | `.batchStage(id, in, out, BatchStageLogic, StageSpec)` | Stage that consumes a `Batch<T>` per invocation. The `StageSpec` must include a batch policy. |
 | `.sink(id, payloadType, Consumer, StageSpec)` | Terminal node. |
@@ -55,6 +57,18 @@ Defaults are conservative for observability overhead and source execution:
 normal downstream fusion is enabled; metrics, source inline, source physical
 path elision, topology-aware placement, strict placement, first-touch placement,
 and JFR are off.
+
+## Configuration Knobs
+
+| Surface | Common knobs | Default | Cost / tradeoff |
+| --- | --- | --- | --- |
+| `StageSpec` | `.wait(...)`, `.pin(...)`, `.batch(...)` | Single-threaded, phased wait, no pin, no batch. | Wait and pin choices affect CPU residency and scheduling; batch policy can improve throughput while adding fill latency. |
+| `EdgeSpec` | `.overflow(...)`, `.wait(...)`, `.memory(...)`, `.batch(...)` | Blocking overflow, phased wait, on-heap slots, no batch. | Overflow policy defines caller behavior under load; residence timing and off-heap handle metadata have explicit costs. |
+| `FusionSpec` | `.inlineSources(...)`, `.elideInlineSourcePhysicalPath(...)`, `.validateTypes(...)` | Downstream fusion on; source-inline and elision off. | Source-inline can remove a handoff but moves stage/sink work onto the producer thread and removes ring backpressure. |
+| `MetricsSpec` | `.hotCounters(...)`, `.fusedLogicalEdgeCounters(...)`, `.stageHistograms(...)`, `.residenceTiming(...)` | Off. | Enables operational visibility at the cost of counter, timestamp, or histogram work on hot paths. |
+| `GraphPlacementSpec` | `.topologyAware(...)`, `.strict(...)`, `.firstTouch(...)` | Off. | Native placement is Linux-strongest and advisory unless strict mode is enabled. |
+| `DiagnosticsSpec` | `.jfr(...)` | Off. | Emits Lattice JFR events when a JVM recording enables the event types. |
+| `exceptionHandler(...)` | Graph-level `StageExceptionHandler` | Fail-stop default. | Custom policy can continue or replace failed messages, but disables source-inline fusion for the affected graph. |
 
 ## Lifecycle
 

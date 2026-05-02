@@ -58,3 +58,9 @@ For every benchmark JSON checked into `docs/benchmark-results/<version>/`:
 Use the same payload model, completion semantics, observability toggles, JVM
 flags, and Disruptor wait strategy as the checked-in baseline when extending a
 "vs Disruptor" claim to a new host.
+
+For explicit Lattice CPU-set placement, record both the requested policy and
+the host's allowed CPU mask. The Linux native backend applies the intersection
+of those sets, which is the right behavior under cgroups and `taskset`; an
+empty intersection is a placement failure and should not be used for pinned
+benchmark claims.

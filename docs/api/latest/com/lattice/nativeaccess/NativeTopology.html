@@ -327,7 +327,10 @@ loadScripts(document, 'script');</script>
 <h3>pinCurrentThreadToCpuSet</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">pinCurrentThreadToCpuSet</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/BitSet.html" title="class or interface in java.util" class="external-link">BitSet</a>&nbsp;cpus,
  int&nbsp;maxCpu)</span></div>
-<div class="block">Pins the current Java thread to a CPU set.</div>
+<div class="block">Pins the current Java thread to a CPU set.
+ <p>
+ Linux applies CPU sets as any-of placement within the current allowed
+ affinity mask. A requested set with no allowed CPUs fails.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>cpus</code> - non-empty CPU set</dd>

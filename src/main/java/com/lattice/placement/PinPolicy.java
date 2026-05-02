@@ -52,6 +52,11 @@ public final class PinPolicy {
 
     /**
      * Requests placement on any CPU in the supplied set.
+     * <p>
+     * On Linux, the native backend applies the intersection of this set and
+     * the worker thread's current allowed affinity. This keeps explicit
+     * any-of placement compatible with cgroups, {@code taskset}, and service
+     * manager CPU limits.
      */
     public static PinPolicy cpuSet(final int firstCpu, final int... additionalCpus) {
         final BitSet cpus = new BitSet();
@@ -64,6 +69,11 @@ public final class PinPolicy {
 
     /**
      * Requests placement on any CPU in the supplied set.
+     * <p>
+     * On Linux, the native backend applies the intersection of this set and
+     * the worker thread's current allowed affinity. This keeps explicit
+     * any-of placement compatible with cgroups, {@code taskset}, and service
+     * manager CPU limits.
      */
     public static PinPolicy cpuSet(final BitSet cpus) {
         final BitSet copy = (BitSet) Objects.requireNonNull(cpus, "cpus").clone();

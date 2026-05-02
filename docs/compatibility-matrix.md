@@ -9,10 +9,10 @@
 | 23 | Best-effort | Same. |
 | 24 | Best-effort | Same. |
 | 25 (LTS) | Planned for 1.1 | Validation pending. |
-| 26 EA | Tracking | No known blockers. |
+| 26 | Tracking | GA on 2026-03-17; validation pending, no known blockers. |
 | <= 20 | **Unsupported** | Lattice uses Java 21 language and APIs. |
 
-The published jar contains:
+The release jar contains:
 
 - `module-info.class` for `com.lattice`.
 - `Automatic-Module-Name: com.lattice` as a fallback.
@@ -34,10 +34,16 @@ library does not imply Linux-equivalent NUMA behavior; check
 `NativeTopology.capabilities()` or `GraphMetrics.placementReport()` before
 making placement or benchmark claims for a platform.
 
+On Linux, single-CPU pinning is exact. CPU-set pinning is any-of placement: the
+native backend intersects the requested set with the worker thread's current
+allowed affinity before applying it. This keeps Lattice aligned with cgroups,
+`taskset`, and service managers; an empty effective set is reported as a
+placement failure.
+
 ## Disruptor
 
 Disruptor 4.0.0 is on the **JMH classpath only**. It is not a runtime
-dependency of the published Lattice jar and never appears on a consumer
+dependency of the Lattice release jar and never appears on a consumer
 classpath.
 
 ## HdrHistogram

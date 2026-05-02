@@ -362,20 +362,15 @@ mod platform {
             return -EINVAL;
         }
 
-        let mut set = CpuSet {
-            bits: [0; CPU_WORD_COUNT],
+        let set = match current_allowed_affinity() {
+            Ok(set) => set,
+            Err(rc) => return rc,
         };
-        let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut set) };
-        if rc != 0 {
-            return -last_errno();
-        }
 
-        let word = cpu as usize / CPU_WORD_BITS;
-        let bit = cpu as usize % CPU_WORD_BITS;
-        if set.bits[word] & (1usize << bit) == 0 {
-            0
-        } else {
+        if cpu_set_contains(&set, cpu as usize) {
             1
+        } else {
+            0
         }
     }
 
@@ -384,12 +379,8 @@ mod platform {
             return -EINVAL;
         }
 
-        let mut set = CpuSet {
-            bits: [0; CPU_WORD_COUNT],
-        };
-        let word = cpu as usize / CPU_WORD_BITS;
-        let bit = cpu as usize % CPU_WORD_BITS;
-        set.bits[word] |= 1usize << bit;
+        let mut set = empty_cpu_set();
+        cpu_set_insert(&mut set, cpu as usize);
 
         set_affinity(&set)
     }
@@ -399,13 +390,10 @@ mod platform {
             return -EINVAL;
         }
 
-        let mut allowed = CpuSet {
-            bits: [0; CPU_WORD_COUNT],
+        let allowed = match current_allowed_affinity() {
+            Ok(set) => set,
+            Err(rc) => return rc,
         };
-        let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut allowed) };
-        if rc != 0 {
-            return -last_errno();
-        }
 
         let mut candidates = [0; CPU_SETSIZE];
         let candidate_count = allowed_numa_cpus(numa_node, &allowed, &mut candidates);
@@ -445,22 +433,27 @@ mod platform {
             return -ERANGE;
         }
 
-        let mut set = CpuSet {
-            bits: [0; CPU_WORD_COUNT],
-        };
-        let mut non_empty = false;
+        let mut requested = empty_cpu_set();
 
         for (index, word) in words.into_iter().enumerate() {
             let bits = word as u64 as usize;
-            set.bits[index] = bits;
-            non_empty |= bits != 0;
+            requested.bits[index] = bits;
         }
 
-        if !non_empty {
+        if !cpu_set_non_empty(&requested) {
             return -EINVAL;
         }
 
-        set_affinity(&set)
+        let allowed = match current_allowed_affinity() {
+            Ok(set) => set,
+            Err(rc) => return rc,
+        };
+        intersect_cpu_sets(&mut requested, &allowed);
+        if !cpu_set_non_empty(&requested) {
+            return -ENODEV;
+        }
+
+        set_affinity(&requested)
     }
 
     pub fn set_local_allocation_policy() -> JInt {
@@ -546,6 +539,22 @@ mod platform {
         }
     }
 
+    fn current_allowed_affinity() -> Result<CpuSet, JInt> {
+        let mut set = empty_cpu_set();
+        let rc = unsafe { sched_getaffinity(0, core::mem::size_of::<CpuSet>(), &mut set) };
+        if rc == 0 {
+            Ok(set)
+        } else {
+            Err(-last_errno())
+        }
+    }
+
+    fn empty_cpu_set() -> CpuSet {
+        CpuSet {
+            bits: [0; CPU_WORD_COUNT],
+        }
+    }
+
     fn allowed_numa_cpus(
         numa_node: JInt,
         allowed: &CpuSet,
@@ -580,6 +589,26 @@ mod platform {
         set.bits[word] & (1usize << bit) != 0
     }
 
+    fn cpu_set_insert(set: &mut CpuSet, cpu: usize) -> bool {
+        if cpu >= CPU_SETSIZE {
+            return false;
+        }
+        let word = cpu / CPU_WORD_BITS;
+        let bit = cpu % CPU_WORD_BITS;
+        set.bits[word] |= 1usize << bit;
+        true
+    }
+
+    fn cpu_set_non_empty(set: &CpuSet) -> bool {
+        set.bits.iter().any(|bits| *bits != 0)
+    }
+
+    fn intersect_cpu_sets(target: &mut CpuSet, allowed: &CpuSet) {
+        for (target_word, allowed_word) in target.bits.iter_mut().zip(allowed.bits.iter()) {
+            *target_word &= *allowed_word;
+        }
+    }
+
     fn thread_selection_seed() -> usize {
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
@@ -611,6 +640,45 @@ mod platform {
         unsafe {
             let value = pointer.read_volatile();
             pointer.write_volatile(value);
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{
+            cpu_set_contains, cpu_set_insert, cpu_set_non_empty, empty_cpu_set,
+            intersect_cpu_sets,
+        };
+
+        #[test]
+        fn cpu_set_intersection_keeps_requested_cpus_that_are_allowed() {
+            let mut requested = empty_cpu_set();
+            cpu_set_insert(&mut requested, 1);
+            cpu_set_insert(&mut requested, 3);
+            let mut allowed = empty_cpu_set();
+            cpu_set_insert(&mut allowed, 3);
+            cpu_set_insert(&mut allowed, 4);
+
+            intersect_cpu_sets(&mut requested, &allowed);
+
+            assert!(!cpu_set_contains(&requested, 1));
+            assert!(cpu_set_contains(&requested, 3));
+            assert!(!cpu_set_contains(&requested, 4));
+            assert!(cpu_set_non_empty(&requested));
+        }
+
+        #[test]
+        fn cpu_set_intersection_detects_empty_effective_mask() {
+            let mut requested = empty_cpu_set();
+            cpu_set_insert(&mut requested, 1);
+            let mut allowed = empty_cpu_set();
+            cpu_set_insert(&mut allowed, 3);
+
+            intersect_cpu_sets(&mut requested, &allowed);
+
+            assert!(!cpu_set_contains(&requested, 1));
+            assert!(!cpu_set_contains(&requested, 3));
+            assert!(!cpu_set_non_empty(&requested));
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.lattice.examples;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
@@ -37,43 +38,30 @@ public final class FusedLinearPipelineExample {
         final CountDownLatch captured,
         final AtomicReference<CapturedOrder> result
     ) {
-        final String previousFusion = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
-            return StaticGraph.builder("example-fused-linear-pipeline")
-                .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
-                .stage("normalize", Order.class, NormalizedOrder.class, (order, out, ctx) ->
-                    out.push(new NormalizedOrder(order.id(), order.text().trim().toUpperCase(), order.valid())),
-                    StageSpec.singleThreaded())
-                .stage("risk", NormalizedOrder.class, RiskCheckedOrder.class, (order, out, ctx) ->
-                    out.push(new RiskCheckedOrder(order.id(), order.text(), order.valid() && !order.text().isBlank())),
-                    StageSpec.singleThreaded())
-                .stage("capture", RiskCheckedOrder.class, CapturedOrder.class, (order, out, ctx) -> {
-                    if (order.accepted()) {
-                        out.push(new CapturedOrder(order.id(), order.text()));
-                    }
-                }, StageSpec.singleThreaded())
-                .sink("egress", CapturedOrder.class, order -> {
-                    result.set(order);
-                    captured.countDown();
-                }, StageSpec.singleThreaded())
-                // A linear chain of single-threaded stages is the shape fusion can collapse.
-                .edge("ingress", "normalize", EdgeSpec.spscRing(RING_SIZE))
-                .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
-                .edge("risk", "capture", EdgeSpec.spscRing(RING_SIZE))
-                .edge("capture", "egress", EdgeSpec.spscRing(RING_SIZE))
-                .build();
-        } finally {
-            restoreFusionProperty(previousFusion);
-        }
-    }
-
-    private static void restoreFusionProperty(final String previousFusion) {
-        if (previousFusion == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previousFusion);
-        }
+        return StaticGraph.builder("example-fused-linear-pipeline")
+            .fusion(FusionSpec.defaults())
+            .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+            .stage("normalize", Order.class, NormalizedOrder.class, (order, out, ctx) ->
+                out.push(new NormalizedOrder(order.id(), order.text().trim().toUpperCase(), order.valid())),
+                StageSpec.singleThreaded())
+            .stage("risk", NormalizedOrder.class, RiskCheckedOrder.class, (order, out, ctx) ->
+                out.push(new RiskCheckedOrder(order.id(), order.text(), order.valid() && !order.text().isBlank())),
+                StageSpec.singleThreaded())
+            .stage("capture", RiskCheckedOrder.class, CapturedOrder.class, (order, out, ctx) -> {
+                if (order.accepted()) {
+                    out.push(new CapturedOrder(order.id(), order.text()));
+                }
+            }, StageSpec.singleThreaded())
+            .sink("egress", CapturedOrder.class, order -> {
+                result.set(order);
+                captured.countDown();
+            }, StageSpec.singleThreaded())
+            // A linear chain of single-threaded stages is the shape fusion can collapse.
+            .edge("ingress", "normalize", EdgeSpec.spscRing(RING_SIZE))
+            .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
+            .edge("risk", "capture", EdgeSpec.spscRing(RING_SIZE))
+            .edge("capture", "egress", EdgeSpec.spscRing(RING_SIZE))
+            .build();
     }
 
     private static void await(

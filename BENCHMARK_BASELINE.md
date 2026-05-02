@@ -19,7 +19,7 @@ the raw JMH JSON and stdout logs with any quoted number.
 | Gradle | 8.8 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Loaded only for `latticePinnedFusedCompleted` in the latency artifact |
+| Native backend | Loaded for Lattice strict-topology and explicit CPU-pinned latency rows |
 
 Common JVM flags:
 
@@ -44,7 +44,8 @@ the older i7 publication baseline.
 | Figure | Description |
 | --- | --- |
 | ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Scoped headline publish rows plus the completion-gated optimal path with JMH error bars. |
-| ![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| ![Isolated end-to-end latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for the isolated end-to-end Lattice and Disruptor paths. |
+| ![Isolated end-to-end p99 latency](docs/assets/latency-p99.svg) | P99-only view for isolated end-to-end latency paths with per-iteration p99 range whiskers. |
 | ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratio view for the scoped headline rows. |
 | ![End-to-end throughput matrix](docs/assets/end-to-end-throughput.svg) | Completion-gated source/sink, pipeline, broadcast, and dependency shapes. |
 | ![Optimal path allocation and GC](docs/assets/optimal-path-gc.svg) | GC-profiler normalized allocation and GC count for the optimal path. |
@@ -57,6 +58,7 @@ the older i7 publication baseline.
 | [`end-to-end-scoped-2026-05-02.json`](benchmarks/baseline/end-to-end-scoped-2026-05-02.json) | Completion-gated source/sink, pipeline, broadcast, and dependency shapes against matching Disruptor rows. |
 | [`optimal-path-completed-2026-05-02.json`](benchmarks/baseline/optimal-path-completed-2026-05-02.json) | Completion-gated optimal path with the longer 3-fork profile. |
 | [`optimal-path-latency-2026-05-02.json`](benchmarks/baseline/optimal-path-latency-2026-05-02.json) | JMH sample-time latency percentiles for the optimal-path variants. |
+| [`latency-isolated-*-2026-05-02.json`](benchmarks/baseline/) | JMH sample-time latency percentiles for individually isolated end-to-end Lattice and Disruptor paths. |
 | [`optimal-path-gc-2026-05-02.json`](benchmarks/baseline/optimal-path-gc-2026-05-02.json) | JMH GC-profiler pass for optimal-path allocation and GC count. |
 | [`three-stage-vs-disruptor.json`](benchmarks/baseline/three-stage-vs-disruptor.json) | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
 | [`three-stage-isolated-physical.json`](benchmarks/baseline/three-stage-isolated-physical.json) | Isolated semi-smoke physical three-stage Lattice vs Disruptor publish throughput. |
@@ -68,10 +70,11 @@ the older i7 publication baseline.
 
 ## Headline Results
 
-### Top checked-in head-to-head rows
+### Top checked-in publish rows
 
 These rows use the matching 2026-05-02 scoped artifact for each published
-workload.
+workload. Each operation publishes one item; these rows are not
+completed-operation throughput.
 
 | Comparison | Lattice (ops/s) | Lattice source | Disruptor (ops/s) | Disruptor source | Ratio |
 | --- | ---: | --- | ---: | --- | ---: |
@@ -82,9 +85,10 @@ workload.
 The reference row uses equal call-site footing:
 `latticeManuallyFusedReference` is one Lattice stage doing the same three
 increments inline as the Disruptor manually fused handler. Lattice is ahead in
-the scoped headline rows.
+the scoped headline rows, including the physical publish row where the graph is
+not collapsed into a source-inline completed path.
 
-### Completed optimal path
+### Source-inline completed path
 
 | Benchmark | Score (ops/s) | Error |
 | --- | ---: | ---: |
@@ -94,7 +98,9 @@ the scoped headline rows.
 This benchmark closes the async publish-rate loophole: every operation waits
 until the sink/handler confirms completion for the same sequence. On this host,
 the Lattice inline-fused completed path measured 21.51x the Disruptor
-busy-spin/manual-fused completed path.
+busy-spin/manual-fused completed path. The Lattice path is source-inline
+specialized: the eligible fused chain runs on the producer thread and the
+physical source edge is removed.
 
 ### Broader end-to-end topology rows
 
@@ -106,22 +112,30 @@ busy-spin/manual-fused completed path.
 | Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
 | Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
-Rows with wide confidence intervals retain their JMH error bars in the tables
-and figures. Do not rank close results without checking the raw JSON confidence
-intervals and the matching topology semantics.
+The raw JSON contains JMH error bars and confidence intervals. Do not rank
+close results without checking those intervals and the matching topology
+semantics.
+
+Read this matrix as boundary evidence, not as a retreat from the Lattice
+thesis. The Disruptor-favorable rows are mostly simple physical completed
+handoffs or routing-heavy shapes. The Lattice-favorable rows are the static
+graph paths the runtime is designed to expose and specialize: physical publish,
+source-inline completion, fused linear pipelines, equal-call-site manual
+fusion, and physical p99 latency.
 
 ## Latency
 
-Latency rows are from JMH sample-time mode over the same optimal-path workload:
+Latency rows are from JMH sample-time mode over the same completed workload:
 parse, enrich, risk, serialize, then publish completion for the same sequence.
+The full profile notes are in [`docs/latency.md`](docs/latency.md).
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
-| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
-| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
-| Lattice source-inline elided | 30 | 39 | 54 | 283 |
-| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
+| Lattice source-inline elided | 30 | 39 | 51 | 295 |
+| Disruptor manual fused | 231 | 291 | 393 | 9,531 |
+| Lattice physical strict topology | 775 | 874 | 1,434 | 21,152 |
+| Disruptor physical | 617 | 728 | 3,632 | 30,240 |
+| Lattice physical pinned CPU | 774 | 868 | 1,620 | 24,466 |
 
 ## Allocation And GC
 
@@ -152,7 +166,7 @@ Use [`docs/linux-validation.md`](docs/linux-validation.md) to reproduce the
 same methodology on another Linux host before claiming results for that
 hardware profile.
 
-The native-pinned latency row additionally requires:
+The native placement latency rows additionally require:
 
 ```bash
 ./gradlew nativeBuildRelease

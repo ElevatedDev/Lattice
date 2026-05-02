@@ -9,9 +9,9 @@ There is no logging on the hot path.
 | --- | --- | --- |
 | `GraphMetrics` | `graph.metrics()` | Aggregate counters, lifecycle state, placement report. |
 | `StageMetrics` | per stage | Invocations, in/out counts, exceptions, optional histograms. |
-| `EdgeMetrics`  | per edge  | Offered, accepted, rejected, dropped, redirected, queue depth samples. |
-| `WaitMetrics`  | per worker | Park reasons, spins, yields, parks, wake counts. |
-| `PlacementStatus` | per worker | Requested vs effective CPU set, NUMA node, native lib status. |
+| `EdgeMetrics`  | per edge  | Accepted/consumed counts, failed and blocked offers, drop/coalesce/redirect counters, depth, high-water mark. |
+| `StageMetrics` wait counters | per stage | `spinCount()`, `yieldCount()`, and `parkCount()` when hot counters are enabled. |
+| `GraphMetrics.StagePlacement` | `graph.metrics().placementReport()` | Requested and observed CPU/NUMA ids, placement status, and violation counters. |
 
 ## Per-Graph Metrics Controls
 
@@ -54,18 +54,22 @@ Capture those events with normal JVM recording options, for example:
 
 The emitted event types include:
 
-- `lattice.GraphLifecycle`, `lattice.WorkerStart`, `lattice.WorkerStop`
-- `lattice.EdgeOverflow`, `lattice.StageException`
-- `lattice.Placement` (one event per worker, recorded once at bootstrap)
+- `com.lattice.GraphStarted`, `com.lattice.GraphStopped`
+- `com.lattice.StageException`, `com.lattice.EdgeBackpressure`,
+  `com.lattice.EdgeStall`
+- `com.lattice.WorkerBlocked`, `com.lattice.WorkerParked`,
+  `com.lattice.BatchProcessed`
+- `com.lattice.WorkerPlacement`, `com.lattice.AffinityMismatch`,
+  `com.lattice.NumaMismatch`
 
 Events are designed to be cheap and non-allocating. JFR remains the right
 profiling channel; per-event histograms are not.
 
 ## Placement Report
 
-`graph.metrics().placementStatus()` returns one row per worker with the
-requested affinity, the effective CPU set the OS allowed, the NUMA node, and
-whether the native backend was loaded. Without the native backend, placement
+`graph.metrics().placementReport()` returns one row per worker with the
+requested CPU/NUMA ids, observed CPU/NUMA ids, placement status, diagnostic
+message, and violation counters. Without the native backend, placement
 requests are recorded as advisory unless
 `GraphPlacementSpec.off().strict(true)` is set on the graph, in which case
 `start()` fails.

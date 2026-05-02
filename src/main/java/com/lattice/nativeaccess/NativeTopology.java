@@ -147,6 +147,9 @@ public final class NativeTopology {
 
     /**
      * Pins the current Java thread to a CPU set.
+     * <p>
+     * Linux applies CPU sets as any-of placement within the current allowed
+     * affinity mask. A requested set with no allowed CPUs fails.
      *
      * @param cpus non-empty CPU set
      * @param maxCpu exclusive upper bound accepted by the native mask

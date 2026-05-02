@@ -55,6 +55,25 @@ configurations {
     testkitImplementation.extendsFrom testImplementation
 }
 
+def exampleMainClasses = [
+    runPreallocatedSourceSinkExample: 'PreallocatedSourceSinkExample',
+    runFusedLinearPipelineExample: 'FusedLinearPipelineExample',
+    runRoutingJoinExample: 'RoutingJoinExample',
+    runMetricsDiagnosticsExample: 'MetricsDiagnosticsExample',
+    runBenchmarkStyleFastPathExample: 'BenchmarkStyleFastPathExample',
+    runOrdersPipelineExample: 'OrdersPipelineExample'
+]
+
+exampleMainClasses.each { taskName, className ->
+    tasks.register(taskName, JavaExec) {
+        group = 'examples'
+        description = "Runs ${className}."
+        dependsOn tasks.named('examplesClasses')
+        classpath = sourceSets.examples.runtimeClasspath
+        mainClass = "com.lattice.examples.${className}"
+    }
+}
+
 dependencies {
     api 'org.hdrhistogram:HdrHistogram:2.2.2'
 

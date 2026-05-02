@@ -7,10 +7,22 @@ graphs whose topology is known before startup. Applications declare sources,
 stages, routing nodes, joins, sinks, and edges; Lattice validates the graph and
 compiles it into dedicated workers connected by bounded SPSC and MPSC rings.
 
+The motivating case is a service that already knows its processing shape:
+orders flow through validation and risk, market data flows through enrichment,
+telemetry flows through filtering and fan-out. A generic queue, broker, or
+dynamic stream processor must keep machinery for topology changes and broad
+delivery semantics. Lattice narrows the problem to one fixed in-process graph,
+then makes the ownership, backpressure, and failure contract explicit.
+
 The core idea is simple: when the graph is static, the runtime can remove work
 that a generic queue, broker, or dynamic stream processor has to keep. Lattice
 uses that information for source specialization, preallocated payload paths,
 edge-local backpressure, deterministic ownership, and eligible linear fusion.
+
+Preallocated payload paths are deliberately compiler-checked rather than
+discipline-based: Lattice accepts reuse only for shapes it can prove safe and
+rejects routing, overflow, or ownership patterns that would make reuse
+ambiguous.
 
 Lattice is not a distributed stream processor, message broker, persistence
 layer, or general-purpose queue replacement. It is an in-process runtime for
@@ -45,9 +57,7 @@ Minimal graph:
 
 ```java
 import com.lattice.edge.EdgeSpec;
-import com.lattice.graph.DiagnosticsSpec;
 import com.lattice.graph.FusionSpec;
-import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
@@ -70,7 +80,7 @@ StaticGraph graph = StaticGraph.builder("orders")
         },
         StageSpec.singleThreaded())
     .sink("egress", ValidOrder.class, order -> { }, StageSpec.singleThreaded())
-    .edge("ingress", "validate", EdgeSpec.mpscRing(1024))
+    .edge("ingress", "validate", EdgeSpec.spscRing(1024))
     .edge("validate", "egress", EdgeSpec.spscRing(1024))
     .build();
 
@@ -83,9 +93,10 @@ ingress.close();
 graph.awaitTermination(Duration.ofSeconds(5));
 ```
 
-The source is marked `SINGLE_PRODUCER`, which is a correctness contract. When
-the topology allows it, the compiler can specialize the physical ingress edge
-even if the DSL edge was declared as MPSC for readability.
+The source is marked `SINGLE_PRODUCER`, which is a correctness contract: at
+most one application thread may call the emitter at a time. Use the default
+multi-producer source plus an MPSC ingress edge when ownership is not
+mechanically true.
 
 ## When To Use Lattice
 
@@ -103,6 +114,25 @@ predictable handoff, ownership, and backpressure:
 Lattice is usually the wrong tool when topology must be created, removed, or
 rebalanced dynamically at runtime, or when work must be durable, replayable,
 distributed, or brokered between processes.
+
+## Lattice And Disruptor
+
+Disruptor is the right comparison because it set the standard for low-latency
+JVM event processing. Lattice is not a wrapper around that model. It is a
+different bet: when the application is a fixed typed graph, the runtime should
+see the graph, validate the graph, and specialize the graph.
+
+Use Disruptor when the workload really is one ordered stream, one preallocated
+ring, and sequence-barrier dependency management. Use Lattice when the system
+is a static DAG: local overload policy per edge, routing and stamp-correlated
+joins as graph primitives, inspectable graph state, optional placement
+diagnostics, compiler-checked payload reuse, and fusion that removes physical
+handoffs without erasing the logical stages.
+
+For static graph workloads, Lattice is the system this repository argues for.
+The benchmark set supports that argument: Lattice leads the scoped physical
+publish, fused publish, equal-call-site reference, source-inline completed,
+and physical p99 latency rows on the current public baseline.
 
 ## How It Works
 
@@ -168,8 +198,8 @@ Lattice keeps its guarantees local and explicit:
 - Edge ordering: SPSC preserves producer order; MPSC preserves successful
   reservation/publication order.
 - Stage ownership: single-threaded stages are invoked by one worker at a time.
-- Backpressure visibility: blocking, timed blocking, fail-fast, lossy,
-  coalescing, and redirect policies are explicit.
+- Backpressure visibility: blocking, timed blocking, fail-fast, drop-latest,
+  drop-oldest, coalescing, and redirect policies are explicit.
 - Lifecycle semantics: closing sources drains accepted queued work; `abort()`
   is fail-fast and does not promise drain.
 - No hidden durability: Lattice does not provide transactional rewind, replay,
@@ -185,44 +215,75 @@ The checked-in benchmark material is the current public baseline. Start with
 the release snapshot index, then cite the underlying host, JVM flags, benchmark
 class, and JSON artifact for any number you quote. The 2026-05-02 refresh
 includes scoped publish-throughput rows, completion-gated end-to-end rows,
-an optimal-path sample-time latency pass with physical, fused, native-pinned,
-and source-inline variants, and a GC-profiler pass for the optimal path.
+isolated end-to-end p99 latency rows for Lattice source-inline elision,
+Lattice physical placement, and matching Disruptor controls, plus a GC-profiler
+pass for the optimal path. Full isolated percentile curves live in the latency
+profile.
 
-The headline comparison is scoped deliberately:
+The benchmark story is stronger than "sometimes faster." The first three rows are
+publish-throughput rows from `ApplesToApplesDisruptorBenchmark`: one JMH
+operation publishes one item. The completed row is stricter: one operation
+publishes one item and waits for the matching sink/handler completion.
 
 - The table uses the matching scoped JMH artifact for each workload rather
   than mixing older isolated and full-matrix runs.
-- The completed optimal path waits for sink/handler completion on both sides.
 - The Disruptor manually fused reference row collapses three increments into
   one handler call; the matching Lattice row uses the best equal-call-site
   `latticeManuallyFusedReference` result: 209.2M ops/s.
-- The physical publish, fused publish, equal-call-site reference, and optimal
-  completed rows all show Lattice ahead for the same workload. Broader
-  end-to-end topology rows are documented separately and include cases where
-  the physical/router shapes favor Disruptor.
+- The physical publish row keeps the graph physical and still has Lattice
+  ahead at 1.47x.
+- The source-inline completed Lattice row runs an eligible fused chain on the
+  producer thread and removes the physical source edge. It is a graph
+  specialization path, not a generic queued handoff.
+- The physical latency comparison is also meaningful: Disruptor is lower at
+  mean/p50/p90, while Lattice strict topology is lower at p99/p99.9.
+- The broader completed-operation matrix remains in the README because it
+  marks the current boundary: simple source/sink, fully physical completed
+  pipeline, broadcast, and dependency rows favor Disruptor on this host.
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
 
-![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg)
+![Isolated end-to-end p99 latency](docs/assets/latency-p99.svg)
 
-| Workload | Lattice | Disruptor | Ratio |
+In isolated p99 runs, Lattice source-inline elided measured 51 ns versus
+393 ns for Disruptor manual fused. That mode has no source ring to fill: the
+caller runs the eligible fused chain synchronously. Lattice physical strict
+topology measured 1.43 us p99 versus 3.63 us for Disruptor physical, while
+Disruptor physical was lower at mean, p50, and p90 in the same run.
+
+| Scoped headline row | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
 | Three-stage physical publish throughput | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
 | Three-stage inline/manual fused publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
 | Manually fused reference payload, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
-| Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
+| Source-inline completed path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
+
+The broader completed-operation matrix is intentionally shown as a boundary,
+not as the headline:
+
+| Completed-operation shape | Lattice | Disruptor | Ratio |
+| --- | ---: | ---: | ---: |
+| Source/sink completed | 3,870,781 ops/s | 5,324,832 ops/s | 0.73x |
+| Physical pipeline completed | 1,229,655 ops/s | 1,701,728 ops/s | 0.72x |
+| Inline/manual fused pipeline completed | 78,108,324 ops/s | 4,399,426 ops/s | 17.75x |
+| Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
+| Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
 - [Benchmark Results](docs/benchmark-results/README.md)
 - [Benchmark Baseline](BENCHMARK_BASELINE.md)
+- [Latency Profile](docs/latency.md)
 - [Benchmark Devices](docs/devices.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)
 
-The defensible public claim is not "Lattice is always faster than Disruptor."
-The claim is that fixed Java processing graphs can be specialized: source
-ingress can be narrowed, payload reuse can be validated, and eligible serial
-logical stages can be fused into fewer physical handoffs.
+The public claim is direct: for fixed Java processing graphs, Lattice gives the
+runtime more structure than a queue or single-ring sequencer can see. That
+structure lets Lattice specialize source ingress, validate payload reuse,
+preserve logical stages while removing eligible handoffs, and win several of
+the benchmark rows that matter most for static graph workloads. It is not a
+universal "always faster" claim; it is an architecture-specific performance
+and ergonomics claim.
 
 ## Build And Verification
 
@@ -273,6 +334,12 @@ before making platform-specific placement claims. Without the native library,
 placement requests degrade through startup diagnostics and metrics by default.
 Set `GraphPlacementSpec.off().strict(true)` on the graph to fail startup when
 requested placement cannot be applied.
+
+For Linux CPU-set policies, Lattice treats the set as "run on any of these
+CPUs that the scheduler currently allows." That means explicit worker pinning
+respects cgroups, `taskset`, and service manager CPU limits while still making
+use of a partial overlap. If there is no overlap, startup degrades or fails
+according to the graph's strict-placement setting.
 
 ## Documentation
 

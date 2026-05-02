@@ -129,7 +129,8 @@ public final class GraphMetrics {
     }
 
     /**
-     * Returns messages dropped by lossy policies.
+     * Returns messages dropped by drop-latest/drop-newest or drop-oldest
+     * policies.
      */
     public long droppedMessages() {
         return droppedMessages.sum();

@@ -44,6 +44,13 @@ Unsupported operations report `ENOSYS`-style unavailability through the Java
 wrapper. The Java runtime degrades placement by default unless strict placement
 is enabled.
 
+On Linux, single-CPU pinning remains exact: requesting a CPU outside the
+thread's permitted scheduler mask fails. CPU-set pinning is intentionally
+any-of. The native backend intersects the requested mask with the thread's
+current allowed affinity before applying it, so cgroup, `taskset`, and service
+manager CPU boundaries are respected without rejecting a useful partial overlap.
+An empty effective mask still fails with `ENODEV`.
+
 ## Target Behavior
 
 | Host target | Build result | Runtime placement behavior |
@@ -75,6 +82,10 @@ Gradle helper from the repo root:
 
 On Windows hosts using Rust's default MSVC toolchain, Cargo also needs Visual
 C++ Build Tools on `PATH` so `link.exe` is available.
+
+The release profile uses ThinLTO, a single codegen unit, and `panic = "abort"`.
+The backend is a tiny JNI/FFI surface, so the preference is an optimized shared
+library that never attempts to unwind through Java frames.
 
 Linux release artifact:
 
