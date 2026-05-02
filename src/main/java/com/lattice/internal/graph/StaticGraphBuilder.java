@@ -1,7 +1,11 @@
 package com.lattice.internal.graph;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.DiagnosticsSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.GraphPlacementSpec;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
@@ -28,9 +32,37 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
     private final List<PendingEdge> edges = new ArrayList<>();
     private StageExceptionHandler exceptionHandler = StageExceptionHandler.failGraph();
     private boolean customExceptionHandler;
+    private FusionSpec fusionSpec = FusionSpec.defaults();
+    private MetricsSpec metricsSpec = MetricsSpec.off();
+    private GraphPlacementSpec placementSpec = GraphPlacementSpec.off();
+    private DiagnosticsSpec diagnosticsSpec = DiagnosticsSpec.off();
 
     public StaticGraphBuilder(final String name) {
         this.name = requireName(name, "graph");
+    }
+
+    @Override
+    public StaticGraph.Builder fusion(final FusionSpec spec) {
+        this.fusionSpec = Objects.requireNonNull(spec, "spec");
+        return this;
+    }
+
+    @Override
+    public StaticGraph.Builder metrics(final MetricsSpec spec) {
+        this.metricsSpec = Objects.requireNonNull(spec, "spec");
+        return this;
+    }
+
+    @Override
+    public StaticGraph.Builder placement(final GraphPlacementSpec spec) {
+        this.placementSpec = Objects.requireNonNull(spec, "spec");
+        return this;
+    }
+
+    @Override
+    public StaticGraph.Builder diagnostics(final DiagnosticsSpec spec) {
+        this.diagnosticsSpec = Objects.requireNonNull(spec, "spec");
+        return this;
     }
 
     @Override
@@ -345,7 +377,8 @@ public final class StaticGraphBuilder implements StaticGraph.Builder {
             nodes,
             edges,
             exceptionHandler,
-            customExceptionHandler
+            customExceptionHandler,
+            new GraphRuntimeConfig(fusionSpec, metricsSpec, placementSpec, diagnosticsSpec)
         ).compile();
         return new DefaultStaticGraph(compiled);
     }

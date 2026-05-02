@@ -10,7 +10,7 @@
 <link rel="stylesheet" type="text/css" href="../../../stylesheet.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../script-dir/jquery-ui.min.css" title="Style">
 <script type="text/javascript" src="../../../script.js"></script>
-<script type="text/javascript" src="../../../script-dir/jquery-3.6.1.min.js"></script>
+<script type="text/javascript" src="../../../script-dir/jquery-3.7.1.min.js"></script>
 <script type="text/javascript" src="../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -107,8 +107,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab3" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab3', 3)" class="table-tab">Abstract Methods</button><button id="method-summary-table-tab5" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab5', 3)" class="table-tab">Default Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -135,25 +135,35 @@ O&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.gr
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Compiles and validates the graph.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#dispatch(java.lang.String,java.lang.Class,com.lattice.routing.DispatchSpec,com.lattice.stage.StageSpec)" class="member-name-link">dispatch</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#diagnostics(com.lattice.graph.DiagnosticsSpec)" class="member-name-link">diagnostics</a><wbr>(<a href="DiagnosticsSpec.html" title="class in com.lattice.graph">DiagnosticsSpec</a>&nbsp;spec)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="block">Sets graph-level diagnostics controls.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#dispatch(java.lang.String,java.lang.Class,com.lattice.routing.DispatchSpec,com.lattice.stage.StageSpec)" class="member-name-link">dispatch</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type,
  <a href="../routing/DispatchSpec.html" title="class in com.lattice.routing">DispatchSpec</a>&lt;? super T&gt;&nbsp;spec,
  <a href="../stage/StageSpec.html" title="class in com.lattice.stage">StageSpec</a>&nbsp;stageSpec)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Adds a routing stage that chooses one downstream branch.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#edge(java.lang.String,java.lang.String,com.lattice.edge.EdgeSpec)" class="member-name-link">edge</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;from,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#edge(java.lang.String,java.lang.String,com.lattice.edge.EdgeSpec)" class="member-name-link">edge</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;from,
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;to,
  <a href="../edge/EdgeSpec.html" title="class in com.lattice.edge">EdgeSpec</a>&nbsp;spec)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Adds a directed edge between two nodes.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#exceptionHandler(com.lattice.stage.StageExceptionHandler)" class="member-name-link">exceptionHandler</a><wbr>(<a href="../stage/StageExceptionHandler.html" title="interface in com.lattice.stage">StageExceptionHandler</a>&nbsp;exceptionHandler)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#exceptionHandler(com.lattice.stage.StageExceptionHandler)" class="member-name-link">exceptionHandler</a><wbr>(<a href="../stage/StageExceptionHandler.html" title="interface in com.lattice.stage">StageExceptionHandler</a>&nbsp;exceptionHandler)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Sets the graph-level stage exception handler.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#fusion(com.lattice.graph.FusionSpec)" class="member-name-link">fusion</a><wbr>(<a href="FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a>&nbsp;spec)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="block">Sets graph-level fusion controls.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;O&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#join(java.lang.String,java.lang.Class,com.lattice.routing.JoinSpec,com.lattice.stage.StageSpec)" class="member-name-link">join</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
@@ -163,14 +173,24 @@ O&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.gr
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Adds a join stage that correlates inputs by stamp.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T,<wbr>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#metrics(com.lattice.graph.MetricsSpec)" class="member-name-link">metrics</a><wbr>(<a href="MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a>&nbsp;spec)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="block">Sets graph-level metrics controls.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T,<wbr>
 K&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#partition(java.lang.String,java.lang.Class,com.lattice.routing.PartitionSpec,com.lattice.stage.StageSpec)" class="member-name-link">partition</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#partition(java.lang.String,java.lang.Class,com.lattice.routing.PartitionSpec,com.lattice.stage.StageSpec)" class="member-name-link">partition</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type,
  <a href="../routing/PartitionSpec.html" title="class in com.lattice.routing">PartitionSpec</a>&lt;? super T,<wbr>K&gt;&nbsp;spec,
  <a href="../stage/StageSpec.html" title="class in com.lattice.stage">StageSpec</a>&nbsp;stageSpec)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Adds a keyed partitioning stage with a fixed lane count.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#placement(com.lattice.graph.GraphPlacementSpec)" class="member-name-link">placement</a><wbr>(<a href="GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a>&nbsp;spec)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="block">Sets graph-level runtime-derived placement controls.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#preallocatedSource(java.lang.String,java.lang.Class,com.lattice.graph.PreallocationSpec)" class="member-name-link">preallocatedSource</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
@@ -260,6 +280,50 @@ O&gt;&nbsp;<a href="StaticGraph.Builder.html" title="interface in com.lattice.gr
 <section class="method-details" id="method-detail">
 <h2>Method Details</h2>
 <ul class="member-list">
+<li>
+<section class="detail" id="fusion(com.lattice.graph.FusionSpec)">
+<h3>fusion</h3>
+<div class="member-signature"><span class="return-type"><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></span>&nbsp;<span class="element-name">fusion</span><wbr><span class="parameters">(<a href="FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a>&nbsp;spec)</span></div>
+<div class="block">Sets graph-level fusion controls.</div>
+<dl class="notes">
+<dt>Returns:</dt>
+<dd>this builder</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="metrics(com.lattice.graph.MetricsSpec)">
+<h3>metrics</h3>
+<div class="member-signature"><span class="return-type"><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></span>&nbsp;<span class="element-name">metrics</span><wbr><span class="parameters">(<a href="MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a>&nbsp;spec)</span></div>
+<div class="block">Sets graph-level metrics controls.</div>
+<dl class="notes">
+<dt>Returns:</dt>
+<dd>this builder</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="placement(com.lattice.graph.GraphPlacementSpec)">
+<h3>placement</h3>
+<div class="member-signature"><span class="return-type"><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></span>&nbsp;<span class="element-name">placement</span><wbr><span class="parameters">(<a href="GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a>&nbsp;spec)</span></div>
+<div class="block">Sets graph-level runtime-derived placement controls.</div>
+<dl class="notes">
+<dt>Returns:</dt>
+<dd>this builder</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="diagnostics(com.lattice.graph.DiagnosticsSpec)">
+<h3>diagnostics</h3>
+<div class="member-signature"><span class="return-type"><a href="StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></span>&nbsp;<span class="element-name">diagnostics</span><wbr><span class="parameters">(<a href="DiagnosticsSpec.html" title="class in com.lattice.graph">DiagnosticsSpec</a>&nbsp;spec)</span></div>
+<div class="block">Sets graph-level diagnostics controls.</div>
+<dl class="notes">
+<dt>Returns:</dt>
+<dd>this builder</dd>
+</dl>
+</section>
+</li>
 <li>
 <section class="detail" id="source(java.lang.String,java.lang.Class)">
 <h3>source</h3>

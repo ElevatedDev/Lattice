@@ -38,6 +38,8 @@ public final class SpscRingEdge implements MessageEdge {
     private final GraphMetrics graphMetrics;
     private final boolean plainClaim;
     private final boolean closeGuard;
+    private final boolean hotCountersEnabled;
+    private final boolean residenceTimingEnabled;
     private Object[] buffer;
     private LongAccess publishTimes;
     private final PaddedLong head = new PaddedLong();
@@ -104,6 +106,8 @@ public final class SpscRingEdge implements MessageEdge {
         this.graphMetrics = Objects.requireNonNull(graphMetrics, "graphMetrics");
         this.plainClaim = plainClaim;
         this.closeGuard = closeGuard;
+        this.hotCountersEnabled = metrics.hotCounters();
+        this.residenceTimingEnabled = metrics.residenceTiming();
     }
 
     @Override
@@ -154,7 +158,7 @@ public final class SpscRingEdge implements MessageEdge {
         }
         localBuffer[index] = item;
         CURSOR.setRelease(tail, currentTail + 1L);
-        if (EdgeMetrics.hotCountersEnabled()) {
+        if (hotCountersEnabled) {
             metrics.recordEmit();
             graphMetrics.recordEmit();
         }
@@ -192,7 +196,7 @@ public final class SpscRingEdge implements MessageEdge {
             localPublishTimes.setPlain(index, 0L);
         }
         CURSOR.setRelease(head, currentHead + 1L);
-        if (EdgeMetrics.hotCountersEnabled()) {
+        if (hotCountersEnabled) {
             metrics.recordConsume();
             graphMetrics.recordConsume();
         }
@@ -317,7 +321,7 @@ public final class SpscRingEdge implements MessageEdge {
     }
 
     private void recordConsumed(final int count) {
-        if (EdgeMetrics.hotCountersEnabled()) {
+        if (hotCountersEnabled) {
             metrics.recordConsume(count);
             graphMetrics.recordConsume(count);
         }
@@ -381,7 +385,7 @@ public final class SpscRingEdge implements MessageEdge {
         }
         final long started = System.nanoTime();
         buffer = new Object[capacity];
-        if (EdgeMetrics.residenceTimingEnabled()) {
+        if (residenceTimingEnabled) {
             publishTimes = LongAccess.create(capacity, memoryKind);
         }
         metrics.recordFirstTouch(System.nanoTime() - started);

@@ -2,6 +2,7 @@ package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.StageSpec;
@@ -16,10 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GraphLifecycleTest {
 
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
+
     @Test
     void runsSourceStageSinkEndToEndAndStopsAfterSourceClose() throws Exception {
         final List<GraphValidationTest.ValidOrder> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("orders")
+        final StaticGraph graph = graph("orders")
             .source("ingress", GraphValidationTest.Order.class)
             .stage(
                 "validate",
@@ -55,7 +60,7 @@ class GraphLifecycleTest {
     @Test
     void stopClosesSourcesAndDrainsQueuedMessages() {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("drain")
+        final StaticGraph graph = graph("drain")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, consumed::add, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(128))
@@ -79,5 +84,9 @@ class GraphLifecycleTest {
         graph.stop();
 
         assertEquals(GraphState.STOPPED, graph.state());
+    }
+
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 }

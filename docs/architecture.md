@@ -40,7 +40,7 @@ flowchart TB
         Worker2["Worker B<br/>stage / join / sink"]
         Sink["Sink callback"]
         Metrics["GraphMetrics ·<br/>StageMetrics ·<br/>EdgeMetrics ·<br/>WaitMetrics"]
-        JFR["JFR events<br/>(-Dlattice.jfr=true)"]
+        JFR["JFR events<br/>(DiagnosticsSpec.jfr(true))"]
         Producer --> Emitter
         Emitter -. "fusion eligible" .-> FusedChain --> Sink
         Emitter -- "physical handoff" --> Worker1 --> Edge1 --> Worker2 --> Sink
@@ -61,18 +61,34 @@ flowchart TB
 | --- | --- | --- |
 | Source specialization | `SourceMode`, downstream edge shape | Pick SPSC physical ingress when the user contract is single-producer; wire the trusted-fast emit path for non-stamping, non-handle messages. |
 | Edge shape selection | Producer count, declared `EdgeSpec` | Upgrade MPSC → SPSC where provably safe; round capacity to a power of two. |
-| Linear fusion | Topology shape, payload type, `StageSpec` | When the chain is linear, single-producer, and ownership-balanced, run the chain on the producer thread; remove internal SPSC handoffs. |
-| Worker placement | `PinPolicy`, native lib status | Ask the native backend to apply CPU affinity / NUMA preference at bootstrap; degrade to advisory if the lib is missing and `lattice.placement.strict` is unset. |
+| Linear fusion | Topology shape, payload type, `StageSpec`, `FusionSpec` | Remove eligible internal SPSC handoffs; source-inline producer-thread execution is a separate per-graph opt-in. |
+| Worker placement | `PinPolicy`, `GraphPlacementSpec`, native lib status | Ask the native backend to apply CPU affinity / NUMA preference at bootstrap; degrade to advisory if the lib is missing and strict placement is not enabled for the graph. |
 | Slab handle wiring | Payload type carries handle? | Emit `Retaining` hop variants where needed, `Benign` hop variants otherwise. |
 
 ## What Stays Inspectable
 
-Even after fusion, the *logical* graph remains inspectable through
-`GraphPlan` and `GraphMetrics`. Per-stage metrics are still recorded (with
-`-Dlattice.runtime.fusedLogicalEdgeMetrics=true`); per-edge metrics for
-elided physical edges report zero traffic, and the placement report still
-names every logical worker. The fusion decision is documented in the plan,
-not hidden.
+Even after fusion, the *logical* graph remains inspectable through `GraphPlan`
+and `GraphMetrics`. Per-stage and logical fused-edge counters are available
+when enabled through `MetricsSpec`; per-edge metrics for elided physical edges
+otherwise report zero traffic, and the placement report still names every
+logical worker. The fusion decision is documented in the plan, not hidden.
+
+## Graph Runtime Specs
+
+Runtime controls are graph-local rather than JVM-global:
+
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults().inlineSources(true))
+    .metrics(MetricsSpec.off().hotCounters(true))
+    .placement(GraphPlacementSpec.off().strict(true))
+    .diagnostics(DiagnosticsSpec.off().jfr(true))
+    .build();
+```
+
+The defaults are fusion enabled, metrics off, source inline off, source
+physical-path elision off, topology-aware placement off, strict placement off,
+first-touch placement off, and JFR off.
 
 ## See Also
 

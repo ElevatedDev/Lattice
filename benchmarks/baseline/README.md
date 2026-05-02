@@ -1,8 +1,8 @@
 # Benchmark Baseline
 
 This directory contains the refreshed benchmark baseline captured on
-2026-04-29. It replaces the older development-run artifacts with a smaller set
-of reproducible JMH JSON/log pairs.
+2026-05-02, plus the older 2026-04-29 publication artifacts retained for audit
+history. The current public figures use the `*-2026-05-02.json` artifacts.
 
 This is the checked-in public result set for regression review, open-source
 transparency, and research comparison. See `env.txt` for the validation
@@ -14,12 +14,19 @@ profile, JVM flags, and exact include patterns.
 | --- | --- |
 | Three-stage throughput | `../../docs/assets/perf-pipeline.svg` |
 | Lattice vs Disruptor ratios | `../../docs/assets/disruptor-comparison.svg` |
-| End-to-end latency percentiles | `../../docs/assets/latency-percentiles.svg` |
+| Optimal-path latency percentiles | `../../docs/assets/latency-percentiles.svg` |
+| End-to-end throughput matrix | `../../docs/assets/end-to-end-throughput.svg` |
+| Optimal path allocation and GC | `../../docs/assets/optimal-path-gc.svg` |
 
 ## Artifact Map
 
 | Artifact | Profile | Purpose |
 | --- | --- | --- |
+| `three-stage-scoped-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Current scoped three-stage Lattice physical/inline-fused/reference vs Disruptor physical/manual-fused/reference publish rows. |
+| `end-to-end-scoped-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure | Current completion-gated source/sink, pipeline, broadcast, and dependency rows. |
+| `optimal-path-completed-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Current completion-gated optimal path headline row. |
+| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measure, sample-time mode | Current JMH latency percentiles for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| `optimal-path-gc-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure, `-prof gc` | Current optimal-path allocation and GC profiler rows. |
 | `three-stage-vs-disruptor.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
 | `three-stage-isolated-physical.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated Lattice physical three-stage vs Disruptor physical three-handler publish throughput. |
 | `three-stage-isolated-fused-copy.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated Lattice inline-fused three-stage vs Disruptor manually fused copy-payload publish throughput. |
@@ -31,51 +38,43 @@ profile, JVM flags, and exact include patterns.
 
 ## Top Checked-In Head-To-Head
 
-Rows using the best checked-in Lattice point estimate and the best checked-in
-Disruptor point estimate for each published workload, with isolated and
-full-matrix repeats deduplicated.
+Rows from the current 2026-05-02 scoped artifacts.
 
 | Comparison | Lattice (ops/s) | Lattice source | Disruptor (ops/s) | Disruptor source | Ratio |
 | --- | ---: | --- | ---: | --- | ---: |
-| Physical three-stage publish | 27,660,948 | `three-stage-isolated-physical.json` | 26,377,465 | `three-stage-isolated-physical.json` | 1.05x |
-| Inline/manual fused copy publish | 61,838,846 | `three-stage-isolated-fused-copy.json` | 45,888,659 | `three-stage-vs-disruptor.json` | 1.35x |
-| Manual fused reference publish, equal call-site | 92,094,463 | `three-stage-vs-disruptor.json` | 44,045,374 | `three-stage-vs-disruptor.json` | 2.09x |
+| Physical three-stage publish | 31,938,529 | `three-stage-scoped-2026-05-02.json` | 21,698,059 | `three-stage-scoped-2026-05-02.json` | 1.47x |
+| Inline/manual fused copy publish | 127,875,286 | `three-stage-scoped-2026-05-02.json` | 35,697,152 | `three-stage-scoped-2026-05-02.json` | 3.58x |
+| Manual fused reference publish, equal call-site | 209,168,722 | `three-stage-scoped-2026-05-02.json` | 31,091,239 | `three-stage-scoped-2026-05-02.json` | 6.73x |
 
-Interpretation: the fused-copy row gives Disruptor its strongest logged
-copy-payload result from the full matrix, and Lattice still leads by point
-estimate. The reference row uses equal call-site footing: one Lattice stage
-performs the same three increments inline as Disruptor's manually fused
+Interpretation: the reference row uses equal call-site footing: one Lattice
+stage performs the same three increments inline as Disruptor's manually fused
 handler. The physical three-stage point estimate remains above parity, and the
 completed path is the strict end-to-end row below.
 
 ## Completed Optimal Path
 
-Rows from `optimal-path-completed.json`. Unlike the publish-throughput rows,
+Rows from `optimal-path-completed-2026-05-02.json`. Unlike the publish-throughput rows,
 each benchmark operation waits until the sink/handler publishes completion for
 the same sequence number.
 
 | Benchmark | Score (ops/s) | Error | Notes |
 | --- | ---: | ---: | --- |
-| Lattice inline-fused completed path | 29,903,291 | +-4,942,063 | Three logical stages plus sink complete on producer thread. |
-| Disruptor manually fused completed path | 4,742,326 | +-1,028,517 | One busy-spin handler; benchmark waits for handler completion. |
+| Lattice inline-fused completed path | 77,868,589 | +-598,524 | Three logical stages plus sink complete on producer thread. |
+| Disruptor manually fused completed path | 3,620,353 | +-78,946 | One busy-spin handler; benchmark waits for handler completion. |
 
-Ratio: Lattice completed path / Disruptor completed path = 6.31x on this host.
+Ratio: Lattice completed path / Disruptor completed path = 21.51x on this host.
 
-## Broader Lattice Topology Rows
+## Broader End-To-End Rows
 
-Selected non-edge throughput rows from `lattice-core-basics.json`.
+Rows from `end-to-end-scoped-2026-05-02.json`.
 
-| Benchmark | Score (ops/s) | Error |
-| --- | ---: | ---: |
-| One source/sink single-producer | 12,398,644 | +-4,959,990 |
-| One source/sink preallocated single-producer | 11,001,289 | +-6,079,214 |
-| One source three-stage fused | 8,438,270 | +-3,936,722 |
-| Batched validate/sink | 8,915,111 | +-3,600,749 |
-| Validate/journal/risk/commit | 8,667,266 | +-2,726,702 |
-| Partition four lanes | 9,880,370 | +-1,567,154 |
-| Broadcast four branch | 4,873,629 | +-8,298,715 |
-| Dispatch fanout | 8,892,558 | +-778,723 |
-| Stamped all-of join | 5,244,672 | +-223,596 |
+| Workload | Lattice | Disruptor | Ratio |
+| --- | ---: | ---: | ---: |
+| Source/sink completed | 3,870,781 ops/s | 5,324,832 ops/s | 0.73x |
+| Physical pipeline completed | 1,229,655 ops/s | 1,701,728 ops/s | 0.72x |
+| Inline/manual fused pipeline completed | 78,108,324 ops/s | 4,399,426 ops/s | 17.75x |
+| Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
+| Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
 Rows with very wide error bars retain their JMH error bars in the table. Do
 not rank close results without checking the raw JSON confidence intervals and
@@ -83,16 +82,24 @@ matching topology semantics.
 
 ## Latency Excerpts
 
-Latency values are printed by `LatencyRecorder` in the `.log` files. These are
-saturating-throughput histograms, not fixed-rate service latency.
+Rows from `optimal-path-latency-2026-05-02.json` in JMH sample-time mode.
 
-| Benchmark | Kind | p50 (ns) | p99 (ns) | p99.9 (ns) | p99.99 (ns) | Max (ns) |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| oneSourceOneSinkSingleProducer | end-to-end | 801 | 892,415 | 4,190,207 | 9,936,895 | 45,088,767 |
-| oneSourceOneSinkPreallocatedSingleProducer | end-to-end | 12,911 | 948,735 | 7,958,527 | 11,444,223 | 20,938,751 |
-| oneSourceThreeStageSinkFused | end-to-end | 342,527 | 1,847,295 | 6,238,207 | 12,369,919 | 22,986,751 |
-| batchedValidateSink | end-to-end | 1,001 | 1,740,799 | 7,335,935 | 15,433,727 | 32,243,711 |
-| validateJournalRiskCommit | end-to-end | 1,500 | 2,498,559 | 11,657,215 | 19,021,823 | 44,761,087 |
+| Variant | p50 | p90 | p99 | p99.9 |
+| --- | ---: | ---: | ---: | ---: |
+| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
+| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
+| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
+| Lattice source-inline elided | 30 | 39 | 54 | 283 |
+| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
+
+## Allocation And GC
+
+Rows from `optimal-path-gc-2026-05-02.json`.
+
+| Benchmark | Allocation rate | Normalized allocation | GC count |
+| --- | ---: | ---: | ---: |
+| Lattice inline-fused completed path | 0.000378 MB/s | 0.00000511 B/op | 0 |
+| Disruptor manually fused completed path | 0.001070 MB/s | 0.000321 B/op | 0 |
 
 ## Interpretation Rules
 
@@ -102,5 +109,6 @@ saturating-throughput histograms, not fixed-rate service latency.
   `OptimalPathBenchmark` when completed-operation throughput matters.
 - The completed-path benchmark avoids comparing synchronous inline completion
   with asynchronous enqueue-only rates.
-- Native placement and cross-socket behavior are not part of this portable
-  baseline because the placement rows use `pinning=false`.
+- Native placement is used only by `latticePinnedFusedCompleted` in the
+  optimal-path latency artifact. The throughput and GC rows remain portable
+  rows without native placement.

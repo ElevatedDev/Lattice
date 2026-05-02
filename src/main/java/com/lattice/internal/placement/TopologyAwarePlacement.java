@@ -15,13 +15,11 @@ import java.util.Map;
 
 public final class TopologyAwarePlacement {
 
-    public static final String ENABLED_PROPERTY = "lattice.placement.topologyAware.enabled";
-
     private TopologyAwarePlacement() {
     }
 
     public static Map<String, PinPolicy> plan(final CompiledGraph compiled, final List<String> workerOrder) {
-        if (!Boolean.getBoolean(ENABLED_PROPERTY)) {
+        if (!compiled.runtimeConfig().placement().topologyAware()) {
             return Map.of();
         }
 

@@ -1,6 +1,7 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.PreallocationSpec;
@@ -145,10 +146,8 @@ class PreallocatedSourceTest {
 
     @Test
     void preallocatedReuseBoundUsesFusedPhysicalPlan() {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
-            final StaticGraph graph = StaticGraph.builder("preallocated-fused-bound")
+        final StaticGraph graph = StaticGraph.builder("preallocated-fused-bound")
+                .fusion(FusionSpec.defaults())
                 .preallocatedSource(
                     "ingress",
                     ReusableMessage.class,
@@ -168,18 +167,7 @@ class PreallocatedSourceTest {
                 graph.preallocatedEmitter("ingress", ReusableMessage.class);
             assertEquals(73, ingress.reuseBound());
             ingress.close();
-            graph.stop(Duration.ofSeconds(1));
-        } finally {
-            restoreFusionProperty(previous);
-        }
-    }
-
-    private static void restoreFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previous);
-        }
+        graph.stop(Duration.ofSeconds(1));
     }
 
     static final class ReusableMessage {

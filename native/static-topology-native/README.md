@@ -120,9 +120,9 @@ Both settings must be present before `NativeTopology` is first initialized.
   diagnostics instead of crashing startup.
 - If `-Dlattice.native.enabled=false` is set, native placement is treated as
   unavailable and no JNI library load is attempted.
-- `-Dlattice.placement.strict=true` changes that behavior and fails graph
-  startup when requested placement or local memory policy setup cannot be
-  applied.
+- Strict placement is configured per graph with
+  `GraphPlacementSpec.off().strict(true)`. In strict mode, `start()` fails when
+  requested placement or local memory policy setup cannot be applied.
 - When the library is missing, placement diagnostics include the attempted load
   source, host OS/architecture, and JVM linker failure so packaging and
   `java.library.path` mistakes are visible in `GraphMetrics.placementReport()`.
@@ -132,4 +132,5 @@ Both settings must be present before `NativeTopology` is first initialized.
   placement or NUMA locality.
 - Placement validation is currently surfaced through `GraphPlan` and
   `StageMetrics`, not through a separate startup report artifact.
-- First-touch placement is controlled by `-Dlattice.firstTouch.enabled=true|false`.
+- First-touch placement is configured per graph with
+  `GraphPlacementSpec.off().firstTouch(true)`. It is off by default.

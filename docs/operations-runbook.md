@@ -4,12 +4,14 @@ Day-2 guidance for running Lattice graphs in production.
 
 ## Startup Checks
 
-1. JVM args set as documented in [Observability](observability.md) — turn off
-   hot counters and stage histograms unless you actively need them.
+1. Graph runtime specs set as documented in [Observability](observability.md):
+   keep `MetricsSpec.off()` and `DiagnosticsSpec.off()` unless you actively
+   need counters, histograms, residence timing, logical fused-edge counters, or
+   JFR events.
 2. If using the native backend, confirm `java.library.path` resolves
    `libstatic_topology_native.{so,dylib,dll}` and that
    `graph.metrics().placementStatus()` reports the requested CPU sets.
-3. Use `-Dlattice.placement.strict=true` in production when affinity is
+3. Use `GraphPlacementSpec.off().strict(true)` in production when affinity is
    required; otherwise placement requests are advisory.
 4. Verify edge capacities are power-of-two and slab pools are sized per
    [Backpressure §Sizing](backpressure.md).
@@ -47,7 +49,7 @@ Day-2 guidance for running Lattice graphs in production.
 
 - `graph.metrics().placementStatus()` — placement / NUMA / native lib
   reporting.
-- `-Dlattice.jfr=true` plus async-profiler / Mission Control for hot-path
-  visibility.
+- `DiagnosticsSpec.off().jfr(true)` plus async-profiler / Mission Control for
+  hot-path visibility.
 - `./gradlew jcstress` to validate edge memory ordering after concurrent
   changes.

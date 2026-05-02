@@ -2,6 +2,7 @@ package com.lattice;
 
 import com.lattice.internal.edge.MpscRingEdge;
 import com.lattice.internal.edge.SpscRingEdge;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
@@ -193,15 +194,17 @@ class RingEdgeCorrectnessTest {
     }
 
     private static EdgeMetrics edgeMetrics() {
-        return new EdgeMetrics("a", "b");
+        return new EdgeMetrics("a", "b", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS,
+            MetricsSpec.off().hotCounters(true));
     }
 
     private static GraphMetrics graphMetrics() {
+        final MetricsSpec metricsSpec = MetricsSpec.off().hotCounters(true);
         final Map<String, StageMetrics> stages = new LinkedHashMap<>();
-        stages.put("a", new StageMetrics("a"));
-        stages.put("b", new StageMetrics("b"));
+        stages.put("a", new StageMetrics("a", metricsSpec));
+        stages.put("b", new StageMetrics("b", metricsSpec));
         final Map<String, EdgeMetrics> edges = new LinkedHashMap<>();
-        edges.put("a->b", new EdgeMetrics("a", "b"));
-        return new GraphMetrics("test", stages, edges);
+        edges.put("a->b", new EdgeMetrics("a", "b", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS, metricsSpec));
+        return new GraphMetrics("test", stages, edges, metricsSpec);
     }
 }

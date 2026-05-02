@@ -10,7 +10,7 @@
 <link rel="stylesheet" type="text/css" href="../../../stylesheet.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../script-dir/jquery-ui.min.css" title="Style">
 <script type="text/javascript" src="../../../script.js"></script>
-<script type="text/javascript" src="../../../script-dir/jquery-3.6.1.min.js"></script>
+<script type="text/javascript" src="../../../script-dir/jquery-3.7.1.min.js"></script>
 <script type="text/javascript" src="../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -99,10 +99,8 @@ loadScripts(document, 'script');</script>
 implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">WaitMetrics</a></span></div>
 <div class="block">Live metrics for one stage worker.
  <p>
- Hot-path counters can be disabled with <code>lattice.metrics.hotCounters</code>.
- Batch and service-time histograms are opt-in through
- <code>lattice.metrics.stageHistograms</code>; histogram accessors return defensive
- copies.
+ Hot-path counters and histograms are graph-level opt-ins; histogram accessors
+ return defensive copies.
  Runtime update methods such as <code>recordConsume()</code> are exposed for the
  runtime implementation and should not be called by applications.</div>
 </section>
@@ -120,6 +118,11 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <div class="col-last even-row-color">
 <div class="block">Creates metrics for a named stage.</div>
 </div>
+<div class="col-constructor-name odd-row-color"><code><a href="#%3Cinit%3E(java.lang.String,com.lattice.graph.MetricsSpec)" class="member-name-link">StageMetrics</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="../graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a>&nbsp;metricsSpec)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates metrics for a named stage.</div>
+</div>
 </div>
 </section>
 </li>
@@ -129,8 +132,8 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -204,15 +207,25 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns failed downstream output attempts.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static boolean</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#histogramsEnabled()" class="member-name-link">histogramsEnabled</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns whether stage histograms are enabled for this JVM.</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#histograms()" class="member-name-link">histograms</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns whether stage histograms are enabled for this stage.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static boolean</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#histogramsEnabled()" class="member-name-link">histogramsEnabled</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns whether stage histograms are enabled by default.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#hotCounters()" class="member-name-link">hotCounters</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns whether hot-path counters are enabled for this stage.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static boolean</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#hotCountersEnabled()" class="member-name-link">hotCountersEnabled</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns whether hot-path counters are enabled for this JVM.</div>
+<div class="block">Returns the source-compatible default hot-counter state.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#markStarted()" class="member-name-link">markStarted</a>()</code></div>
@@ -438,6 +451,14 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <div class="block">Creates metrics for a named stage.</div>
 </section>
 </li>
+<li>
+<section class="detail" id="&lt;init&gt;(java.lang.String,com.lattice.graph.MetricsSpec)">
+<h3>StageMetrics</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">StageMetrics</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="../graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a>&nbsp;metricsSpec)</span></div>
+<div class="block">Creates metrics for a named stage.</div>
+</section>
+</li>
 </ul>
 </section>
 </li>
@@ -450,7 +471,14 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <section class="detail" id="hotCountersEnabled()">
 <h3>hotCountersEnabled</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">hotCountersEnabled</span>()</div>
-<div class="block">Returns whether hot-path counters are enabled for this JVM.</div>
+<div class="block">Returns the source-compatible default hot-counter state.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="hotCounters()">
+<h3>hotCounters</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">hotCounters</span>()</div>
+<div class="block">Returns whether hot-path counters are enabled for this stage.</div>
 </section>
 </li>
 <li>
@@ -639,7 +667,14 @@ implements <a href="WaitMetrics.html" title="interface in com.lattice.metrics">W
 <section class="detail" id="histogramsEnabled()">
 <h3>histogramsEnabled</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">histogramsEnabled</span>()</div>
-<div class="block">Returns whether stage histograms are enabled for this JVM.</div>
+<div class="block">Returns whether stage histograms are enabled by default.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="histograms()">
+<h3>histograms</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">histograms</span>()</div>
+<div class="block">Returns whether stage histograms are enabled for this stage.</div>
 </section>
 </li>
 <li>

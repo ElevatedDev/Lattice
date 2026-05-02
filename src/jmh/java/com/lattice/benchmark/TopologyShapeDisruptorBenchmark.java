@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.routing.BroadcastSpec;
@@ -282,23 +283,18 @@ public class TopologyShapeDisruptorBenchmark {
         abstract void setup();
 
         void setup(final boolean fused) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            setFusion(fused);
-            try {
-                graph = StaticGraph.builder("shape-lattice-pipeline-" + (fused ? "fused" : "physical"))
-                    .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
-                    .stage("normalize", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
-                    .stage("risk", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
-                    .stage("validate", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
-                    .sink("egress", Signal.class, ignored -> consumed.incrementAndGet(), STAGE)
-                    .edge("ingress", "normalize", SPSC_FUSIBLE)
-                    .edge("normalize", "risk", SPSC_FUSIBLE)
-                    .edge("risk", "validate", SPSC_FUSIBLE)
-                    .edge("validate", "egress", SPSC_FUSIBLE)
-                    .build();
-            } finally {
-                restoreFusion(previousFusion);
-            }
+            graph = StaticGraph.builder("shape-lattice-pipeline-" + (fused ? "fused" : "physical"))
+                .fusion(fused ? FusionSpec.defaults() : FusionSpec.disabled())
+                .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                .stage("normalize", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
+                .stage("risk", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
+                .stage("validate", Signal.class, Signal.class, TopologyShapeDisruptorBenchmark::increment, STAGE)
+                .sink("egress", Signal.class, ignored -> consumed.incrementAndGet(), STAGE)
+                .edge("ingress", "normalize", SPSC_FUSIBLE)
+                .edge("normalize", "risk", SPSC_FUSIBLE)
+                .edge("risk", "validate", SPSC_FUSIBLE)
+                .edge("validate", "egress", SPSC_FUSIBLE)
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Signal.class);
         }
@@ -738,19 +734,4 @@ public class TopologyShapeDisruptorBenchmark {
         };
     }
 
-    private static void setFusion(final boolean fused) {
-        if (fused) {
-            System.setProperty("lattice.fusion.enabled", "true");
-        } else {
-            System.setProperty("lattice.fusion.enabled", "false");
-        }
-    }
-
-    private static void restoreFusion(final String previousFusion) {
-        if (previousFusion == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previousFusion);
-        }
-    }
 }

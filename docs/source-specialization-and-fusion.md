@@ -24,21 +24,31 @@ contract:
 
 A linear chain — `source → stage₁ → stage₂ → ... → sink` — with no fan-out,
 fan-in, or routing in the middle is *fusion-eligible*. When fusion fires, the
-SPSC handoffs between stages are removed and the chain runs on the producer
-thread.
+SPSC handoffs between stages are removed. Normal downstream fusion keeps the
+source boundary physical and runs the fused chain on the owner worker.
 
 ```mermaid
 sequenceDiagram
     participant App as App thread
     participant Emit as SourceEmitter
+    participant Edge as Source ingress edge
+    participant Owner as Owner worker
     participant Fused as Fused chain
     participant Sink as Sink
-    Note over App,Sink: SINGLE_PRODUCER + linear chain → fusion eligible
+    Note over App,Sink: Linear chain → downstream fusion eligible
     App->>Emit: emit(item)
-    Emit->>Fused: in-thread invoke (no SPSC handoff)
-    Fused->>Fused: stage₁ → stage₂ → ...
-    Fused->>Sink: deliver
+    Emit->>Edge: offer
+    Edge->>Owner: poll
+    Owner->>Fused: stage₁ → stage₂ → ...
+    Fused->>Sink: deliver on owner worker
 ```
+
+Source-inline fusion is a separate opt-in. When
+`FusionSpec.defaults().inlineSources(true)` is set and all safety checks pass,
+`emitter.emit(...)` may run the stage chain and sink synchronously on the
+calling producer thread. If
+`elideInlineSourcePhysicalPath(true)` is also set, the runtime may remove the
+source ingress edge and lifecycle-only owner worker for eligible chains.
 
 Implementation notes:
 
@@ -47,24 +57,32 @@ Implementation notes:
 - Hops are specialized into `Benign` (POJO payload) and `Retaining` (slab
   handle) variants chosen at wire time. `Benign` drops the retain/release
   scope and keeps exception-path attribution per fused hop.
-- Intra-fused type validation is gated by `-Dlattice.fusion.validateTypes`
-  (default `false`) — the public ingress emit boundary already validates the
-  user-supplied type.
+- Intra-fused type validation is gated by
+  `FusionSpec.defaults().validateTypes(true)` — the public ingress emit boundary
+  already validates the user-supplied type.
 - Inline source fusion is disabled when a custom `StageExceptionHandler` is
   installed so handler policy stays on the worker path.
+- Inline source fusion is disabled when explicit effective placement or
+  topology-aware placement applies to the chain. This preserves the contract
+  that pinned/topology-placed stage logic runs on the placed owner worker.
 
-## Toggles
+## Per-Graph Controls
 
-| Property | Default | Effect |
+| API | Default | Effect |
 | --- | --- | --- |
-| `-Dlattice.fusion.inlineSource=true` | true | Run the fused chain on the producer thread for eligible single-producer graphs. |
-| `-Dlattice.fusion.validateTypes=false` | false | Re-enable defensive intra-fused type assertions while developing custom `StageLogic`. |
+| `FusionSpec.defaults()` | enabled | Allow normal downstream stage/sink/router fusion where legal. |
+| `FusionSpec.disabled()` | off only when selected | Force the physical baseline for that graph. |
+| `inlineSources(true)` | false | Allow producer-thread source-inline execution for eligible single-producer graphs. |
+| `elideInlineSourcePhysicalPath(true)` | false | Allow removal of the lifecycle-only owner worker and source ingress edge for eligible source-inline chains. |
+| `validateTypes(true)` | false | Enable defensive intra-fused type assertions while developing custom `StageLogic`. |
 
 ## When Fusion Does *Not* Fire
 
 - Multi-producer sources.
 - Custom `StageExceptionHandler` when considering producer-thread inline
   source fusion.
+- Explicit stage pinning or topology-aware placement when considering
+  producer-thread inline source fusion.
 - Fan-out (broadcast/partition/dispatch) inside the chain.
 - Joins inside the chain.
 - A stage opts out via `StageSpec`.
@@ -73,4 +91,3 @@ Implementation notes:
 
 In all these cases the physical edges remain and ordering, ownership, and
 backpressure work as documented in [Edge Semantics](edge-semantics.md).
-

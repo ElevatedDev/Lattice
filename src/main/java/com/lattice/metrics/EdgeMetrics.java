@@ -1,5 +1,6 @@
 package com.lattice.metrics;
 
+import com.lattice.graph.MetricsSpec;
 import com.lattice.placement.MemoryMode;
 import org.HdrHistogram.Histogram;
 import java.util.concurrent.atomic.AtomicLong;
@@ -8,18 +9,12 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * Live metrics for one edge.
  * <p>
- * Hot-path counters can be disabled with {@code lattice.metrics.hotCounters}.
- * Residence-time histograms are opt-in through {@code lattice.metrics.residence}
- * and histogram accessors return defensive copies.
+ * Hot-path counters and residence-time histograms are graph-level opt-ins.
+ * Histogram accessors return defensive copies.
  * Runtime update methods such as {@code recordEmit()} are exposed for the
  * runtime implementation and should not be called by applications.
  */
 public final class EdgeMetrics implements WaitMetrics {
-
-    private static final boolean RESIDENCE_TIMING_ENABLED = Boolean.getBoolean("lattice.metrics.residence");
-    private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
-        System.getProperty("lattice.metrics.hotCounters", "true")
-    );
 
     private static final int DEPTH_SAMPLE_SHIFT = 10; // sample every 1024 emits
     private static final long DEPTH_SAMPLE_MASK = (1L << DEPTH_SAMPLE_SHIFT) - 1L;
@@ -28,6 +23,8 @@ public final class EdgeMetrics implements WaitMetrics {
     private final String to;
     private final String allocationOwner;
     private final MemoryMode.MemoryKind memoryKind;
+    private final boolean hotCountersEnabled;
+    private final boolean residenceTimingEnabled;
 
     private final LongAdder emittedCount = new LongAdder();
     private final LongAdder consumedCount = new LongAdder();
@@ -49,23 +46,21 @@ public final class EdgeMetrics implements WaitMetrics {
     private final LongAdder residenceSamples = new LongAdder();
     private final LongAdder firstTouchCount = new LongAdder();
     private final LongAdder firstTouchNanos = new LongAdder();
-    private final Histogram residenceTimeNanosHistogram = RESIDENCE_TIMING_ENABLED
-        ? new Histogram(1, 60_000_000_000L, 3)
-        : null;
+    private final Histogram residenceTimeNanosHistogram;
     private final long createdNanos = System.nanoTime();
 
     /**
      * Creates on-heap edge metrics without an allocation owner.
      */
     public EdgeMetrics(final String from, final String to) {
-        this(from, to, "", MemoryMode.MemoryKind.ON_HEAP_SLOTS);
+        this(from, to, "", MemoryMode.MemoryKind.ON_HEAP_SLOTS, MetricsSpec.off());
     }
 
     /**
-     * Returns whether hot-path counters are enabled for this JVM.
+     * Returns the source-compatible default hot-counter state.
      */
     public static boolean hotCountersEnabled() {
-        return HOT_COUNTERS_ENABLED;
+        return false;
     }
 
     /**
@@ -77,10 +72,28 @@ public final class EdgeMetrics implements WaitMetrics {
         final String allocationOwner,
         final MemoryMode.MemoryKind memoryKind
     ) {
+        this(from, to, allocationOwner, memoryKind, MetricsSpec.off());
+    }
+
+    /**
+     * Creates edge metrics with allocation metadata.
+     */
+    public EdgeMetrics(
+        final String from,
+        final String to,
+        final String allocationOwner,
+        final MemoryMode.MemoryKind memoryKind,
+        final MetricsSpec metricsSpec
+    ) {
         this.from = from;
         this.to = to;
         this.allocationOwner = allocationOwner == null ? "" : allocationOwner;
         this.memoryKind = memoryKind == null ? MemoryMode.MemoryKind.ON_HEAP_SLOTS : memoryKind;
+        this.hotCountersEnabled = metricsSpec.hotCounters();
+        this.residenceTimingEnabled = metricsSpec.residenceTiming();
+        this.residenceTimeNanosHistogram = residenceTimingEnabled
+            ? new Histogram(1, 60_000_000_000L, 3)
+            : null;
     }
 
     /**
@@ -109,6 +122,20 @@ public final class EdgeMetrics implements WaitMetrics {
      */
     public MemoryMode.MemoryKind memoryKind() {
         return memoryKind;
+    }
+
+    /**
+     * Returns whether hot-path counters are enabled for this edge.
+     */
+    public boolean hotCounters() {
+        return hotCountersEnabled;
+    }
+
+    /**
+     * Returns whether residence-time tracking is enabled for this edge.
+     */
+    public boolean residenceTiming() {
+        return residenceTimingEnabled;
     }
 
     /**
@@ -262,10 +289,10 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     /**
-     * Returns whether residence timing is enabled for this JVM.
+     * Returns whether residence timing is enabled by default.
      */
     public static boolean residenceTimingEnabled() {
-        return RESIDENCE_TIMING_ENABLED;
+        return false;
     }
 
     /**
@@ -285,7 +312,7 @@ public final class EdgeMetrics implements WaitMetrics {
     private final ThreadLocal<long[]> emitTick = ThreadLocal.withInitial(() -> new long[1]);
 
     public void recordEmit() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         emittedCount.increment();
@@ -298,14 +325,14 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public void recordConsume() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         if (count > 0) {
@@ -314,58 +341,82 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public void recordFailedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         failedOffers.increment();
     }
 
     public void recordFailedOffers(final long count) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (count > 0L) {
             failedOffers.add(count);
         }
     }
 
     public void recordBlockedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         blockedOffers.increment();
     }
 
     public void recordBackpressureNanos(final long nanos) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (nanos > 0L) {
             backpressureNanos.add(nanos);
         }
     }
 
     public void recordDroppedLatest() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         droppedLatest.increment();
     }
 
     public void recordDroppedOldest() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         droppedOldest.increment();
         droppedOldestCount.increment();
     }
 
     public void recordCoalescedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         coalescedOffers.increment();
     }
 
     public void recordRedirectedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         redirectedOffers.increment();
     }
 
     public void recordBranchIsolationAction() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         branchIsolationActions.increment();
     }
 
     public void recordLaneSelection() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         laneSelections.increment();
     }
 
     public void recordHotKeySignal() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         hotKeySignals.increment();
@@ -373,7 +424,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     @Override
     public void recordSpin() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         spinCount.increment();
@@ -381,7 +432,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     @Override
     public void recordYield() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         yieldCount.increment();
@@ -389,7 +440,7 @@ public final class EdgeMetrics implements WaitMetrics {
 
     @Override
     public void recordPark() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         parkCount.increment();
@@ -403,6 +454,9 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public void recordFirstTouch(final long nanos) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         firstTouchCount.increment();
         if (nanos > 0L) {
             firstTouchNanos.add(nanos);
@@ -410,6 +464,9 @@ public final class EdgeMetrics implements WaitMetrics {
     }
 
     public void recordDepth(final long depth) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         long current = highWaterMark.get();
         if (depth <= current) {
             return;

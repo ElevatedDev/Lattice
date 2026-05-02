@@ -1,13 +1,18 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.PlacementStatus;
 import com.lattice.placement.PinPolicy;
+import com.lattice.routing.JoinSpec;
+import com.lattice.routing.Stamped;
 import com.lattice.slab.SlabHandle;
 import com.lattice.slab.SlabPool;
+import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.StageExceptionAction;
 import com.lattice.stage.StageSpec;
@@ -23,13 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StageFusionTest {
 
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
+
     @Test
     void optInStageToSinkFusionElidesSinkWorkerThread() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> sinkThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion")
+            final StaticGraph graph = graph("fusion")
                 .source("ingress", Integer.class)
                 .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 1),
                     StageSpec.singleThreaded())
@@ -51,19 +57,85 @@ class StageFusionTest {
             assertTrue(sinkThreads.stream().allMatch(name -> name.endsWith("-validate")));
             assertEquals(8, graph.metrics().stage("egress").consumedCount());
             assertEquals(8, graph.metrics().edge("validate", "egress").consumedCount());
-        } finally {
-            restoreFusionProperty(previous);
-        }
+    }
+
+    @Test
+    void batchStageToSinkFusionElidesSinkWorkerThread() throws Exception {
+            final List<Integer> consumed = new CopyOnWriteArrayList<>();
+            final List<String> sinkThreads = new CopyOnWriteArrayList<>();
+            final StaticGraph graph = graph("batch-sink-fusion")
+                .source("ingress", Integer.class)
+                .batchStage("batch", Integer.class, Integer.class, (batch, out, ctx) -> {
+                    for (int i = 0; i < batch.size(); i++) {
+                        out.push(batch.get(i) + 1);
+                    }
+                }, StageSpec.singleThreaded().batch(BatchPolicy.maxItems(4)))
+                .sink("egress", Integer.class, value -> {
+                    consumed.add(value);
+                    sinkThreads.add(Thread.currentThread().getName());
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "batch", EdgeSpec.mpscRing(32).batch(BatchPolicy.maxItems(4)))
+                .edge("batch", "egress", EdgeSpec.spscRing(32))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            for (int i = 0; i < 8; i++) {
+                ingress.emit(i);
+            }
+            ingress.close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8), List.copyOf(consumed));
+            assertTrue(sinkThreads.stream().allMatch(name -> name.endsWith("-batch")));
+            assertEquals(8, graph.metrics().stage("egress").consumedCount());
+            assertEquals(8, graph.metrics().edge("batch", "egress").consumedCount());
+    }
+
+    @Test
+    void joinToSinkFusionElidesSinkWorkerThread() throws Exception {
+            final List<String> consumed = new CopyOnWriteArrayList<>();
+            final List<String> sinkThreads = new CopyOnWriteArrayList<>();
+            final JoinSpec<String> joinSpec = JoinSpec.allOf(group -> {
+                final Stamped<?> left = group.value("left", Stamped.class).orElseThrow();
+                final Stamped<?> right = group.value("right", Stamped.class).orElseThrow();
+                return group.longStamp() + ":" + left.value() + "/" + right.value();
+            });
+            final StaticGraph graph = graph("join-sink-fusion")
+                .stampedSource("left", String.class)
+                .stampedSource("right", String.class)
+                .join("join", String.class, joinSpec, StageSpec.singleThreaded())
+                .sink("egress", String.class, value -> {
+                    consumed.add(value);
+                    sinkThreads.add(Thread.currentThread().getName());
+                }, StageSpec.singleThreaded())
+                .edge("left", "join", EdgeSpec.mpscRing(32))
+                .edge("right", "join", EdgeSpec.mpscRing(32))
+                .edge("join", "egress", EdgeSpec.spscRing(32))
+                .build();
+
+            graph.start();
+            final Emitter<String> left = graph.emitter("left", String.class);
+            final Emitter<String> right = graph.emitter("right", String.class);
+            left.emit("l0");
+            right.emit("r0");
+            left.emit("l1");
+            right.emit("r1");
+            left.close();
+            right.close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(List.of("0:l0/r0", "1:l1/r1"), List.copyOf(consumed));
+            assertTrue(sinkThreads.stream().allMatch(name -> name.endsWith("-join")));
+            assertEquals(2, graph.metrics().stage("egress").consumedCount());
+            assertEquals(2, graph.metrics().edge("join", "egress").consumedCount());
     }
 
     @Test
     void optInStageToStageFusionElidesIntermediateWorkerThread() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> validateThreads = new CopyOnWriteArrayList<>();
             final List<String> sinkThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-chain")
+            final StaticGraph graph = graph("fusion-chain")
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 1),
                     StageSpec.singleThreaded())
@@ -97,21 +169,15 @@ class StageFusionTest {
             assertEquals(8, graph.metrics().edge("normalize", "validate").consumedCount());
             assertEquals(8, graph.metrics().edge("validate", "egress").emittedCount());
             assertEquals(8, graph.metrics().edge("validate", "egress").consumedCount());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void optInMaximalLinearFusionElidesMultipleStageAndSinkWorkers() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> normalizeThreads = new CopyOnWriteArrayList<>();
             final List<String> validateThreads = new CopyOnWriteArrayList<>();
             final List<String> enrichThreads = new CopyOnWriteArrayList<>();
             final List<String> sinkThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-long-chain")
+            final StaticGraph graph = graph("fusion-long-chain")
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> {
                     normalizeThreads.add(Thread.currentThread().getName());
@@ -152,18 +218,12 @@ class StageFusionTest {
             assertEquals(8, graph.metrics().edge("normalize", "validate").consumedCount());
             assertEquals(8, graph.metrics().edge("validate", "enrich").consumedCount());
             assertEquals(8, graph.metrics().edge("enrich", "egress").consumedCount());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void fusedStageFailureIsAttributedToChildStage() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> failedStages = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-failure")
+            final StaticGraph graph = graph("fusion-failure")
                 .exceptionHandler((graphName, stageName, failure, context) -> {
                     failedStages.add(stageName);
                     return StageExceptionAction.FAIL_GRAPH;
@@ -189,20 +249,12 @@ class StageFusionTest {
             assertEquals(0, graph.metrics().stage("normalize").stageExceptions());
             assertEquals(1, graph.metrics().stage("validate").stageExceptions());
             assertTrue(graph.failure().orElseThrow().getMessage().contains("stage failed: validate"));
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void customExceptionHandlerDisablesInlineSourceFusion() throws Exception {
-        final String previousFusion = System.getProperty("lattice.fusion.enabled");
-        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-        System.setProperty("lattice.fusion.enabled", "true");
-        System.setProperty("lattice.fusion.inlineSource", "true");
-        try {
             final List<String> failedStages = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("inline-custom-handler")
+            final StaticGraph graph = inlineGraph("inline-custom-handler")
                 .exceptionHandler((graphName, stageName, failure, context) -> {
                     failedStages.add(stageName);
                     return StageExceptionAction.POISON_STAGE;
@@ -226,19 +278,46 @@ class StageFusionTest {
             assertEquals(List.of("explode"), failedStages);
             assertEquals(1, graph.metrics().stage("explode").stageExceptions());
             assertTrue(graph.failure().isEmpty());
-        } finally {
-            restoreFusionProperty(previousFusion);
-            restoreInlineFusionProperty(previousInline);
-        }
+    }
+
+    @Test
+    void inlineSourcePhysicalElisionTerminatesWithoutOwnerWorkerThread() throws Exception {
+            final List<Integer> consumed = new CopyOnWriteArrayList<>();
+            final List<String> sinkThreads = new CopyOnWriteArrayList<>();
+            final StaticGraph graph = inlineElidedGraph("inline-elided")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 1),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, value -> {
+                    consumed.add(value);
+                    sinkThreads.add(Thread.currentThread().getName());
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "validate", EdgeSpec.spscRing(8))
+                .edge("validate", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            final String callerThread = Thread.currentThread().getName();
+            ingress.emit(41);
+            ingress.close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.STOPPED, graph.state());
+            assertEquals(List.of(42), consumed);
+            assertEquals(List.of(callerThread), sinkThreads);
+            assertEquals(1, graph.metrics().stage("validate").consumedCount());
+            assertEquals(1, graph.metrics().stage("egress").consumedCount());
+            assertEquals(1, graph.metrics().edge("ingress", "validate").emittedCount());
+            assertEquals(1, graph.metrics().edge("ingress", "validate").consumedCount());
+            assertEquals(1, graph.metrics().edge("validate", "egress").emittedCount());
+            assertEquals(1, graph.metrics().edge("validate", "egress").consumedCount());
     }
 
     @Test
     void benignFusedChainFailureIsAttributedToDownstreamStage() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> failedStages = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-downstream-failure")
+            final StaticGraph graph = graph("fusion-downstream-failure")
                 .exceptionHandler((graphName, stageName, failure, context) -> {
                     failedStages.add(stageName);
                     return StageExceptionAction.FAIL_GRAPH;
@@ -267,18 +346,12 @@ class StageFusionTest {
             assertEquals(List.of("enrich"), failedStages);
             assertEquals(0, graph.metrics().stage("validate").stageExceptions());
             assertEquals(1, graph.metrics().stage("enrich").stageExceptions());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void benignFusedSinkFailureIsAttributedToSink() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> failedStages = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-sink-failure")
+            final StaticGraph graph = graph("fusion-sink-failure")
                 .exceptionHandler((graphName, stageName, failure, context) -> {
                     failedStages.add(stageName);
                     return StageExceptionAction.FAIL_GRAPH;
@@ -302,19 +375,13 @@ class StageFusionTest {
             assertEquals(List.of("egress"), failedStages);
             assertEquals(0, graph.metrics().stage("validate").stageExceptions());
             assertEquals(1, graph.metrics().stage("egress").stageExceptions());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void fusedObjectTypedChainRetainsSlabHandleUntilOwnerStageReturns() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final SlabPool<String> pool = new SlabPool<>("fusion-object-handle", 1);
             final List<Boolean> releasedBeforeOwnerReturned = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-object-handle")
+            final StaticGraph graph = graph("fusion-object-handle")
                 .source("ingress", Object.class)
                 .stage("owner", Object.class, Object.class, (value, out, ctx) -> {
                     out.push(value);
@@ -336,18 +403,12 @@ class StageFusionTest {
             assertEquals(List.of(false), releasedBeforeOwnerReturned);
             assertFalse(graph.failure().isPresent());
             assertEquals(0, pool.leakedCount());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void fusedSinkExplicitPinBecomesEffectiveWorkerPinWithoutMutatingPlan() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> sinkThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-sink-pin")
+            final StaticGraph graph = graph("fusion-sink-pin")
                 .source("ingress", Integer.class)
                 .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
                     StageSpec.singleThreaded())
@@ -368,18 +429,12 @@ class StageFusionTest {
             assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
             assertTrue(sinkThreads.stream().allMatch(name -> name.endsWith("-validate")));
             assertNotEquals(PlacementStatus.NOT_REQUESTED, graph.metrics().stage("validate").placementStatus());
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
     @Test
     void fusionDoesNotOverrideConflictingExplicitPins() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
             final List<String> sinkThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-conflicting-pins")
+            final StaticGraph graph = graph("fusion-conflicting-pins")
                 .source("ingress", Integer.class)
                 .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
                     StageSpec.singleThreaded().pin(PinPolicy.inheritCpuset()))
@@ -395,24 +450,19 @@ class StageFusionTest {
 
             assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
             assertTrue(sinkThreads.stream().allMatch(name -> name.endsWith("-egress")));
-        } finally {
-            restoreFusionProperty(previous);
-        }
     }
 
-    private static void restoreFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previous);
-        }
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 
-    private static void restoreInlineFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.inlineSource");
-        } else {
-            System.setProperty("lattice.fusion.inlineSource", previous);
-        }
+    private static StaticGraph.Builder inlineGraph(final String name) {
+        return graph(name).fusion(FusionSpec.defaults().inlineSources(true));
+    }
+
+    private static StaticGraph.Builder inlineElidedGraph(final String name) {
+        return graph(name).fusion(FusionSpec.defaults()
+            .inlineSources(true)
+            .elideInlineSourcePhysicalPath(true));
     }
 }

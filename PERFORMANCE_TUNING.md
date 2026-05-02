@@ -2,7 +2,8 @@
 
 This guide is for configuring Lattice graphs and interpreting benchmark
 results. The short version: use SPSC whenever ownership proves there is one
-producer, turn on fusion only for eligible fixed serial segments, use
+producer, leave normal fusion enabled for eligible fixed serial segments, opt
+into source inline only when the producer thread may run stage logic, use
 preallocated sources for steady-state object reuse, and measure with the same
 payload and observability settings you plan to claim.
 
@@ -22,8 +23,8 @@ Then tune from the topology:
 - External source called by exactly one application thread:
   `source(..., SourceMode.SINGLE_PRODUCER)`.
 - Worker-to-worker edge with one upstream worker: `EdgeSpec.spscRing(...)`.
-- Serial source -> stage -> stage -> sink segment:
-  `-Dlattice.fusion.enabled=true`, after validating fusion eligibility.
+- Serial source -> stage -> stage -> sink segment: default fusion is already
+  enabled; use `FusionSpec.disabled()` only when you need the physical baseline.
 - Allocation-sensitive source path:
   `preallocatedSource(...)` with a pool larger than the compiled reuse bound.
 
@@ -76,10 +77,13 @@ and validate with the compiler and stress tests.
 
 ## Fusion
 
-Enable fusion with:
+Normal downstream fusion is enabled by default:
 
-```bash
--Dlattice.fusion.enabled=true
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults())
+    // source/stage/sink/edge declarations...
+    .build();
 ```
 
 Fusion is useful for serial static segments such as:
@@ -89,32 +93,55 @@ source -> stage -> sink
 source -> stageA -> stageB -> stageC -> sink
 ```
 
-When eligible, the runtime elides internal SPSC handoffs and executes the
-segment on the owner worker while preserving logical graph visibility. This is
-why the current baseline keeps physical and fused pipeline rows separate.
+When eligible, the runtime elides internal SPSC handoffs and executes downstream
+stages/sinks on the owner worker while preserving logical graph visibility. This
+is why the current baseline keeps physical and fused pipeline rows separate.
 
 Fusion is deliberately strict. Expect it only for normal SPSC, blocking,
 on-heap, non-batch, non-redirect serial paths without conflicting explicit
 pins. Treat capacity, worker placement, and edge-depth visibility as observable
-behavior: turning fusion on is a topology decision, not a universal default.
+behavior.
 
-### Inline source-side fusion (default-on, eligibility-gated)
+Force the physical baseline per graph with:
+
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.disabled())
+    .build();
+```
+
+### Inline Source-Side Fusion
 
 For static topologies whose ingress is owned by a single producer (typically a
 benchmark or a hot-path application thread that is already the natural source),
 the runtime additionally elides the source -> fused-worker SPSC handoff and
-executes the entire fused chain on the producer thread. This is enabled by
-default and engages automatically when eligibility holds:
+executes the entire fused chain on the producer thread. This is off by default
+because it changes which thread executes stage and sink logic. Enable it per
+graph:
 
-```bash
-# Default. Disable explicitly only if the producer thread must remain isolated
-# from the stage and sink work.
--Dlattice.fusion.inlineSource=true
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults()
+        .inlineSources(true))
+    .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+    .build();
+```
+
+For the lowest-latency eligible path, the runtime can also remove the
+lifecycle-only owner worker and source ingress edge:
+
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults()
+        .inlineSources(true)
+        .elideInlineSourcePhysicalPath(true))
+    .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+    .build();
 ```
 
 Eligibility is strict and conservative:
 
-- `lattice.fusion.enabled=true` must be in effect (default).
+- `FusionSpec.enabled(true)` must be in effect (the default).
 - The source declares `SourceMode.SINGLE_PRODUCER`.
 - The source is not preallocated and not stamped.
 - The source's payload type is not `Object`, `SlabHandle`, or `Stamped`
@@ -123,6 +150,10 @@ Eligibility is strict and conservative:
   BLOCK, on-heap slots, no batch policy).
 - The downstream worker has a fused stage chain or a fused stage->sink chain
   and exactly one input edge.
+- No custom `StageExceptionHandler` is installed.
+- No explicit effective placement or topology-aware placement applies to the
+  inline chain. Pinned/topology-placed graphs keep the source boundary physical
+  so stage logic still runs on the placed owner worker.
 
 When all conditions hold, the consumer worker thread parks immediately after
 bootstrap; emit calls run the entire chain synchronously on the calling
@@ -130,31 +161,24 @@ thread. **Backpressure is not available** in this mode because there is no
 ring to fill: each emit either runs the chain to completion or throws.
 
 Because eligibility requires `SourceMode.SINGLE_PRODUCER` (a correctness
-contract the application explicitly opted in to), turning this on by default
-does not change semantics for graphs that did not declare single-producer
-ingress. Disable it explicitly if your producer thread cannot tolerate doing
-the stage and sink work synchronously (for example because it must remain
-free for placement reasons).
+contract the application explicitly opted in to), the runtime does not infer
+producer-thread ownership. Do not enable source inline if the producer thread
+must remain isolated from stage/sink work.
 
-The current checked-in isolated stage baseline records
-`latticeThreeStagePipelineFused` at 61,838,846 ops/s,
-`latticeThreeStagePipelineFusedReference` at 52,698,325 ops/s, and
-`latticeThreeStagePipelinePhysical` at 27,660,948 ops/s. The completed optimal
+The current checked-in 2026-05-02 stage baseline records
+`latticeThreeStagePipelineFused` at 127,875,286 ops/s,
+`latticeManuallyFusedReference` at 209,168,722 ops/s, and
+`latticeThreeStagePipelinePhysical` at 31,938,529 ops/s. The completed optimal
 path is tracked separately so publish throughput is not confused with
 completed-operation throughput.
 
 ## Batch Size
 
-There are two batching knobs:
+Batching is configured through graph APIs:
 
-- `BatchPolicy.maxItems(n)` and `BatchPolicy.linger(...)` for batch stages.
-- `-Dlattice.runtime.singleMessageBatchSize=<n>` for how many single-message
-  items a worker drains per turn.
-
-The default single-message drain batch is `64`. Increase it when throughput is
-limited by worker loop overhead and the workload tolerates longer per-turn
-residence time. Decrease it toward `1` when testing strict handoff behavior or
-when tail latency matters more than peak throughput.
+- `BatchPolicy.maxItems(n)` and `BatchPolicy.linger(...)` for batch stages and
+  batch-capable edges.
+- The internal single-message drain batch is fixed at `64` in this release.
 
 For batch stages, `BatchPolicy.maxItems(n)` is the low-latency batching option.
 `BatchPolicy.linger(...)` can improve fill rate under bursty load but adds
@@ -185,30 +209,37 @@ cores.
 
 ## Metrics And JFR
 
-Hot counters are enabled by default. They are useful operational telemetry, but
-they add work to the hottest paths. For throughput-only benchmarks:
+Metrics are off by default. They are useful operational telemetry, but they add
+work to hot paths and can change benchmark results. Enable them per graph:
 
-```bash
--Dlattice.metrics.hotCounters=false
--Dlattice.metrics.stageHistograms=false
--Dlattice.metrics.residence=false
--Dlattice.jfr=false
+```java
+StaticGraph.builder("orders")
+    .metrics(MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true)
+        .stageHistograms(true)
+        .residenceTiming(true))
+    .build();
 ```
 
-For observability runs:
+JFR event emission is also per graph:
+
+```java
+StaticGraph.builder("orders")
+    .diagnostics(DiagnosticsSpec.off().jfr(true))
+    .build();
+```
+
+Use normal JVM recording controls to capture the events:
 
 ```bash
--Dlattice.metrics.hotCounters=true
--Dlattice.metrics.stageHistograms=true
--Dlattice.metrics.residence=true
--Dlattice.jfr=true
 -XX:StartFlightRecording=filename=lattice.jfr,settings=profile,dumponexit=true
 ```
 
-Residence timing adds timestamp reads on offer/poll paths. Stage histograms and
-JFR batch events can also change measured throughput. Keep observability runs
-separate from max-throughput runs unless the claim is explicitly "with
-observability enabled."
+Residence timing adds timestamp reads on offer/poll paths. Stage histograms,
+logical fused-edge counters, hot counters, and JFR batch events can also change
+measured throughput. Keep observability runs separate from max-throughput runs
+unless the claim is explicitly "with observability enabled."
 
 ## Native Placement
 
@@ -229,15 +260,19 @@ java -Djava.library.path=native/static-topology-native/target/release ...
 
 Use strict mode when placement is part of correctness or benchmark evidence:
 
-```bash
--Dlattice.placement.strict=true
+```java
+StaticGraph.builder("orders")
+    .placement(GraphPlacementSpec.off().strict(true))
+    .build();
 ```
 
 Use topology-aware startup placement as an opt-in helper, not a replacement for
 explicit production pinning:
 
-```bash
--Dlattice.placement.topologyAware.enabled=true
+```java
+StaticGraph.builder("orders")
+    .placement(GraphPlacementSpec.off().topologyAware(true))
+    .build();
 ```
 
 Placement-sensitive claims should be made on Linux with the native backend
@@ -247,8 +282,10 @@ governor, JVM version, and `GraphMetrics.placementReport()`.
 For comparison-only benchmark runs, document whether first-touch behavior was
 left enabled or disabled with:
 
-```bash
--Dlattice.firstTouch.enabled=false
+```java
+StaticGraph.builder("orders")
+    .placement(GraphPlacementSpec.off().firstTouch(false))
+    .build();
 ```
 
 To compare the same pinned topology with native placement disabled versus
@@ -264,17 +301,19 @@ java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
   -jvmArgsAppend "-Dlattice.native.library.path=$(pwd)/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0 -Dlattice.bench.cpuB=1 -Dlattice.bench.cpuC=2"
 ```
 
-## Recommended Property Sets
+## Recommended Profiles
 
 Max-throughput, low-observability run:
 
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults())
+    .metrics(MetricsSpec.off())
+    .diagnostics(DiagnosticsSpec.off())
+    .build();
+```
+
 ```bash
--Dlattice.fusion.enabled=true
--Dlattice.runtime.singleMessageBatchSize=64
--Dlattice.metrics.hotCounters=false
--Dlattice.metrics.stageHistograms=false
--Dlattice.metrics.residence=false
--Dlattice.jfr=false
 -Xms4g -Xmx4g
 -XX:+AlwaysPreTouch
 -XX:+UseG1GC
@@ -283,16 +322,18 @@ Max-throughput, low-observability run:
 
 Placement-sensitive max-throughput run on Linux:
 
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults())
+    .metrics(MetricsSpec.off())
+    .placement(GraphPlacementSpec.off()
+        .strict(true)
+        .topologyAware(true))
+    .build();
+```
+
 ```bash
 -Djava.library.path=native/static-topology-native/target/release
--Dlattice.placement.strict=true
--Dlattice.placement.topologyAware.enabled=true
--Dlattice.fusion.enabled=true
--Dlattice.runtime.singleMessageBatchSize=64
--Dlattice.metrics.hotCounters=false
--Dlattice.metrics.stageHistograms=false
--Dlattice.metrics.residence=false
--Dlattice.jfr=false
 -Xms4g -Xmx4g
 -XX:+AlwaysPreTouch
 -XX:+UseG1GC
@@ -301,12 +342,19 @@ Placement-sensitive max-throughput run on Linux:
 
 Observability and diagnostics run:
 
+```java
+StaticGraph.builder("orders")
+    .metrics(MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true)
+        .stageHistograms(true)
+        .residenceTiming(true))
+    .placement(GraphPlacementSpec.off().strict(true))
+    .diagnostics(DiagnosticsSpec.off().jfr(true))
+    .build();
+```
+
 ```bash
--Dlattice.metrics.hotCounters=true
--Dlattice.metrics.stageHistograms=true
--Dlattice.metrics.residence=true
--Dlattice.jfr=true
--Dlattice.placement.strict=true
 -XX:StartFlightRecording=filename=lattice.jfr,settings=profile,dumponexit=true
 ```
 
@@ -320,7 +368,7 @@ multiple forks, and store JSON results with the exact JVM flags:
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
   "com.lattice.benchmark.(TopologyBenchmark|ApplesToApplesDisruptorBenchmark|OptimalPathBenchmark|DisruptorBaselineBenchmark).*" \
   -wi 5 -i 8 -f 3 -w 5s -r 5s \
-  -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false" \
+  -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC" \
   -rf json -rff results/lattice-jmh.json
 ```
 
@@ -352,9 +400,11 @@ For Disruptor comparisons:
 ## Current Data Scope
 
 The current public result set under
-[`docs/benchmark-results/v1.0.0-baseline/`](docs/benchmark-results/v1.0.0-baseline/)
-is a JDK 21 data set refreshed on 2026-04-29. It shows the architectural value
-of source specialization, equal-call-site manual fusion, and inline fusion.
+[`docs/benchmark-results/2026-05-02-per-graph-refresh/`](docs/benchmark-results/2026-05-02-per-graph-refresh/)
+is a JDK 21 data set refreshed after the per-graph runtime API migration. It
+shows the architectural value of source specialization, equal-call-site manual
+fusion, inline fusion, completion-gated comparison, and the allocation profile
+of the optimal path.
 
 Scope rules:
 
@@ -363,14 +413,14 @@ Scope rules:
 - Apples-to-apples benchmark rows are only fair when the payload model and
   dependency semantics match the claim.
 - Publish-throughput rows are not completed-operation rows. Use
-  `optimal-path-completed.json` when completion matters.
+  `optimal-path-completed-2026-05-02.json` when completion matters.
 - Treat single-producer Disruptor rows as baseline context for shared-ring
   workloads, not as proof about every static graph shape.
 
 The practical reading of the current data is that Lattice is strongest when the
-compiler can specialize and inline a static topology. The isolated physical,
-inline-fused, reference-framed, equal-call-site reference, and completion-gated
-rows all put Lattice ahead by point estimate; the physical row has overlapping
-JMH error bars, while the fused and completion-gated rows are clearer. Disruptor
-remains a strong baseline for a single shared sequence domain, so keep the raw
-artifacts and topology semantics attached to any comparison.
+compiler can specialize and inline a static topology. The headline physical,
+inline-fused, equal-call-site reference, and completion-gated rows put Lattice
+ahead by point estimate. The broader end-to-end matrix is mixed: physical
+source/sink and routing-heavy shapes can favor Disruptor, while the eligible
+static linear pipeline is the Lattice fast path. Keep the raw artifacts and
+topology semantics attached to any comparison.

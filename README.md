@@ -45,6 +45,10 @@ Minimal graph:
 
 ```java
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.DiagnosticsSpec;
+import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphPlacementSpec;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
@@ -55,6 +59,8 @@ record Order(int id, boolean valid) {}
 record ValidOrder(int id) {}
 
 StaticGraph graph = StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults())
+    .metrics(MetricsSpec.off())
     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
     .stage("validate", Order.class, ValidOrder.class,
         (order, out, ctx) -> {
@@ -110,7 +116,7 @@ The hot path is intentionally narrow:
 
 - Sources publish into bounded SPSC or MPSC edges, or run an eligible fused
   chain directly on the source thread when `SourceMode.SINGLE_PRODUCER` proves
-  ownership.
+  ownership and `FusionSpec.inlineSources(true)` is enabled for that graph.
 - Stages are single-owner callbacks. A stage sees one message or one batch at a
   time and pushes through typed `Output` handles.
 - Linear SPSC chains can be fused so logical stages remain visible in the plan
@@ -119,8 +125,36 @@ The hot path is intentionally narrow:
   the compiler rejects shapes where reuse would be unsafe.
 - Routing nodes (`dispatch`, `broadcast`, `partition`) and joins are graph
   primitives rather than ad hoc queue consumers.
-- Metrics and placement diagnostics are graph/stage/edge objects, with
-  low-observability benchmark flags available for clean throughput evidence.
+- Runtime controls are graph-local: `FusionSpec`, `MetricsSpec`,
+  `GraphPlacementSpec`, and `DiagnosticsSpec` replace process-global fusion,
+  metrics, placement, and JFR flags.
+
+## Per-Graph Runtime Controls
+
+Runtime behavior is configured on each `StaticGraph.Builder`:
+
+```java
+StaticGraph graph = StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults()
+        .inlineSources(true)
+        .elideInlineSourcePhysicalPath(true))
+    .metrics(MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true))
+    .placement(GraphPlacementSpec.off()
+        .strict(true))
+    .diagnostics(DiagnosticsSpec.off()
+        .jfr(true))
+    .build();
+```
+
+Defaults are fusion on, metrics off, source inline off, source physical-path
+elision off, topology-aware placement off, strict placement off, first-touch
+placement off, and JFR off. Source-inline fusion is an execution-thread
+contract: stage and sink logic may run on the caller of `emitter.emit(...)`.
+It is blocked when explicit effective placement or topology-aware placement is
+in effect so pinned/topology-placed stage logic remains on the placed owner
+worker.
 
 ## Runtime Guarantees
 
@@ -149,38 +183,38 @@ See [Ordering Guarantees](docs/ordering-guarantees.md),
 
 The checked-in benchmark material is the current public baseline. Start with
 the release snapshot index, then cite the underlying host, JVM flags, benchmark
-class, and JSON artifact for any number you quote. The refreshed baseline
-includes both publish-throughput rows and a completion-gated
-`OptimalPathBenchmark` so async enqueue rates are not confused with
-completed-operation throughput.
+class, and JSON artifact for any number you quote. The 2026-05-02 refresh
+includes scoped publish-throughput rows, completion-gated end-to-end rows,
+an optimal-path sample-time latency pass with physical, fused, native-pinned,
+and source-inline variants, and a GC-profiler pass for the optimal path.
 
 The headline comparison is scoped deliberately:
 
-- The table deduplicates isolated and full-matrix repeats, then uses the best
-  checked-in Lattice point estimate and the best checked-in Disruptor point
-  estimate for each published workload.
+- The table uses the matching scoped JMH artifact for each workload rather
+  than mixing older isolated and full-matrix runs.
 - The completed optimal path waits for sink/handler completion on both sides.
 - The Disruptor manually fused reference row collapses three increments into
   one handler call; the matching Lattice row uses the best equal-call-site
-  `latticeManuallyFusedReference` result: 92.1M ops/s.
-- The physical, fused-copy, manual-reference, and completed-path rows all show
-  Lattice ahead of the strongest logged Disruptor result for the same workload.
-
-![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg)
+  `latticeManuallyFusedReference` result: 209.2M ops/s.
+- The physical publish, fused publish, equal-call-site reference, and optimal
+  completed rows all show Lattice ahead for the same workload. Broader
+  end-to-end topology rows are documented separately and include cases where
+  the physical/router shapes favor Disruptor.
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
 
-![End-to-end latency percentiles](docs/assets/latency-percentiles.svg)
+![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg)
 
 | Workload | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
-| Three-stage physical publish throughput | 27,660,948 ops/s | 26,377,465 ops/s | 1.05x |
-| Three-stage inline/manual fused, copy payload | 61,838,846 ops/s | 45,888,659 ops/s | 1.35x |
-| Manually fused reference payload, equal call-site | 92,094,463 ops/s | 44,045,374 ops/s | 2.09x |
-| Completed optimal path | 29,903,291 ops/s | 4,742,326 ops/s | 6.31x |
+| Three-stage physical publish throughput | 31,938,529 ops/s | 21,698,059 ops/s | 1.47x |
+| Three-stage inline/manual fused publish | 127,875,286 ops/s | 35,697,152 ops/s | 3.58x |
+| Manually fused reference payload, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
+| Completed optimal path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 
 - [Benchmark Results](docs/benchmark-results/README.md)
 - [Benchmark Baseline](BENCHMARK_BASELINE.md)
+- [Benchmark Devices](docs/devices.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)
@@ -237,8 +271,8 @@ Linux exposes the full native placement surface. Windows and macOS expose
 narrower capability bits; see the [Compatibility Matrix](docs/compatibility-matrix.md)
 before making platform-specific placement claims. Without the native library,
 placement requests degrade through startup diagnostics and metrics by default.
-Set `-Dlattice.placement.strict=true` to fail startup when requested placement
-cannot be applied.
+Set `GraphPlacementSpec.off().strict(true)` on the graph to fail startup when
+requested placement cannot be applied.
 
 ## Documentation
 

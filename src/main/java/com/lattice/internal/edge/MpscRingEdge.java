@@ -95,8 +95,8 @@ public final class MpscRingEdge implements MessageEdge {
         this.metrics = metrics;
         this.graphMetrics = graphMetrics;
         this.plainClaim = plainClaim;
-        this.hotCountersEnabled = EdgeMetrics.hotCountersEnabled();
-        this.residenceTimingEnabled = EdgeMetrics.residenceTimingEnabled();
+        this.hotCountersEnabled = metrics.hotCounters();
+        this.residenceTimingEnabled = metrics.residenceTiming();
     }
 
     @Override

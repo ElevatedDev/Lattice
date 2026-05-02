@@ -19,6 +19,12 @@ class RuntimeCoordinator {
     private final AtomicReference<GraphState> state;
     private final AtomicReference<Throwable> failure;
     private final GraphMetrics metrics;
+    private final boolean jfrEnabled;
+    private final boolean fusedLogicalEdgeCountersEnabled;
+    private final boolean validateFusedTypes;
+    private final boolean strictPlacement;
+    private final boolean firstTouchPlacement;
+    private final long placementBootstrapDelayMillis;
     private final AtomicInteger remainingWorkers;
     private final CountDownLatch bootstrapLatch;
     private final CountDownLatch runLatch = new CountDownLatch(1);
@@ -32,12 +38,24 @@ class RuntimeCoordinator {
         final AtomicReference<GraphState> state,
         final AtomicReference<Throwable> failure,
         final GraphMetrics metrics,
-        final int workerCount
+        final int workerCount,
+        final boolean jfrEnabled,
+        final boolean fusedLogicalEdgeCountersEnabled,
+        final boolean validateFusedTypes,
+        final boolean strictPlacement,
+        final boolean firstTouchPlacement,
+        final long placementBootstrapDelayMillis
     ) {
         this.graphName = graphName;
         this.state = state;
         this.failure = failure;
         this.metrics = metrics;
+        this.jfrEnabled = jfrEnabled;
+        this.fusedLogicalEdgeCountersEnabled = fusedLogicalEdgeCountersEnabled;
+        this.validateFusedTypes = validateFusedTypes;
+        this.strictPlacement = strictPlacement;
+        this.firstTouchPlacement = firstTouchPlacement;
+        this.placementBootstrapDelayMillis = placementBootstrapDelayMillis;
         this.remainingWorkers = new AtomicInteger(workerCount);
         this.bootstrapLatch = new CountDownLatch(workerCount);
     }
@@ -58,6 +76,30 @@ class RuntimeCoordinator {
 
     GraphMetrics metrics() {
         return metrics;
+    }
+
+    boolean jfrEnabled() {
+        return jfrEnabled;
+    }
+
+    boolean fusedLogicalEdgeCountersEnabled() {
+        return fusedLogicalEdgeCountersEnabled;
+    }
+
+    boolean validateFusedTypes() {
+        return validateFusedTypes;
+    }
+
+    boolean strictPlacement() {
+        return strictPlacement;
+    }
+
+    boolean firstTouchPlacement() {
+        return firstTouchPlacement;
+    }
+
+    long placementBootstrapDelayMillis() {
+        return placementBootstrapDelayMillis;
     }
 
     boolean isAbortRequested() {
@@ -122,7 +164,9 @@ class RuntimeCoordinator {
             state.set(GraphState.FAILED);
             releaseWorkers();
 
-            JfrEvents.stageException(graphName, stageName, cause);
+            if (jfrEnabled) {
+                JfrEvents.stageException(graphName, stageName, cause);
+            }
 
             final SourceEmitter<?>[] currentSources = sources;
             for (int i = 0; i < currentSources.length; i++) {
@@ -168,7 +212,9 @@ class RuntimeCoordinator {
         final MessageEdge[] outputs
     ) {
         metrics.recordStageException();
-        JfrEvents.stageException(graphName, stageName, cause);
+        if (jfrEnabled) {
+            JfrEvents.stageException(graphName, stageName, cause);
+        }
         if (inputs != null) {
             for (int i = 0; i < inputs.length; i++) {
                 inputs[i].close();
@@ -192,7 +238,9 @@ class RuntimeCoordinator {
             state.compareAndSet(GraphState.QUIESCING, GraphState.STOPPED);
             state.compareAndSet(GraphState.DRAINING, GraphState.STOPPED);
             state.compareAndSet(GraphState.STOPPING, GraphState.STOPPED);
-            JfrEvents.graphStopped(graphName, state.get().name());
+            if (jfrEnabled) {
+                JfrEvents.graphStopped(graphName, state.get().name());
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ import com.lattice.edge.BackpressureException;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.StageSpec;
@@ -18,9 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeFailureAndBackpressureTest {
 
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off().hotCounters(true);
+
     @Test
     void stageExceptionFailsGraphAndAbortsWorkers() throws Exception {
-        final StaticGraph graph = StaticGraph.builder("failure")
+        final StaticGraph graph = graph("failure")
             .source("ingress", Integer.class)
             .stage("explode", Integer.class, Integer.class, (value, out, ctx) -> {
                 throw new IllegalStateException("boom-" + value);
@@ -44,7 +47,7 @@ class RuntimeFailureAndBackpressureTest {
     void failFastOverflowRejectsWhenEdgeIsFull() throws Exception {
         final CountDownLatch sinkEntered = new CountDownLatch(1);
         final CountDownLatch releaseSink = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("backpressure")
+        final StaticGraph graph = graph("backpressure")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> {
                 sinkEntered.countDown();
@@ -83,5 +86,9 @@ class RuntimeFailureAndBackpressureTest {
             Thread.sleep(10);
         }
         assertTrue(condition.getAsBoolean());
+    }
+
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 }

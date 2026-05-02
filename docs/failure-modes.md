@@ -66,7 +66,7 @@ emits.
 
 Without `libstatic_topology_native`, placement requests are recorded as
 advisory in `PlacementStatus` but the graph starts. With
-`-Dlattice.placement.strict=true`, `start()` instead fails with
+`GraphPlacementSpec.off().strict(true)`, `start()` instead fails with
 `GraphRuntimeException` and the graph never reaches `RUNNING`.
 
 ## Slab Leaks

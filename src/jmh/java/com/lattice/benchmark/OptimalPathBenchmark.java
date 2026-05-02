@@ -1,8 +1,11 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
+import com.lattice.placement.PinPolicy;
 import com.lattice.stage.Emitter;
 import com.lattice.stage.Output;
 import com.lattice.stage.StageSpec;
@@ -31,6 +34,7 @@ import org.openjdk.jmh.annotations.TearDown;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class OptimalPathBenchmark {
 
+    private static final String PINNED_CPU_PROPERTY = "lattice.bench.cpuA";
     private static final int RING_SIZE = 8192;
     private static final int POOL_SIZE = 1 << 18;
     private static final int SIDE_TABLE_SIZE = 1024;
@@ -39,6 +43,30 @@ public class OptimalPathBenchmark {
     private static final StageSpec STAGE = StageSpec.singleThreaded().wait(WAIT);
     private static final EdgeSpec SPSC = EdgeSpec.spscRing(RING_SIZE).wait(WAIT);
     private static final long[] SIDE_TABLE = sideTable();
+
+    @Benchmark
+    public long latticePhysicalCompleted(final LatticePhysicalState state) {
+        final Order order = state.nextOrder();
+        state.emitter.emit(order);
+        awaitCompleted(state.completedSequence, order.sequence);
+        return order.checksum;
+    }
+
+    @Benchmark
+    public long latticeFusedCompleted(final LatticeFusedState state) {
+        final Order order = state.nextOrder();
+        state.emitter.emit(order);
+        awaitCompleted(state.completedSequence, order.sequence);
+        return order.checksum;
+    }
+
+    @Benchmark
+    public long latticePinnedFusedCompleted(final LatticePinnedFusedState state) {
+        final Order order = state.nextOrder();
+        state.emitter.emit(order);
+        awaitCompleted(state.completedSequence, order.sequence);
+        return order.checksum;
+    }
 
     @Benchmark
     public long latticeInlineFusedCompleted(final LatticeInlineFusedState state) {
@@ -62,29 +90,106 @@ public class OptimalPathBenchmark {
     }
 
     @State(Scope.Benchmark)
-    public static class LatticeInlineFusedState extends PooledOrders {
+    public static class LatticePhysicalState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-physical",
+                FusionSpec.disabled(),
+                GraphPlacementSpec.off(),
+                STAGE,
+                STAGE,
+                STAGE,
+                STAGE,
+                "latticePhysicalCompleted"
+            );
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeFusedState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-fused",
+                FusionSpec.defaults(),
+                GraphPlacementSpec.off(),
+                STAGE,
+                STAGE,
+                STAGE,
+                STAGE,
+                "latticeFusedCompleted"
+            );
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticePinnedFusedState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-pinned-fused",
+                FusionSpec.defaults(),
+                GraphPlacementSpec.off()
+                    .strict(true)
+                    .firstTouch(true),
+                pinnedStage(cpuProperty(PINNED_CPU_PROPERTY, 0)),
+                STAGE,
+                STAGE,
+                STAGE,
+                "latticePinnedFusedCompleted"
+            );
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeInlineFusedState extends LatticeState {
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(
+                "optimal-lattice-inline-fused",
+                FusionSpec.defaults()
+                    .inlineSources(true)
+                    .elideInlineSourcePhysicalPath(true),
+                GraphPlacementSpec.off(),
+                STAGE,
+                STAGE,
+                STAGE,
+                STAGE,
+                "latticeInlineFusedCompleted"
+            );
+        }
+    }
+
+    public abstract static class LatticeState extends PooledOrders {
         final AtomicLong completedSequence = new AtomicLong(-1L);
         StaticGraph graph;
         Emitter<Order> emitter;
-        String previousFusion;
-        String previousInlineSource;
+        String benchmarkName;
 
-        @Setup(Level.Trial)
-        public void setup() {
-            previousFusion = System.getProperty("lattice.fusion.enabled");
-            previousInlineSource = System.getProperty("lattice.fusion.inlineSource");
-            System.setProperty("lattice.fusion.enabled", "true");
-            System.setProperty("lattice.fusion.inlineSource", "true");
+        void setup(
+            final String graphName,
+            final FusionSpec fusionSpec,
+            final GraphPlacementSpec placementSpec,
+            final StageSpec parseSpec,
+            final StageSpec enrichSpec,
+            final StageSpec riskSpec,
+            final StageSpec commitSpec,
+            final String benchmarkName
+        ) {
             try {
-                graph = StaticGraph.builder("optimal-lattice-inline-fused")
+                this.benchmarkName = benchmarkName;
+                graph = StaticGraph.builder(graphName)
+                    .fusion(fusionSpec)
+                    .placement(placementSpec)
                     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
-                    .stage("parse", Order.class, Order.class, OptimalPathBenchmark::parse, STAGE)
-                    .stage("enrich", Order.class, Order.class, OptimalPathBenchmark::enrich, STAGE)
-                    .stage("risk", Order.class, Order.class, OptimalPathBenchmark::risk, STAGE)
+                    .stage("parse", Order.class, Order.class, OptimalPathBenchmark::parse, parseSpec)
+                    .stage("enrich", Order.class, Order.class, OptimalPathBenchmark::enrich, enrichSpec)
+                    .stage("risk", Order.class, Order.class, OptimalPathBenchmark::risk, riskSpec)
                     .sink("commit", Order.class, order -> {
                         serialize(order);
                         completedSequence.lazySet(order.sequence);
-                    }, STAGE)
+                    }, commitSpec)
                     .edge("ingress", "parse", SPSC)
                     .edge("parse", "enrich", SPSC)
                     .edge("enrich", "risk", SPSC)
@@ -93,7 +198,6 @@ public class OptimalPathBenchmark {
                 graph.start();
                 emitter = graph.emitter("ingress", Order.class);
             } catch (final RuntimeException | Error ex) {
-                restoreProperties();
                 throw ex;
             }
         }
@@ -108,14 +212,8 @@ public class OptimalPathBenchmark {
                     graph.stop(STOP_TIMEOUT);
                 }
             } finally {
-                restoreProperties();
-                requireCompleted("latticeInlineFusedCompleted", completedSequence);
+                requireCompleted(benchmarkName, completedSequence);
             }
-        }
-
-        private void restoreProperties() {
-            restoreProperty("lattice.fusion.enabled", previousFusion);
-            restoreProperty("lattice.fusion.inlineSource", previousInlineSource);
         }
     }
 
@@ -296,11 +394,16 @@ public class OptimalPathBenchmark {
         };
     }
 
-    private static void restoreProperty(final String property, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(property);
-        } else {
-            System.setProperty(property, previousValue);
-        }
+    private static StageSpec pinnedStage(final int cpu) {
+        return STAGE.pin(PinPolicy.cpu(cpu));
     }
+
+    private static int cpuProperty(final String property, final int fallback) {
+        final int cpu = Integer.getInteger(property, fallback);
+        if (cpu < 0) {
+            throw new IllegalArgumentException(property + " must not be negative");
+        }
+        return cpu;
+    }
+
 }

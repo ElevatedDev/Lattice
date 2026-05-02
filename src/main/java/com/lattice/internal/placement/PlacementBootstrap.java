@@ -12,8 +12,24 @@ import com.lattice.nativeaccess.NativeTopologyUnavailableException;
 import java.util.BitSet;
 
 public final class PlacementBootstrap {
+    private static volatile long bootstrapDelayMillisForTests;
 
     private PlacementBootstrap() {
+    }
+
+    public static void bootstrapDelayMillisForTests(final long delayMillis) {
+        if (delayMillis < 0L) {
+            throw new IllegalArgumentException("delayMillis must not be negative");
+        }
+        bootstrapDelayMillisForTests = delayMillis;
+    }
+
+    public static void clearBootstrapDelayMillisForTests() {
+        bootstrapDelayMillisForTests = 0L;
+    }
+
+    public static long bootstrapDelayMillisForTests() {
+        return bootstrapDelayMillisForTests;
     }
 
     public static PlacementResult bootstrap(
@@ -21,7 +37,18 @@ public final class PlacementBootstrap {
         final PinPolicy policy,
         final MessageEdge[] ownedEdges
     ) {
-        bootstrapDelay();
+        return bootstrap(stageName, policy, ownedEdges, false, false, 0L);
+    }
+
+    public static PlacementResult bootstrap(
+        final String stageName,
+        final PinPolicy policy,
+        final MessageEdge[] ownedEdges,
+        final boolean strict,
+        final boolean firstTouch,
+        final long bootstrapDelayMillis
+    ) {
+        bootstrapDelay(bootstrapDelayMillis);
         final StringBuilder message = new StringBuilder();
         final boolean placementRequested = policy.kind() != PinPolicy.PinKind.NONE;
         boolean pinApplied = false;
@@ -39,7 +66,7 @@ public final class PlacementBootstrap {
             } else {
                 append(message, snapshot.failureMessage());
                 if (placementRequested) {
-                    maybeStrict(stageName, snapshotFailure(snapshot));
+                    maybeStrict(stageName, snapshotFailure(snapshot), strict);
                 }
             }
         } else if (placementRequested) {
@@ -48,7 +75,7 @@ public final class PlacementBootstrap {
                 nativeUnavailableMessage(snapshot)
             );
             append(message, unavailable.getMessage());
-            maybeStrict(stageName, unavailable);
+            maybeStrict(stageName, unavailable, strict);
         }
 
         if (nativeLoaded && capabilities != null) {
@@ -56,7 +83,7 @@ public final class PlacementBootstrap {
                 append(message, "native topology backend does not support this platform");
             }
 
-            final PinAttempt pinAttempt = applyPin(stageName, policy, capabilities, snapshot);
+            final PinAttempt pinAttempt = applyPin(stageName, policy, capabilities, snapshot, strict);
             pinApplied = pinAttempt.applied();
             expectedCpu = pinAttempt.expectedCpu(expectedCpu);
             expectedNumaNode = pinAttempt.expectedNumaNode(expectedNumaNode);
@@ -69,12 +96,12 @@ public final class PlacementBootstrap {
                     localPolicyApplied = true;
                 } catch (final NativeTopologyException ex) {
                     append(message, ex.getMessage());
-                    maybeStrict(stageName, ex);
+                    maybeStrict(stageName, ex, strict);
                 }
             }
         }
 
-        final long firstTouchNanos = firstTouch(ownedEdges, stageName);
+        final long firstTouchNanos = firstTouch ? firstTouch(ownedEdges, stageName) : 0L;
         if (firstTouchNanos > 0L) {
             append(message, "first-touch completed in " + firstTouchNanos + " ns");
         }
@@ -130,18 +157,19 @@ public final class PlacementBootstrap {
         final String stageName,
         final PinPolicy policy,
         final NativeCapabilities capabilities,
-        final NativeTopologySnapshot snapshot
+        final NativeTopologySnapshot snapshot,
+        final boolean strict
     ) {
         if (policy.kind() == PinPolicy.PinKind.NONE || policy.kind() == PinPolicy.PinKind.INHERIT_CPUSET) {
             return PinAttempt.notApplied("", -1, -1);
         }
         if (!capabilities.affinity()) {
-            maybeStrict(stageName, new NativeTopologyException("native affinity is unavailable"));
+            maybeStrict(stageName, new NativeTopologyException("native affinity is unavailable"), strict);
             return PinAttempt.notApplied("native affinity is unavailable", -1, -1);
         }
         if (policy.kind() == PinPolicy.PinKind.NUMA_NODE && !capabilities.numaQuery()) {
             final NativeTopologyException unavailable = new NativeTopologyException("native NUMA query is unavailable");
-            maybeStrict(stageName, unavailable);
+            maybeStrict(stageName, unavailable, strict);
             return PinAttempt.notApplied(unavailable.getMessage(), -1, policy.numaNode());
         }
 
@@ -160,7 +188,7 @@ public final class PlacementBootstrap {
                 default -> PinAttempt.notApplied("", -1, -1);
             };
         } catch (final NativeTopologyException | IllegalArgumentException ex) {
-            maybeStrict(stageName, ex);
+            maybeStrict(stageName, ex, strict);
             return PinAttempt.notApplied(ex.getMessage(), -1, policy.numaNode());
         }
     }
@@ -326,18 +354,13 @@ public final class PlacementBootstrap {
         return new NativeTopologyException(message);
     }
 
-    private static void maybeStrict(final String stageName, final Throwable failure) {
-        if (strict()) {
+    private static void maybeStrict(final String stageName, final Throwable failure, final boolean strict) {
+        if (strict) {
             throw new GraphRuntimeException("worker placement failed for " + stageName, failure);
         }
     }
 
-    private static boolean strict() {
-        return Boolean.getBoolean("lattice.placement.strict");
-    }
-
-    private static void bootstrapDelay() {
-        final long delayMillis = Long.getLong("lattice.placement.bootstrapDelayMillis", 0L);
+    private static void bootstrapDelay(final long delayMillis) {
         if (delayMillis <= 0L) {
             return;
         }

@@ -32,8 +32,9 @@ and per source through `SourceMode`. There is no hidden unbounded buffering.
 
 ## Visibility
 
-Every overflow event increments an `EdgeMetrics` counter (offers, accepted,
-rejected, dropped, redirected). With JFR enabled (`-Dlattice.jfr=true`) you
-also get per-event JFR records suitable for Mission Control / async-profiler
-post-processing. See [Observability](observability.md).
-
+When graph hot counters are enabled through `MetricsSpec.hotCounters(true)`,
+overflow events update `EdgeMetrics` counters (offers, accepted, rejected,
+dropped, redirected). With graph JFR enabled through
+`DiagnosticsSpec.off().jfr(true)`, you also get per-event JFR records suitable
+for Mission Control / async-profiler post-processing. See
+[Observability](observability.md).

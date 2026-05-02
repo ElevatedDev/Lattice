@@ -38,6 +38,24 @@ EdgeSpec.mpscRing(1024).overflow(OverflowPolicy.failFast())
 
 See [Edge Semantics](edge-semantics.md) for capacity rules and handle ownership.
 
+## Graph Runtime Specs
+
+Graph-wide runtime controls are optional builder calls. They apply only to the
+graph being built:
+
+```java
+StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults().inlineSources(true))
+    .metrics(MetricsSpec.off().hotCounters(true))
+    .placement(GraphPlacementSpec.off().strict(true))
+    .diagnostics(DiagnosticsSpec.off().jfr(true));
+```
+
+Defaults are conservative for observability overhead and source execution:
+normal downstream fusion is enabled; metrics, source inline, source physical
+path elision, topology-aware placement, strict placement, first-touch placement,
+and JFR are off.
+
 ## Lifecycle
 
 ```java

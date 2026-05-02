@@ -1,64 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="500" viewBox="0 0 1120 500">
-<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:12px;fill:#52616f}.value{font-size:12px;font-weight:600}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}</style>
-<rect width="1120" height="500" fill="white"/>
-<text class="title" x="22" y="32">Best logged Lattice vs Disruptor publish throughput</text>
-<text class="sub" x="22" y="54">Best checked-in point estimate per side; isolated and full-matrix repeats deduplicated</text>
-<line class="grid" x1="250" y1="86" x2="250" y2="430"/>
-<text class="axis" x="250" y="454" text-anchor="middle">0M</text>
-<line class="grid" x1="410" y1="86" x2="410" y2="430"/>
-<text class="axis" x="410" y="454" text-anchor="middle">22M</text>
-<line class="grid" x1="570" y1="86" x2="570" y2="430"/>
-<text class="axis" x="570" y="454" text-anchor="middle">44M</text>
-<line class="grid" x1="730" y1="86" x2="730" y2="430"/>
-<text class="axis" x="730" y="454" text-anchor="middle">66M</text>
-<line class="grid" x1="890" y1="86" x2="890" y2="430"/>
-<text class="axis" x="890" y="454" text-anchor="middle">88M</text>
-<line class="grid" x1="1050" y1="86" x2="1050" y2="430"/>
-<text class="axis" x="1050" y="454" text-anchor="middle">110M</text>
-<line class="axisline" x1="250" y1="430" x2="1050" y2="430"/>
-
-<text class="label" x="236" y="125" text-anchor="end">Lattice, isolated physical</text>
-<rect x="250" y="104" width="201.2" height="26" rx="3" fill="#0f766e"/>
-<line class="err" x1="394.1" y1="117" x2="508.2" y2="117"/>
-<line class="err" x1="394.1" y1="109" x2="394.1" y2="125"/>
-<line class="err" x1="508.2" y1="109" x2="508.2" y2="125"/>
-<text class="value" x="459.2" y="124">27.7M</text>
-<text class="label" x="236" y="161" text-anchor="end">Disruptor, isolated physical</text>
-<rect x="250" y="140" width="191.8" height="26" rx="3" fill="#b45309"/>
-<line class="err" x1="424.0" y1="153" x2="459.6" y2="153"/>
-<line class="err" x1="424.0" y1="145" x2="424.0" y2="161"/>
-<line class="err" x1="459.6" y1="145" x2="459.6" y2="161"/>
-<text class="value" x="449.8" y="160">26.4M</text>
-
-<text class="label" x="236" y="229" text-anchor="end">Lattice, isolated fused copy</text>
-<rect x="250" y="208" width="449.7" height="26" rx="3" fill="#0f766e"/>
-<line class="err" x1="672.6" y1="221" x2="726.9" y2="221"/>
-<line class="err" x1="672.6" y1="213" x2="672.6" y2="229"/>
-<line class="err" x1="726.9" y1="213" x2="726.9" y2="229"/>
-<text class="value" x="707.7" y="228">61.8M</text>
-<text class="label" x="236" y="265" text-anchor="end">Disruptor, full matrix</text>
-<rect x="250" y="244" width="333.7" height="26" rx="3" fill="#b45309"/>
-<line class="err" x1="568.2" y1="257" x2="599.3" y2="257"/>
-<line class="err" x1="568.2" y1="249" x2="568.2" y2="265"/>
-<line class="err" x1="599.3" y1="249" x2="599.3" y2="265"/>
-<text class="value" x="591.7" y="264">45.9M</text>
-
-<text class="label" x="236" y="333" text-anchor="end">Lattice, full matrix</text>
-<rect x="250" y="312" width="669.8" height="26" rx="3" fill="#0f766e"/>
-<line class="err" x1="832.6" y1="325" x2="1007.0" y2="325"/>
-<line class="err" x1="832.6" y1="317" x2="832.6" y2="333"/>
-<line class="err" x1="1007.0" y1="317" x2="1007.0" y2="333"/>
-<text class="value" x="927.8" y="332">92.1M</text>
-<text class="label" x="236" y="369" text-anchor="end">Disruptor, full matrix</text>
-<rect x="250" y="348" width="320.3" height="26" rx="3" fill="#b45309"/>
-<line class="err" x1="536.7" y1="361" x2="603.9" y2="361"/>
-<line class="err" x1="536.7" y1="353" x2="536.7" y2="369"/>
-<line class="err" x1="603.9" y1="353" x2="603.9" y2="369"/>
-<text class="value" x="578.3" y="368">44.0M</text>
-
-<rect x="920" y="392" width="14" height="14" rx="2" fill="#0f766e"/>
-<text class="axis" x="942" y="404">Lattice</text>
-<rect x="1000" y="392" width="14" height="14" rx="2" fill="#b45309"/>
-<text class="axis" x="1022" y="404">Disruptor</text>
-<text class="axis" x="1050" y="478" text-anchor="end">score +/- JMH error, ops/s</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="600" viewBox="0 0 1180 600">
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#102033}.title{font-size:24px;font-weight:700}.sub{font-size:13px;fill:#52616f}.axis{font-size:12px;fill:#52616f}.label{font-size:12px;fill:#52616f}.series{font-size:11px;fill:#52616f}.value{font-size:12px;font-weight:700}.small{font-size:11px;fill:#52616f}.grid{stroke:#d8dee8;stroke-width:1}.axisline{stroke:#475569;stroke-width:1.2}.err{stroke:#243447;stroke-width:1.5}.line{fill:none;stroke-width:2.6}.dot{stroke:white;stroke-width:1.4}</style>
+<rect width="1180" height="600" fill="white"/>
+<text class="title" x="24" y="34">Lattice vs Disruptor headline throughput</text>
+<text class="sub" x="24" y="58">Scoped JMH runs on 2026-05-02; publish rows use throughput, optimal path waits for completion</text>
+<line class="grid" x1="380.0" y1="82" x2="380.0" y2="520"/>
+<text class="axis" x="380.0" y="548" text-anchor="middle">0M</text>
+<line class="grid" x1="522.0" y1="82" x2="522.0" y2="520"/>
+<text class="axis" x="522.0" y="548" text-anchor="middle">50M</text>
+<line class="grid" x1="664.0" y1="82" x2="664.0" y2="520"/>
+<text class="axis" x="664.0" y="548" text-anchor="middle">100M</text>
+<line class="grid" x1="806.0" y1="82" x2="806.0" y2="520"/>
+<text class="axis" x="806.0" y="548" text-anchor="middle">150M</text>
+<line class="grid" x1="948.0" y1="82" x2="948.0" y2="520"/>
+<text class="axis" x="948.0" y="548" text-anchor="middle">200M</text>
+<line class="grid" x1="1090.0" y1="82" x2="1090.0" y2="520"/>
+<text class="axis" x="1090.0" y="548" text-anchor="middle">250M</text>
+<line class="axisline" x1="380" y1="520" x2="1090" y2="520"/>
+<text class="label" x="24" y="96">3-stage physical publish</text>
+<text class="series" x="350" y="125" text-anchor="end">Lattice</text>
+<rect x="380" y="108" width="90.7" height="24" rx="3" fill="#0f766e"/>
+<line class="err" x1="466.0" y1="120.0" x2="475.4" y2="120.0"/>
+<line class="err" x1="466.0" y1="113.0" x2="466.0" y2="127.0"/>
+<line class="err" x1="475.4" y1="113.0" x2="475.4" y2="127.0"/>
+<text class="value" x="479.7" y="125">31.9M</text>
+<text class="series" x="350" y="157" text-anchor="end">Disruptor</text>
+<rect x="380" y="140" width="61.6" height="24" rx="3" fill="#b45309"/>
+<line class="err" x1="440.2" y1="152.0" x2="443.0" y2="152.0"/>
+<line class="err" x1="440.2" y1="145.0" x2="440.2" y2="159.0"/>
+<line class="err" x1="443.0" y1="145.0" x2="443.0" y2="159.0"/>
+<text class="value" x="450.6" y="157">21.7M</text>
+<text class="label" x="24" y="208">3-stage fused publish</text>
+<text class="series" x="350" y="237" text-anchor="end">Lattice</text>
+<rect x="380" y="220" width="363.2" height="24" rx="3" fill="#0f766e"/>
+<line class="err" x1="736.8" y1="232.0" x2="749.5" y2="232.0"/>
+<line class="err" x1="736.8" y1="225.0" x2="736.8" y2="239.0"/>
+<line class="err" x1="749.5" y1="225.0" x2="749.5" y2="239.0"/>
+<text class="value" x="752.2" y="237">127.9M</text>
+<text class="series" x="350" y="269" text-anchor="end">Disruptor</text>
+<rect x="380" y="252" width="101.4" height="24" rx="3" fill="#b45309"/>
+<line class="err" x1="477.0" y1="264.0" x2="485.8" y2="264.0"/>
+<line class="err" x1="477.0" y1="257.0" x2="477.0" y2="271.0"/>
+<line class="err" x1="485.8" y1="257.0" x2="485.8" y2="271.0"/>
+<text class="value" x="490.4" y="269">35.7M</text>
+<text class="label" x="24" y="320">Equal-call-site reference</text>
+<text class="series" x="350" y="349" text-anchor="end">Lattice</text>
+<rect x="380" y="332" width="594.0" height="24" rx="3" fill="#0f766e"/>
+<line class="err" x1="965.4" y1="344.0" x2="982.6" y2="344.0"/>
+<line class="err" x1="965.4" y1="337.0" x2="965.4" y2="351.0"/>
+<line class="err" x1="982.6" y1="337.0" x2="982.6" y2="351.0"/>
+<text class="value" x="983.0" y="349">209.2M</text>
+<text class="series" x="350" y="381" text-anchor="end">Disruptor</text>
+<rect x="380" y="364" width="88.3" height="24" rx="3" fill="#b45309"/>
+<line class="err" x1="465.2" y1="376.0" x2="471.4" y2="376.0"/>
+<line class="err" x1="465.2" y1="369.0" x2="465.2" y2="383.0"/>
+<line class="err" x1="471.4" y1="369.0" x2="471.4" y2="383.0"/>
+<text class="value" x="477.3" y="381">31.1M</text>
+<text class="label" x="24" y="432">Optimal completed path</text>
+<text class="series" x="350" y="461" text-anchor="end">Lattice</text>
+<rect x="380" y="444" width="221.1" height="24" rx="3" fill="#0f766e"/>
+<line class="err" x1="599.4" y1="456.0" x2="602.8" y2="456.0"/>
+<line class="err" x1="599.4" y1="449.0" x2="599.4" y2="463.0"/>
+<line class="err" x1="602.8" y1="449.0" x2="602.8" y2="463.0"/>
+<text class="value" x="610.1" y="461">77.9M</text>
+<text class="series" x="350" y="493" text-anchor="end">Disruptor</text>
+<rect x="380" y="476" width="10.3" height="24" rx="3" fill="#b45309"/>
+<line class="err" x1="390.1" y1="488.0" x2="390.5" y2="488.0"/>
+<line class="err" x1="390.1" y1="481.0" x2="390.1" y2="495.0"/>
+<line class="err" x1="390.5" y1="481.0" x2="390.5" y2="495.0"/>
+<text class="value" x="399.3" y="493">3.6M</text>
+<text class="axis" x="1090" y="578" text-anchor="end">ops/s, score +/- JMH error</text>
 </svg>

@@ -35,19 +35,22 @@ final class GraphCompiler {
     private final List<StaticGraphBuilder.PendingEdge> declaredEdges;
     private final StageExceptionHandler exceptionHandler;
     private final boolean customExceptionHandler;
+    private final GraphRuntimeConfig runtimeConfig;
 
     GraphCompiler(
         final String graphName,
         final List<NodeDefinition> declaredNodes,
         final List<StaticGraphBuilder.PendingEdge> declaredEdges,
         final StageExceptionHandler exceptionHandler,
-        final boolean customExceptionHandler
+        final boolean customExceptionHandler,
+        final GraphRuntimeConfig runtimeConfig
     ) {
         this.graphName = graphName;
         this.declaredNodes = List.copyOf(declaredNodes);
         this.declaredEdges = List.copyOf(declaredEdges);
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
         this.customExceptionHandler = customExceptionHandler;
+        this.runtimeConfig = Objects.requireNonNull(runtimeConfig, "runtimeConfig");
     }
 
     CompiledGraph compile() {
@@ -87,7 +90,8 @@ final class GraphCompiler {
             redirectBySourceAndTarget,
             List.copyOf(workerOrder),
             exceptionHandler,
-            customExceptionHandler
+            customExceptionHandler,
+            runtimeConfig
         );
     }
 

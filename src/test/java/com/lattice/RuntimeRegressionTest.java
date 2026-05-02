@@ -2,7 +2,9 @@ package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.EdgeMetrics;
@@ -30,12 +32,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeRegressionTest {
 
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
+
     @Test
     void dropOldestDoesNotCountDroppedItemsAsConsumedAndPreservesSurvivorOrder() throws Exception {
         final CountDownLatch firstEntered = new CountDownLatch(1);
         final CountDownLatch releaseFirst = new CountDownLatch(1);
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("drop-oldest-metrics")
+        final StaticGraph graph = graph("drop-oldest-metrics")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, value -> {
                 firstEntered.countDown();
@@ -66,7 +72,7 @@ class RuntimeRegressionTest {
         final SlabPool<String> plainPool = new SlabPool<>("abort-plain", 2);
         final CountDownLatch plainEntered = new CountDownLatch(1);
         final CountDownLatch releasePlain = new CountDownLatch(1);
-        final StaticGraph plain = StaticGraph.builder("abort-plain")
+        final StaticGraph plain = graph("abort-plain")
             .source("ingress", SlabHandle.class)
             .sink("egress", SlabHandle.class, ignored -> {
                 plainEntered.countDown();
@@ -90,7 +96,7 @@ class RuntimeRegressionTest {
         final SlabPool<String> stampedPool = new SlabPool<>("abort-stamped", 2);
         final CountDownLatch stampedEntered = new CountDownLatch(1);
         final CountDownLatch releaseStamped = new CountDownLatch(1);
-        final StaticGraph stamped = StaticGraph.builder("abort-stamped")
+        final StaticGraph stamped = graph("abort-stamped")
             .stampedSource("ingress", SlabHandle.class)
             .sink("egress", Stamped.class, ignored -> {
                 stampedEntered.countDown();
@@ -112,7 +118,7 @@ class RuntimeRegressionTest {
     @Test
     void poisonReleasesQueuedSlabHandlePayloads() throws Exception {
         final SlabPool<String> pool = new SlabPool<>("poison-release", 2);
-        final StaticGraph graph = StaticGraph.builder("poison-release")
+        final StaticGraph graph = graph("poison-release")
             .exceptionHandler((graphName, stageName, failure, context) -> StageExceptionAction.POISON_STAGE)
             .source("ingress", SlabHandle.class)
             .stage("explode", SlabHandle.class, SlabHandle.class, (handle, out, ctx) -> {
@@ -133,7 +139,7 @@ class RuntimeRegressionTest {
 
     @Test
     void anyOfDuplicateFailRejectsLaterSourceForAlreadyEmittedStamp() throws Exception {
-        final StaticGraph graph = StaticGraph.builder("any-duplicate-fail")
+        final StaticGraph graph = graph("any-duplicate-fail")
             .source("left", Stamped.class)
             .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource())
@@ -169,7 +175,7 @@ class RuntimeRegressionTest {
         final SlabPool<String> pool = new SlabPool<>("pass-through", 1);
         final CountDownLatch sinkEntered = new CountDownLatch(1);
         final CountDownLatch releaseSink = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("pass-through")
+        final StaticGraph graph = graph("pass-through")
             .source("ingress", SlabHandle.class)
             .stage("identity", SlabHandle.class, SlabHandle.class, (handle, out, ctx) -> out.push(handle),
                 StageSpec.singleThreaded())
@@ -197,7 +203,7 @@ class RuntimeRegressionTest {
     void quiesceDoesNotReturnWhileSinkIsActivelyProcessingItem() throws Exception {
         final CountDownLatch sinkEntered = new CountDownLatch(1);
         final CountDownLatch releaseSink = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("quiesce-active")
+        final StaticGraph graph = graph("quiesce-active")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> {
                 sinkEntered.countDown();
@@ -222,14 +228,9 @@ class RuntimeRegressionTest {
 
     @Test
     void quiesceDoesNotReturnWhileInlineSourceFusionIsProcessingItem() throws Exception {
-        final String previousFusion = System.getProperty("lattice.fusion.enabled");
-        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-        System.setProperty("lattice.fusion.enabled", "true");
-        System.setProperty("lattice.fusion.inlineSource", "true");
-        try {
             final CountDownLatch sinkEntered = new CountDownLatch(1);
             final CountDownLatch releaseSink = new CountDownLatch(1);
-            final StaticGraph graph = StaticGraph.builder("quiesce-inline-active")
+            final StaticGraph graph = inlineGraph("quiesce-inline-active")
                 .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
                 .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
                     StageSpec.singleThreaded())
@@ -256,22 +257,46 @@ class RuntimeRegressionTest {
             emitting.get(5, TimeUnit.SECONDS);
             ingress.close();
             graph.stop(Duration.ofSeconds(5));
-        } finally {
-            restoreFusionProperty(previousFusion);
-            restoreInlineFusionProperty(previousInline);
-        }
+    }
+
+    @Test
+    void quiesceDoesNotReturnWhileElidedInlineSourceFusionIsProcessingItemWithDepthFlagOff() throws Exception {
+            final CountDownLatch sinkEntered = new CountDownLatch(1);
+            final CountDownLatch releaseSink = new CountDownLatch(1);
+            final StaticGraph graph = inlineElidedGraph("quiesce-elided-inline-active")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    sinkEntered.countDown();
+                    await(releaseSink);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "identity", EdgeSpec.spscRing(8))
+                .edge("identity", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            final CompletableFuture<Void> emitting = CompletableFuture.runAsync(() -> ingress.emit(1));
+            assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+
+            final CompletableFuture<Boolean> quiesced = CompletableFuture.supplyAsync(
+                () -> graph.quiesce(Duration.ofSeconds(5)));
+
+            Thread.sleep(100);
+            assertFalse(quiesced.isDone());
+            releaseSink.countDown();
+            assertTrue(quiesced.get(5, TimeUnit.SECONDS));
+            emitting.get(5, TimeUnit.SECONDS);
+            ingress.close();
+            graph.stop(Duration.ofSeconds(5));
     }
 
     @Test
     void stopWaitsForInlineSourceFusionInFlightWork() throws Exception {
-        final String previousFusion = System.getProperty("lattice.fusion.enabled");
-        final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-        System.setProperty("lattice.fusion.enabled", "true");
-        System.setProperty("lattice.fusion.inlineSource", "true");
-        try {
             final CountDownLatch sinkEntered = new CountDownLatch(1);
             final CountDownLatch releaseSink = new CountDownLatch(1);
-            final StaticGraph graph = StaticGraph.builder("stop-inline-active")
+            final StaticGraph graph = inlineGraph("stop-inline-active")
                 .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
                 .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
                     StageSpec.singleThreaded())
@@ -297,20 +322,46 @@ class RuntimeRegressionTest {
             assertTrue(stopped.get(5, TimeUnit.SECONDS));
             emitting.get(5, TimeUnit.SECONDS);
             assertEquals(GraphState.STOPPED, graph.state());
-        } finally {
-            restoreFusionProperty(previousFusion);
-            restoreInlineFusionProperty(previousInline);
-        }
+    }
+
+    @Test
+    void stopWaitsForElidedInlineSourceFusionInFlightWorkWithDepthFlagOff() throws Exception {
+            final CountDownLatch sinkEntered = new CountDownLatch(1);
+            final CountDownLatch releaseSink = new CountDownLatch(1);
+            final StaticGraph graph = inlineElidedGraph("stop-elided-inline-active")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> {
+                    sinkEntered.countDown();
+                    await(releaseSink);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "identity", EdgeSpec.spscRing(8))
+                .edge("identity", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+            final CompletableFuture<Void> emitting = CompletableFuture.runAsync(() -> ingress.emit(1));
+            assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+
+            final CompletableFuture<Boolean> stopped = CompletableFuture.supplyAsync(
+                () -> graph.stop(Duration.ofSeconds(5)));
+
+            Thread.sleep(100);
+            assertFalse(stopped.isDone());
+            releaseSink.countDown();
+            assertTrue(stopped.get(5, TimeUnit.SECONDS));
+            emitting.get(5, TimeUnit.SECONDS);
+            assertEquals(GraphState.STOPPED, graph.state());
     }
 
     @Test
     void abortWhileOutputIsBackpressuredDoesNotFailGraph() throws Exception {
-        final String previousFusion = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "false");
-        try {
             final CountDownLatch sinkEntered = new CountDownLatch(1);
             final CountDownLatch releaseSink = new CountDownLatch(1);
-            final StaticGraph graph = StaticGraph.builder("abort-backpressured-output")
+            final StaticGraph graph = graph("abort-backpressured-output")
+                .fusion(FusionSpec.disabled())
                 .source("ingress", Integer.class)
                 .stage("identity", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
                     StageSpec.singleThreaded())
@@ -336,13 +387,6 @@ class RuntimeRegressionTest {
             assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
             assertEquals(GraphState.STOPPED, graph.state());
             assertTrue(graph.failure().isEmpty());
-        } finally {
-            if (previousFusion == null) {
-                System.clearProperty("lattice.fusion.enabled");
-            } else {
-                System.setProperty("lattice.fusion.enabled", previousFusion);
-            }
-        }
     }
 
     @Test
@@ -357,7 +401,7 @@ class RuntimeRegressionTest {
     private static void assertAnyOfDuplicatePolicy(final JoinSpec.DuplicatePolicy policy, final long duplicates)
         throws Exception {
         final List<String> joined = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("any-duplicate-" + policy.name().toLowerCase())
+        final StaticGraph graph = graph("any-duplicate-" + policy.name().toLowerCase())
             .source("left", Stamped.class)
             .source("right", Stamped.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource() + ":" + group.stamp())
@@ -390,20 +434,18 @@ class RuntimeRegressionTest {
         }
     }
 
-    private static void restoreFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previous);
-        }
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 
-    private static void restoreInlineFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.inlineSource");
-        } else {
-            System.setProperty("lattice.fusion.inlineSource", previous);
-        }
+    private static StaticGraph.Builder inlineGraph(final String name) {
+        return graph(name).fusion(FusionSpec.defaults().inlineSources(true));
+    }
+
+    private static StaticGraph.Builder inlineElidedGraph(final String name) {
+        return graph(name).fusion(FusionSpec.defaults()
+            .inlineSources(true)
+            .elideInlineSourcePhysicalPath(true));
     }
 
     private static void assertEventually(final java.util.function.BooleanSupplier condition, final Duration timeout)

@@ -1,0 +1,861 @@
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.native.library.path=/home/elevated/projects/Lattice/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Sampling time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
+
+# Run progress: 0.00% complete, ETA 00:05:00
+# Fork: 1 of 2
+# Warmup Iteration   1: 355.447 ±(99.9%) 29.486 ns/op
+# Warmup Iteration   2: 315.744 ±(99.9%) 28.490 ns/op
+# Warmup Iteration   3: 301.961 ±(99.9%) 23.041 ns/op
+# Warmup Iteration   4: 334.898 ±(99.9%) 55.591 ns/op
+# Warmup Iteration   5: 301.803 ±(99.9%) 26.785 ns/op
+Iteration   1: 385.715 ±(99.9%) 183.331 ns/op
+                 disruptorManualFusedCompleted·p0.00:   138.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   268.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   328.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   350.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   522.160 ns/op
+                 disruptorManualFusedCompleted·p0.999:  10376.256 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 68691.405 ns/op
+                 disruptorManualFusedCompleted·p1.00:   5054464.000 ns/op
+
+Iteration   2: 363.272 ±(99.9%) 81.849 ns/op
+                 disruptorManualFusedCompleted·p0.00:   141.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   267.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   327.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   347.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   553.120 ns/op
+                 disruptorManualFusedCompleted·p0.999:  12339.072 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 154459.955 ns/op
+                 disruptorManualFusedCompleted·p1.00:   2113536.000 ns/op
+
+Iteration   3: 299.093 ±(99.9%) 20.979 ns/op
+                 disruptorManualFusedCompleted·p0.00:   139.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   241.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   296.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   315.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   492.020 ns/op
+                 disruptorManualFusedCompleted·p0.999:  12381.712 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 76685.018 ns/op
+                 disruptorManualFusedCompleted·p1.00:   369664.000 ns/op
+
+Iteration   4: 305.723 ±(99.9%) 22.706 ns/op
+                 disruptorManualFusedCompleted·p0.00:   139.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   245.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   301.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   319.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   463.590 ns/op
+                 disruptorManualFusedCompleted·p0.999:  10632.128 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 126770.918 ns/op
+                 disruptorManualFusedCompleted·p1.00:   304128.000 ns/op
+
+Iteration   5: 354.856 ±(99.9%) 31.023 ns/op
+                 disruptorManualFusedCompleted·p0.00:   145.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   267.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   323.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   341.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   570.200 ns/op
+                 disruptorManualFusedCompleted·p0.999:  16349.760 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 134617.088 ns/op
+                 disruptorManualFusedCompleted·p1.00:   468992.000 ns/op
+
+
+# Run progress: 10.00% complete, ETA 00:04:33
+# Fork: 2 of 2
+# Warmup Iteration   1: 318.558 ±(99.9%) 34.836 ns/op
+# Warmup Iteration   2: 283.388 ±(99.9%) 23.091 ns/op
+# Warmup Iteration   3: 271.637 ±(99.9%) 32.093 ns/op
+# Warmup Iteration   4: 278.548 ±(99.9%) 35.867 ns/op
+# Warmup Iteration   5: 272.974 ±(99.9%) 30.948 ns/op
+Iteration   1: 272.807 ±(99.9%) 22.741 ns/op
+                 disruptorManualFusedCompleted·p0.00:   144.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   222.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   265.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   286.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   356.000 ns/op
+                 disruptorManualFusedCompleted·p0.999:  8816.528 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 56761.747 ns/op
+                 disruptorManualFusedCompleted·p1.00:   616448.000 ns/op
+
+Iteration   2: 274.436 ±(99.9%) 22.367 ns/op
+                 disruptorManualFusedCompleted·p0.00:   148.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   223.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   263.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   282.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   363.000 ns/op
+                 disruptorManualFusedCompleted·p0.999:  8492.864 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 53433.370 ns/op
+                 disruptorManualFusedCompleted·p1.00:   498176.000 ns/op
+
+Iteration   3: 291.961 ±(99.9%) 30.851 ns/op
+                 disruptorManualFusedCompleted·p0.00:   150.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   221.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   262.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   283.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   366.000 ns/op
+                 disruptorManualFusedCompleted·p0.999:  9811.296 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 120411.162 ns/op
+                 disruptorManualFusedCompleted·p1.00:   626688.000 ns/op
+
+Iteration   4: 274.223 ±(99.9%) 19.500 ns/op
+                 disruptorManualFusedCompleted·p0.00:   149.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   224.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   265.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   285.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   369.000 ns/op
+                 disruptorManualFusedCompleted·p0.999:  8390.064 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 63260.685 ns/op
+                 disruptorManualFusedCompleted·p1.00:   403456.000 ns/op
+
+Iteration   5: 268.019 ±(99.9%) 23.377 ns/op
+                 disruptorManualFusedCompleted·p0.00:   150.000 ns/op
+                 disruptorManualFusedCompleted·p0.50:   212.000 ns/op
+                 disruptorManualFusedCompleted·p0.90:   252.000 ns/op
+                 disruptorManualFusedCompleted·p0.95:   263.000 ns/op
+                 disruptorManualFusedCompleted·p0.99:   350.000 ns/op
+                 disruptorManualFusedCompleted·p0.999:  9029.472 ns/op
+                 disruptorManualFusedCompleted·p0.9999: 101202.355 ns/op
+                 disruptorManualFusedCompleted·p1.00:   400384.000 ns/op
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
+  N = 1018522
+  mean =    305.733 ±(99.9%) 19.451 ns/op
+
+  Histogram, ns/op:
+    [      0.000,  500000.000) = 1018518
+    [ 500000.000, 1000000.000) = 2
+    [1000000.000, 1500000.000) = 0
+    [1500000.000, 2000000.000) = 0
+    [2000000.000, 2500000.000) = 1
+    [2500000.000, 3000000.000) = 0
+    [3000000.000, 3500000.000) = 0
+    [3500000.000, 4000000.000) = 0
+    [4000000.000, 4500000.000) = 0
+    [4500000.000, 5000000.000) = 0
+    [5000000.000, 5500000.000) = 1
+
+  Percentiles, ns/op:
+      p(0.0000) =    138.000 ns/op
+     p(50.0000) =    233.000 ns/op
+     p(90.0000) =    296.000 ns/op
+     p(95.0000) =    319.000 ns/op
+     p(99.0000) =    421.000 ns/op
+     p(99.9000) =  10016.000 ns/op
+     p(99.9900) =  86693.811 ns/op
+     p(99.9990) = 395357.599 ns/op
+     p(99.9999) = 4999989.190 ns/op
+    p(100.0000) = 5054464.000 ns/op
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.native.library.path=/home/elevated/projects/Lattice/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Sampling time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticeFusedCompleted
+
+# Run progress: 20.00% complete, ETA 00:04:02
+# Fork: 1 of 2
+# Warmup Iteration   1: 423.771 ±(99.9%) 40.450 ns/op
+# Warmup Iteration   2: 395.600 ±(99.9%) 31.876 ns/op
+# Warmup Iteration   3: 380.474 ±(99.9%) 39.369 ns/op
+# Warmup Iteration   4: 401.143 ±(99.9%) 72.864 ns/op
+# Warmup Iteration   5: 382.919 ±(99.9%) 28.360 ns/op
+Iteration   1: 402.894 ±(99.9%) 44.244 ns/op
+                 latticeFusedCompleted·p0.00:   217.000 ns/op
+                 latticeFusedCompleted·p0.50:   295.000 ns/op
+                 latticeFusedCompleted·p0.90:   339.000 ns/op
+                 latticeFusedCompleted·p0.95:   363.000 ns/op
+                 latticeFusedCompleted·p0.99:   813.130 ns/op
+                 latticeFusedCompleted·p0.999:  14687.088 ns/op
+                 latticeFusedCompleted·p0.9999: 197264.435 ns/op
+                 latticeFusedCompleted·p1.00:   523776.000 ns/op
+
+Iteration   2: 372.294 ±(99.9%) 26.437 ns/op
+                 latticeFusedCompleted·p0.00:   203.000 ns/op
+                 latticeFusedCompleted·p0.50:   279.000 ns/op
+                 latticeFusedCompleted·p0.90:   326.000 ns/op
+                 latticeFusedCompleted·p0.95:   336.000 ns/op
+                 latticeFusedCompleted·p0.99:   722.610 ns/op
+                 latticeFusedCompleted·p0.999:  20184.512 ns/op
+                 latticeFusedCompleted·p0.9999: 113222.810 ns/op
+                 latticeFusedCompleted·p1.00:   332800.000 ns/op
+
+Iteration   3: 377.752 ±(99.9%) 30.766 ns/op
+                 latticeFusedCompleted·p0.00:   219.000 ns/op
+                 latticeFusedCompleted·p0.50:   299.000 ns/op
+                 latticeFusedCompleted·p0.90:   341.000 ns/op
+                 latticeFusedCompleted·p0.95:   365.000 ns/op
+                 latticeFusedCompleted·p0.99:   834.500 ns/op
+                 latticeFusedCompleted·p0.999:  12500.000 ns/op
+                 latticeFusedCompleted·p0.9999: 96521.600 ns/op
+                 latticeFusedCompleted·p1.00:   459776.000 ns/op
+
+Iteration   4: 359.820 ±(99.9%) 26.736 ns/op
+                 latticeFusedCompleted·p0.00:   201.000 ns/op
+                 latticeFusedCompleted·p0.50:   278.000 ns/op
+                 latticeFusedCompleted·p0.90:   319.000 ns/op
+                 latticeFusedCompleted·p0.95:   335.000 ns/op
+                 latticeFusedCompleted·p0.99:   742.450 ns/op
+                 latticeFusedCompleted·p0.999:  14148.160 ns/op
+                 latticeFusedCompleted·p0.9999: 127386.688 ns/op
+                 latticeFusedCompleted·p1.00:   280576.000 ns/op
+
+Iteration   5: 375.224 ±(99.9%) 33.113 ns/op
+                 latticeFusedCompleted·p0.00:   206.000 ns/op
+                 latticeFusedCompleted·p0.50:   297.000 ns/op
+                 latticeFusedCompleted·p0.90:   335.000 ns/op
+                 latticeFusedCompleted·p0.95:   343.000 ns/op
+                 latticeFusedCompleted·p0.99:   752.940 ns/op
+                 latticeFusedCompleted·p0.999:  16541.024 ns/op
+                 latticeFusedCompleted·p0.9999: 121396.557 ns/op
+                 latticeFusedCompleted·p1.00:   419840.000 ns/op
+
+
+# Run progress: 30.00% complete, ETA 00:03:32
+# Fork: 2 of 2
+# Warmup Iteration   1: 435.331 ±(99.9%) 42.850 ns/op
+# Warmup Iteration   2: 374.817 ±(99.9%) 29.256 ns/op
+# Warmup Iteration   3: 347.343 ±(99.9%) 26.123 ns/op
+# Warmup Iteration   4: 333.965 ±(99.9%) 24.387 ns/op
+# Warmup Iteration   5: 376.761 ±(99.9%) 28.876 ns/op
+Iteration   1: 367.569 ±(99.9%) 32.864 ns/op
+                 latticeFusedCompleted·p0.00:   198.000 ns/op
+                 latticeFusedCompleted·p0.50:   289.000 ns/op
+                 latticeFusedCompleted·p0.90:   332.000 ns/op
+                 latticeFusedCompleted·p0.95:   355.000 ns/op
+                 latticeFusedCompleted·p0.99:   709.220 ns/op
+                 latticeFusedCompleted·p0.999:  13241.216 ns/op
+                 latticeFusedCompleted·p0.9999: 88311.296 ns/op
+                 latticeFusedCompleted·p1.00:   529408.000 ns/op
+
+Iteration   2: 355.003 ±(99.9%) 21.672 ns/op
+                 latticeFusedCompleted·p0.00:   195.000 ns/op
+                 latticeFusedCompleted·p0.50:   290.000 ns/op
+                 latticeFusedCompleted·p0.90:   327.000 ns/op
+                 latticeFusedCompleted·p0.95:   353.000 ns/op
+                 latticeFusedCompleted·p0.99:   677.530 ns/op
+                 latticeFusedCompleted·p0.999:  13575.168 ns/op
+                 latticeFusedCompleted·p0.9999: 87274.304 ns/op
+                 latticeFusedCompleted·p1.00:   231168.000 ns/op
+
+Iteration   3: 353.899 ±(99.9%) 21.755 ns/op
+                 latticeFusedCompleted·p0.00:   196.000 ns/op
+                 latticeFusedCompleted·p0.50:   291.000 ns/op
+                 latticeFusedCompleted·p0.90:   328.000 ns/op
+                 latticeFusedCompleted·p0.95:   352.000 ns/op
+                 latticeFusedCompleted·p0.99:   719.630 ns/op
+                 latticeFusedCompleted·p0.999:  14860.448 ns/op
+                 latticeFusedCompleted·p0.9999: 56147.917 ns/op
+                 latticeFusedCompleted·p1.00:   370688.000 ns/op
+
+Iteration   4: 356.328 ±(99.9%) 24.888 ns/op
+                 latticeFusedCompleted·p0.00:   212.000 ns/op
+                 latticeFusedCompleted·p0.50:   292.000 ns/op
+                 latticeFusedCompleted·p0.90:   329.000 ns/op
+                 latticeFusedCompleted·p0.95:   355.000 ns/op
+                 latticeFusedCompleted·p0.99:   694.960 ns/op
+                 latticeFusedCompleted·p0.999:  11161.344 ns/op
+                 latticeFusedCompleted·p0.9999: 71730.688 ns/op
+                 latticeFusedCompleted·p1.00:   315904.000 ns/op
+
+Iteration   5: 367.373 ±(99.9%) 44.267 ns/op
+                 latticeFusedCompleted·p0.00:   199.000 ns/op
+                 latticeFusedCompleted·p0.50:   267.000 ns/op
+                 latticeFusedCompleted·p0.90:   308.000 ns/op
+                 latticeFusedCompleted·p0.95:   331.000 ns/op
+                 latticeFusedCompleted·p0.99:   729.270 ns/op
+                 latticeFusedCompleted·p0.999:  13399.264 ns/op
+                 latticeFusedCompleted·p0.9999: 186441.242 ns/op
+                 latticeFusedCompleted·p1.00:   710656.000 ns/op
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.latticeFusedCompleted":
+  N = 790884
+  mean =    368.545 ±(99.9%) 9.973 ns/op
+
+  Histogram, ns/op:
+    [     0.000,  50000.000) = 790702
+    [ 50000.000, 100000.000) = 95
+    [100000.000, 150000.000) = 25
+    [150000.000, 200000.000) = 31
+    [200000.000, 250000.000) = 14
+    [250000.000, 300000.000) = 4
+    [300000.000, 350000.000) = 4
+    [350000.000, 400000.000) = 4
+    [400000.000, 450000.000) = 1
+    [450000.000, 500000.000) = 1
+    [500000.000, 550000.000) = 2
+    [550000.000, 600000.000) = 0
+    [600000.000, 650000.000) = 0
+    [650000.000, 700000.000) = 0
+    [700000.000, 750000.000) = 1
+
+  Percentiles, ns/op:
+      p(0.0000) =    195.000 ns/op
+     p(50.0000) =    291.000 ns/op
+     p(90.0000) =    331.000 ns/op
+     p(95.0000) =    349.000 ns/op
+     p(99.0000) =    739.150 ns/op
+     p(99.9000) =  14307.680 ns/op
+     p(99.9900) = 114247.360 ns/op
+     p(99.9990) = 369292.006 ns/op
+     p(99.9999) = 710656.000 ns/op
+    p(100.0000) = 710656.000 ns/op
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.native.library.path=/home/elevated/projects/Lattice/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Sampling time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
+
+# Run progress: 40.00% complete, ETA 00:03:02
+# Fork: 1 of 2
+# Warmup Iteration   1: 63.980 ±(99.9%) 15.491 ns/op
+# Warmup Iteration   2: 41.367 ±(99.9%) 5.019 ns/op
+# Warmup Iteration   3: 46.971 ±(99.9%) 17.917 ns/op
+# Warmup Iteration   4: 47.758 ±(99.9%) 11.416 ns/op
+# Warmup Iteration   5: 41.408 ±(99.9%) 7.619 ns/op
+Iteration   1: 38.382 ±(99.9%) 3.586 ns/op
+                 latticeInlineFusedCompleted·p0.00:   24.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   31.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   40.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   43.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   54.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  277.128 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 12607.754 ns/op
+                 latticeInlineFusedCompleted·p1.00:   59008.000 ns/op
+
+Iteration   2: 37.944 ±(99.9%) 2.209 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   31.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   41.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   47.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   105.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  287.800 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 9727.360 ns/op
+                 latticeInlineFusedCompleted·p1.00:   49216.000 ns/op
+
+Iteration   3: 41.094 ±(99.9%) 10.305 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   31.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   40.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   43.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   53.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  311.500 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 11962.400 ns/op
+                 latticeInlineFusedCompleted·p1.00:   295424.000 ns/op
+
+Iteration   4: 36.975 ±(99.9%) 3.104 ns/op
+                 latticeInlineFusedCompleted·p0.00:   24.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   30.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   39.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   42.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   52.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  291.705 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 10831.288 ns/op
+                 latticeInlineFusedCompleted·p1.00:   75264.000 ns/op
+
+Iteration   5: 41.994 ±(99.9%) 8.865 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   31.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   40.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   43.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   54.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  327.000 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 17430.634 ns/op
+                 latticeInlineFusedCompleted·p1.00:   205056.000 ns/op
+
+
+# Run progress: 50.00% complete, ETA 00:02:31
+# Fork: 2 of 2
+# Warmup Iteration   1: 73.153 ±(99.9%) 25.173 ns/op
+# Warmup Iteration   2: 35.565 ±(99.9%) 2.622 ns/op
+# Warmup Iteration   3: 38.955 ±(99.9%) 6.440 ns/op
+# Warmup Iteration   4: 41.749 ±(99.9%) 7.659 ns/op
+# Warmup Iteration   5: 42.500 ±(99.9%) 14.435 ns/op
+Iteration   1: 38.327 ±(99.9%) 7.476 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   30.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   39.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   43.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   52.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  303.917 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 10897.467 ns/op
+                 latticeInlineFusedCompleted·p1.00:   236288.000 ns/op
+
+Iteration   2: 37.858 ±(99.9%) 8.419 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   29.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   38.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   42.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   51.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  260.466 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 9397.864 ns/op
+                 latticeInlineFusedCompleted·p1.00:   199168.000 ns/op
+
+Iteration   3: 35.811 ±(99.9%) 3.885 ns/op
+                 latticeInlineFusedCompleted·p0.00:   22.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   29.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   38.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   42.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   50.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  220.814 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 12306.363 ns/op
+                 latticeInlineFusedCompleted·p1.00:   100736.000 ns/op
+
+Iteration   4: 36.891 ±(99.9%) 3.452 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   29.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   39.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   42.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   51.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  271.688 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 12688.614 ns/op
+                 latticeInlineFusedCompleted·p1.00:   64384.000 ns/op
+
+Iteration   5: 37.601 ±(99.9%) 7.280 ns/op
+                 latticeInlineFusedCompleted·p0.00:   23.000 ns/op
+                 latticeInlineFusedCompleted·p0.50:   29.000 ns/op
+                 latticeInlineFusedCompleted·p0.90:   38.000 ns/op
+                 latticeInlineFusedCompleted·p0.95:   42.000 ns/op
+                 latticeInlineFusedCompleted·p0.99:   51.000 ns/op
+                 latticeInlineFusedCompleted·p0.999:  254.516 ns/op
+                 latticeInlineFusedCompleted·p0.9999: 11018.064 ns/op
+                 latticeInlineFusedCompleted·p1.00:   226560.000 ns/op
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
+  N = 1096829
+  mean =     38.263 ±(99.9%) 2.037 ns/op
+
+  Histogram, ns/op:
+    [     0.000,  25000.000) = 1096794
+    [ 25000.000,  50000.000) = 18
+    [ 50000.000,  75000.000) = 7
+    [ 75000.000, 100000.000) = 1
+    [100000.000, 125000.000) = 1
+    [125000.000, 150000.000) = 1
+    [150000.000, 175000.000) = 0
+    [175000.000, 200000.000) = 3
+    [200000.000, 225000.000) = 1
+    [225000.000, 250000.000) = 2
+    [250000.000, 275000.000) = 0
+
+  Percentiles, ns/op:
+      p(0.0000) =     22.000 ns/op
+     p(50.0000) =     30.000 ns/op
+     p(90.0000) =     39.000 ns/op
+     p(95.0000) =     43.000 ns/op
+     p(99.0000) =     54.000 ns/op
+     p(99.9000) =    283.000 ns/op
+     p(99.9900) =  12138.144 ns/op
+     p(99.9990) =  71297.843 ns/op
+     p(99.9999) = 289697.861 ns/op
+    p(100.0000) = 295424.000 ns/op
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.native.library.path=/home/elevated/projects/Lattice/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Sampling time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticePhysicalCompleted
+
+# Run progress: 60.00% complete, ETA 00:02:01
+# Fork: 1 of 2
+# Warmup Iteration   1: 1011.315 ±(99.9%) 94.044 ns/op
+# Warmup Iteration   2: 878.719 ±(99.9%) 23.296 ns/op
+# Warmup Iteration   3: 862.487 ±(99.9%) 24.912 ns/op
+# Warmup Iteration   4: 865.526 ±(99.9%) 25.606 ns/op
+# Warmup Iteration   5: 895.874 ±(99.9%) 33.138 ns/op
+Iteration   1: 883.595 ±(99.9%) 24.475 ns/op
+                 latticePhysicalCompleted·p0.00:   588.000 ns/op
+                 latticePhysicalCompleted·p0.50:   783.000 ns/op
+                 latticePhysicalCompleted·p0.90:   876.000 ns/op
+                 latticePhysicalCompleted·p0.95:   906.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1364.240 ns/op
+                 latticePhysicalCompleted·p0.999:  16641.920 ns/op
+                 latticePhysicalCompleted·p0.9999: 139198.771 ns/op
+                 latticePhysicalCompleted·p1.00:   316416.000 ns/op
+
+Iteration   2: 882.982 ±(99.9%) 24.946 ns/op
+                 latticePhysicalCompleted·p0.00:   572.000 ns/op
+                 latticePhysicalCompleted·p0.50:   778.000 ns/op
+                 latticePhysicalCompleted·p0.90:   873.000 ns/op
+                 latticePhysicalCompleted·p0.95:   902.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1207.380 ns/op
+                 latticePhysicalCompleted·p0.999:  19123.648 ns/op
+                 latticePhysicalCompleted·p0.9999: 127947.597 ns/op
+                 latticePhysicalCompleted·p1.00:   459776.000 ns/op
+
+Iteration   3: 861.135 ±(99.9%) 33.375 ns/op
+                 latticePhysicalCompleted·p0.00:   568.000 ns/op
+                 latticePhysicalCompleted·p0.50:   747.000 ns/op
+                 latticePhysicalCompleted·p0.90:   847.000 ns/op
+                 latticePhysicalCompleted·p0.95:   883.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1314.000 ns/op
+                 latticePhysicalCompleted·p0.999:  20943.360 ns/op
+                 latticePhysicalCompleted·p0.9999: 122345.062 ns/op
+                 latticePhysicalCompleted·p1.00:   658432.000 ns/op
+
+Iteration   4: 865.272 ±(99.9%) 20.276 ns/op
+                 latticePhysicalCompleted·p0.00:   585.000 ns/op
+                 latticePhysicalCompleted·p0.50:   768.000 ns/op
+                 latticePhysicalCompleted·p0.90:   855.000 ns/op
+                 latticePhysicalCompleted·p0.95:   885.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1353.520 ns/op
+                 latticePhysicalCompleted·p0.999:  16492.160 ns/op
+                 latticePhysicalCompleted·p0.9999: 116711.424 ns/op
+                 latticePhysicalCompleted·p1.00:   237824.000 ns/op
+
+Iteration   5: 917.349 ±(99.9%) 37.002 ns/op
+                 latticePhysicalCompleted·p0.00:   570.000 ns/op
+                 latticePhysicalCompleted·p0.50:   762.000 ns/op
+                 latticePhysicalCompleted·p0.90:   854.000 ns/op
+                 latticePhysicalCompleted·p0.95:   886.000 ns/op
+                 latticePhysicalCompleted·p0.99:   4284.000 ns/op
+                 latticePhysicalCompleted·p0.999:  27275.200 ns/op
+                 latticePhysicalCompleted·p0.9999: 123941.440 ns/op
+                 latticePhysicalCompleted·p1.00:   323584.000 ns/op
+
+
+# Run progress: 70.00% complete, ETA 00:01:31
+# Fork: 2 of 2
+# Warmup Iteration   1: 952.916 ±(99.9%) 46.551 ns/op
+# Warmup Iteration   2: 938.761 ±(99.9%) 53.699 ns/op
+# Warmup Iteration   3: 922.890 ±(99.9%) 37.243 ns/op
+# Warmup Iteration   4: 1059.580 ±(99.9%) 202.573 ns/op
+# Warmup Iteration   5: 876.979 ±(99.9%) 27.123 ns/op
+Iteration   1: 884.640 ±(99.9%) 68.251 ns/op
+                 latticePhysicalCompleted·p0.00:   573.000 ns/op
+                 latticePhysicalCompleted·p0.50:   743.000 ns/op
+                 latticePhysicalCompleted·p0.90:   833.000 ns/op
+                 latticePhysicalCompleted·p0.95:   865.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1142.000 ns/op
+                 latticePhysicalCompleted·p0.999:  19487.936 ns/op
+                 latticePhysicalCompleted·p0.9999: 229100.723 ns/op
+                 latticePhysicalCompleted·p1.00:   2064384.000 ns/op
+
+Iteration   2: 866.140 ±(99.9%) 24.432 ns/op
+                 latticePhysicalCompleted·p0.00:   568.000 ns/op
+                 latticePhysicalCompleted·p0.50:   767.000 ns/op
+                 latticePhysicalCompleted·p0.90:   850.000 ns/op
+                 latticePhysicalCompleted·p0.95:   882.000 ns/op
+                 latticePhysicalCompleted·p0.99:   1356.000 ns/op
+                 latticePhysicalCompleted·p0.999:  19175.168 ns/op
+                 latticePhysicalCompleted·p0.9999: 142162.022 ns/op
+                 latticePhysicalCompleted·p1.00:   362496.000 ns/op
+
+Iteration   3: 957.347 ±(99.9%) 48.222 ns/op
+                 latticePhysicalCompleted·p0.00:   565.000 ns/op
+                 latticePhysicalCompleted·p0.50:   764.000 ns/op
+                 latticePhysicalCompleted·p0.90:   846.000 ns/op
+                 latticePhysicalCompleted·p0.95:   881.000 ns/op
+                 latticePhysicalCompleted·p0.99:   4955.840 ns/op
+                 latticePhysicalCompleted·p0.999:  36633.856 ns/op
+                 latticePhysicalCompleted·p0.9999: 156995.686 ns/op
+                 latticePhysicalCompleted·p1.00:   315392.000 ns/op
+
+Iteration   4: 914.399 ±(99.9%) 53.856 ns/op
+                 latticePhysicalCompleted·p0.00:   545.000 ns/op
+                 latticePhysicalCompleted·p0.50:   726.000 ns/op
+                 latticePhysicalCompleted·p0.90:   814.000 ns/op
+                 latticePhysicalCompleted·p0.95:   852.000 ns/op
+                 latticePhysicalCompleted·p0.99:   4741.840 ns/op
+                 latticePhysicalCompleted·p0.999:  37065.344 ns/op
+                 latticePhysicalCompleted·p0.9999: 142629.939 ns/op
+                 latticePhysicalCompleted·p1.00:   638976.000 ns/op
+
+Iteration   5: 902.473 ±(99.9%) 36.812 ns/op
+                 latticePhysicalCompleted·p0.00:   569.000 ns/op
+                 latticePhysicalCompleted·p0.50:   747.000 ns/op
+                 latticePhysicalCompleted·p0.90:   827.000 ns/op
+                 latticePhysicalCompleted·p0.95:   861.000 ns/op
+                 latticePhysicalCompleted·p0.99:   4504.320 ns/op
+                 latticePhysicalCompleted·p0.999:  29931.264 ns/op
+                 latticePhysicalCompleted·p0.9999: 164039.475 ns/op
+                 latticePhysicalCompleted·p1.00:   219904.000 ns/op
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.latticePhysicalCompleted":
+  N = 944184
+  mean =    886.448 ±(99.9%) 12.544 ns/op
+
+  Histogram, ns/op:
+    [      0.000,  250000.000) = 944158
+    [ 250000.000,  500000.000) = 21
+    [ 500000.000,  750000.000) = 4
+    [ 750000.000, 1000000.000) = 0
+    [1000000.000, 1250000.000) = 0
+    [1250000.000, 1500000.000) = 0
+    [1500000.000, 1750000.000) = 0
+    [1750000.000, 2000000.000) = 0
+    [2000000.000, 2250000.000) = 1
+    [2250000.000, 2500000.000) = 0
+    [2500000.000, 2750000.000) = 0
+
+  Percentiles, ns/op:
+      p(0.0000) =    545.000 ns/op
+     p(50.0000) =    762.000 ns/op
+     p(90.0000) =    852.000 ns/op
+     p(95.0000) =    886.000 ns/op
+     p(99.0000) =   1846.000 ns/op
+     p(99.9000) =  23360.000 ns/op
+     p(99.9900) = 137150.592 ns/op
+     p(99.9990) = 363924.864 ns/op
+     p(99.9999) = 2064384.000 ns/op
+    p(100.0000) = 2064384.000 ns/op
+
+
+# JMH version: 1.36
+# VM version: JDK 21.0.10, OpenJDK 64-Bit Server VM, 21.0.10+7-Ubuntu-124.04
+# VM invoker: /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+# VM options: -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.native.library.path=/home/elevated/projects/Lattice/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Sampling time
+# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticePinnedFusedCompleted
+
+# Run progress: 80.00% complete, ETA 00:01:00
+# Fork: 1 of 2
+# Warmup Iteration   1: 544.441 ±(99.9%) 175.901 ns/op
+# Warmup Iteration   2: 343.365 ±(99.9%) 22.724 ns/op
+# Warmup Iteration   3: 362.308 ±(99.9%) 24.741 ns/op
+# Warmup Iteration   4: 381.802 ±(99.9%) 37.683 ns/op
+# Warmup Iteration   5: 334.402 ±(99.9%) 19.600 ns/op
+Iteration   1: 368.647 ±(99.9%) 30.812 ns/op
+                 latticePinnedFusedCompleted·p0.00:   207.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   296.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   334.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   352.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   717.420 ns/op
+                 latticePinnedFusedCompleted·p0.999:  12794.432 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 175657.728 ns/op
+                 latticePinnedFusedCompleted·p1.00:   291328.000 ns/op
+
+Iteration   2: 341.521 ±(99.9%) 25.323 ns/op
+                 latticePinnedFusedCompleted·p0.00:   200.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   273.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   312.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   332.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   710.870 ns/op
+                 latticePinnedFusedCompleted·p0.999:  10836.736 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 88861.914 ns/op
+                 latticePinnedFusedCompleted·p1.00:   374272.000 ns/op
+
+Iteration   3: 374.337 ±(99.9%) 33.774 ns/op
+                 latticePinnedFusedCompleted·p0.00:   203.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   287.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   334.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   357.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   763.000 ns/op
+                 latticePinnedFusedCompleted·p0.999:  16261.072 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 145921.306 ns/op
+                 latticePinnedFusedCompleted·p1.00:   412672.000 ns/op
+
+Iteration   4: 369.619 ±(99.9%) 31.688 ns/op
+                 latticePinnedFusedCompleted·p0.00:   205.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   289.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   332.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   350.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   742.770 ns/op
+                 latticePinnedFusedCompleted·p0.999:  15533.792 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 145420.480 ns/op
+                 latticePinnedFusedCompleted·p1.00:   333312.000 ns/op
+
+Iteration   5: 341.731 ±(99.9%) 27.456 ns/op
+                 latticePinnedFusedCompleted·p0.00:   68.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   266.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   304.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   324.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   714.330 ns/op
+                 latticePinnedFusedCompleted·p0.999:  12268.784 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 129534.720 ns/op
+                 latticePinnedFusedCompleted·p1.00:   330240.000 ns/op
+
+
+# Run progress: 90.00% complete, ETA 00:00:30
+# Fork: 2 of 2
+# Warmup Iteration   1: 393.769 ±(99.9%) 40.364 ns/op
+# Warmup Iteration   2: 343.253 ±(99.9%) 28.866 ns/op
+# Warmup Iteration   3: 325.283 ±(99.9%) 21.801 ns/op
+# Warmup Iteration   4: 330.110 ±(99.9%) 17.775 ns/op
+# Warmup Iteration   5: 369.428 ±(99.9%) 33.368 ns/op
+Iteration   1: 344.626 ±(99.9%) 22.776 ns/op
+                 latticePinnedFusedCompleted·p0.00:   201.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   272.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   316.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   336.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   713.880 ns/op
+                 latticePinnedFusedCompleted·p0.999:  11658.624 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 106235.904 ns/op
+                 latticePinnedFusedCompleted·p1.00:   252928.000 ns/op
+
+Iteration   2: 347.802 ±(99.9%) 30.178 ns/op
+                 latticePinnedFusedCompleted·p0.00:   209.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   271.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   309.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   332.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   683.660 ns/op
+                 latticePinnedFusedCompleted·p0.999:  12527.936 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 161756.877 ns/op
+                 latticePinnedFusedCompleted·p1.00:   541696.000 ns/op
+
+Iteration   3: 355.638 ±(99.9%) 33.102 ns/op
+                 latticePinnedFusedCompleted·p0.00:   204.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   269.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   310.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   332.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   687.000 ns/op
+                 latticePinnedFusedCompleted·p0.999:  13668.560 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 148580.608 ns/op
+                 latticePinnedFusedCompleted·p1.00:   515072.000 ns/op
+
+Iteration   4: 326.246 ±(99.9%) 21.960 ns/op
+                 latticePinnedFusedCompleted·p0.00:   195.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   267.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   301.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   313.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   621.640 ns/op
+                 latticePinnedFusedCompleted·p0.999:  10263.296 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 87058.483 ns/op
+                 latticePinnedFusedCompleted·p1.00:   229888.000 ns/op
+
+Iteration   5: 304.261 ±(99.9%) 13.095 ns/op
+                 latticePinnedFusedCompleted·p0.00:   189.000 ns/op
+                 latticePinnedFusedCompleted·p0.50:   262.000 ns/op
+                 latticePinnedFusedCompleted·p0.90:   298.000 ns/op
+                 latticePinnedFusedCompleted·p0.95:   312.000 ns/op
+                 latticePinnedFusedCompleted·p0.99:   577.300 ns/op
+                 latticePinnedFusedCompleted·p0.999:  8388.800 ns/op
+                 latticePinnedFusedCompleted·p0.9999: 43879.232 ns/op
+                 latticePinnedFusedCompleted·p1.00:   262144.000 ns/op
+
+
+
+Result "com.lattice.benchmark.OptimalPathBenchmark.latticePinnedFusedCompleted":
+  N = 851867
+  mean =    346.711 ±(99.9%) 8.670 ns/op
+
+  Histogram, ns/op:
+    [     0.000,  50000.000) = 851712
+    [ 50000.000, 100000.000) = 68
+    [100000.000, 150000.000) = 21
+    [150000.000, 200000.000) = 32
+    [200000.000, 250000.000) = 16
+    [250000.000, 300000.000) = 10
+    [300000.000, 350000.000) = 3
+    [350000.000, 400000.000) = 2
+    [400000.000, 450000.000) = 1
+    [450000.000, 500000.000) = 0
+    [500000.000, 550000.000) = 2
+
+  Percentiles, ns/op:
+      p(0.0000) =     68.000 ns/op
+     p(50.0000) =    272.000 ns/op
+     p(90.0000) =    319.000 ns/op
+     p(95.0000) =    336.000 ns/op
+     p(99.0000) =    693.000 ns/op
+     p(99.9000) =  12194.112 ns/op
+     p(99.9900) = 101880.986 ns/op
+     p(99.9990) = 310683.894 ns/op
+     p(99.9999) = 541696.000 ns/op
+    p(100.0000) = 541696.000 ns/op
+
+
+# Run complete. Total time: 00:05:03
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                                                                   Mode      Cnt        Score    Error  Units
+OptimalPathBenchmark.disruptorManualFusedCompleted                                        sample  1018522      305.733 ± 19.451  ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.00    sample               138.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.50    sample               233.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.90    sample               296.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.95    sample               319.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.99    sample               421.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.999   sample             10016.000           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p0.9999  sample             86693.811           ns/op
+OptimalPathBenchmark.disruptorManualFusedCompleted:disruptorManualFusedCompleted·p1.00    sample           5054464.000           ns/op
+OptimalPathBenchmark.latticeFusedCompleted                                                sample   790884      368.545 ±  9.973  ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.00                    sample               195.000           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.50                    sample               291.000           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.90                    sample               331.000           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.95                    sample               349.000           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.99                    sample               739.150           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.999                   sample             14307.680           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p0.9999                  sample            114247.360           ns/op
+OptimalPathBenchmark.latticeFusedCompleted:latticeFusedCompleted·p1.00                    sample            710656.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted                                          sample  1096829       38.263 ±  2.037  ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.00        sample                22.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.50        sample                30.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.90        sample                39.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.95        sample                43.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.99        sample                54.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.999       sample               283.000           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p0.9999      sample             12138.144           ns/op
+OptimalPathBenchmark.latticeInlineFusedCompleted:latticeInlineFusedCompleted·p1.00        sample            295424.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted                                             sample   944184      886.448 ± 12.544  ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.00              sample               545.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.50              sample               762.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.90              sample               852.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.95              sample               886.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.99              sample              1846.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.999             sample             23360.000           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p0.9999            sample            137150.592           ns/op
+OptimalPathBenchmark.latticePhysicalCompleted:latticePhysicalCompleted·p1.00              sample           2064384.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted                                          sample   851867      346.711 ±  8.670  ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.00        sample                68.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.50        sample               272.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.90        sample               319.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.95        sample               336.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.99        sample               693.000           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.999       sample             12194.112           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p0.9999      sample            101880.986           ns/op
+OptimalPathBenchmark.latticePinnedFusedCompleted:latticePinnedFusedCompleted·p1.00        sample            541696.000           ns/op
+
+Benchmark result is saved to benchmarks/baseline/optimal-path-latency-2026-05-02.json
