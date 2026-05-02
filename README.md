@@ -117,15 +117,22 @@ distributed, or brokered between processes.
 
 ## Lattice And Disruptor
 
-LMAX Disruptor remains a strong, mature choice for a single preallocated ring,
-one ordered sequence domain, and sequence-barrier dependency graphs. If that
-is your model, Disruptor is often the simpler default and the better-known
-operational bet.
+Disruptor is the right comparison because it set the standard for low-latency
+JVM event processing. Lattice is not a wrapper around that model. It is a
+different bet: when the application is a fixed typed graph, the runtime should
+see the graph, validate the graph, and specialize the graph.
 
-Use Lattice when the application wants to declare a typed static DAG instead:
-local overload policy per edge, routing and stamp-correlated joins as graph
-primitives, inspectable graph state, optional placement diagnostics, and
-compiler-controlled specialization that keeps the logical graph visible.
+Use Disruptor when the workload really is one ordered stream, one preallocated
+ring, and sequence-barrier dependency management. Use Lattice when the system
+is a static DAG: local overload policy per edge, routing and stamp-correlated
+joins as graph primitives, inspectable graph state, optional placement
+diagnostics, compiler-checked payload reuse, and fusion that removes physical
+handoffs without erasing the logical stages.
+
+For static graph workloads, Lattice is the system this repository argues for.
+The benchmark set supports that argument: Lattice leads the scoped physical
+publish, fused publish, equal-call-site reference, source-inline completed,
+and physical p99 latency rows on the current public baseline.
 
 ## How It Works
 
@@ -213,7 +220,7 @@ Lattice physical placement, and matching Disruptor controls, plus a GC-profiler
 pass for the optimal path. Full isolated percentile curves live in the latency
 profile.
 
-The headline comparison is scoped deliberately. The first three rows are
+The benchmark story is stronger than "sometimes faster." The first three rows are
 publish-throughput rows from `ApplesToApplesDisruptorBenchmark`: one JMH
 operation publishes one item. The completed row is stricter: one operation
 publishes one item and waits for the matching sink/handler completion.
@@ -223,12 +230,16 @@ publishes one item and waits for the matching sink/handler completion.
 - The Disruptor manually fused reference row collapses three increments into
   one handler call; the matching Lattice row uses the best equal-call-site
   `latticeManuallyFusedReference` result: 209.2M ops/s.
+- The physical publish row keeps the graph physical and still has Lattice
+  ahead at 1.47x.
 - The source-inline completed Lattice row runs an eligible fused chain on the
   producer thread and removes the physical source edge. It is a graph
   specialization path, not a generic queued handoff.
-- The broader completed-operation matrix is mixed and includes source/sink,
-  physical pipeline, broadcast, and dependency shapes where Disruptor is ahead
-  on this host.
+- The physical latency comparison is also meaningful: Disruptor is lower at
+  mean/p50/p90, while Lattice strict topology is lower at p99/p99.9.
+- The broader completed-operation matrix remains in the README because it
+  marks the current boundary: simple source/sink, fully physical completed
+  pipeline, broadcast, and dependency rows favor Disruptor on this host.
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
 
@@ -247,8 +258,8 @@ Disruptor physical was lower at mean, p50, and p90 in the same run.
 | Manually fused reference payload, equal call-site | 209,168,722 ops/s | 31,091,239 ops/s | 6.73x |
 | Source-inline completed path | 77,868,589 ops/s | 3,620,353 ops/s | 21.51x |
 
-The broader completed-operation matrix is intentionally shown as part of the
-same story:
+The broader completed-operation matrix is intentionally shown as a boundary,
+not as the headline:
 
 | Completed-operation shape | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
@@ -266,10 +277,13 @@ same story:
 - [Linux Validation Notes](docs/linux-validation.md)
 - [Performance Tuning](PERFORMANCE_TUNING.md)
 
-The defensible public claim is not "Lattice is always faster than Disruptor."
-The claim is that fixed Java processing graphs can be specialized: source
-ingress can be narrowed, payload reuse can be validated, and eligible serial
-logical stages can be fused into fewer physical handoffs.
+The public claim is direct: for fixed Java processing graphs, Lattice gives the
+runtime more structure than a queue or single-ring sequencer can see. That
+structure lets Lattice specialize source ingress, validate payload reuse,
+preserve logical stages while removing eligible handoffs, and win several of
+the benchmark rows that matter most for static graph workloads. It is not a
+universal "always faster" claim; it is an architecture-specific performance
+and ergonomics claim.
 
 ## Build And Verification
 

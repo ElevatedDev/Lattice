@@ -85,7 +85,8 @@ completed-operation throughput.
 The reference row uses equal call-site footing:
 `latticeManuallyFusedReference` is one Lattice stage doing the same three
 increments inline as the Disruptor manually fused handler. Lattice is ahead in
-the scoped headline rows.
+the scoped headline rows, including the physical publish row where the graph is
+not collapsed into a source-inline completed path.
 
 ### Source-inline completed path
 
@@ -114,6 +115,13 @@ physical source edge is removed.
 The raw JSON contains JMH error bars and confidence intervals. Do not rank
 close results without checking those intervals and the matching topology
 semantics.
+
+Read this matrix as boundary evidence, not as a retreat from the Lattice
+thesis. The Disruptor-favorable rows are mostly simple physical completed
+handoffs or routing-heavy shapes. The Lattice-favorable rows are the static
+graph paths the runtime is designed to expose and specialize: physical publish,
+source-inline completion, fused linear pipelines, equal-call-site manual
+fusion, and physical p99 latency.
 
 ## Latency
 

@@ -48,6 +48,13 @@ The 2026-05-02 refresh records both publish-throughput and completion-gated
 comparisons after the per-graph runtime API migration. The table uses matching
 scoped artifacts for each workload.
 
+The result is a positive Lattice story for static graphs, not just a list of
+caveats. Lattice leads the scoped physical publish, fused publish,
+equal-call-site reference, source-inline completed, and physical p99 latency
+rows. The remaining Disruptor-favorable rows are useful boundaries for the
+current implementation, especially where the benchmark is closer to a simple
+single-ring handoff than to the static graph shapes Lattice is built for.
+
 ![Three-stage publish throughput](assets/perf-pipeline.svg)
 
 ![Lattice vs Disruptor ratios](assets/disruptor-comparison.svg)
@@ -87,9 +94,10 @@ The broader end-to-end matrix is more mixed:
 | Broadcast two-branch completed | 2,135,888 ops/s | 3,700,906 ops/s | 0.58x |
 | Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
-That broader matrix is the honest shape of the comparison: physical one-ring
-or routing-heavy cases can favor Disruptor, while the eligible static linear
-pipeline is the Lattice fast path.
+That broader matrix is the boundary of the current implementation: physical
+one-ring or routing-heavy completed-throughput cases can favor Disruptor, while
+the static linear pipeline and graph-specialized paths are Lattice's fast
+path.
 
 ## What The Baseline Set Measures
 
@@ -105,26 +113,29 @@ pipeline is the Lattice fast path.
 
 ## Choosing Between Them
 
-Choose Disruptor when the application is naturally one ordered stream with
-preallocated event slots, clear sequence-barrier dependencies, and a team that
-already understands the Disruptor operational model.
+Choose Disruptor when the application is actually a single sequenced stream:
+one preallocated ring, event-slot mutation, and sequence-barrier dependencies.
+It is excellent at that problem.
 
-Choose Lattice when the application is a fixed typed DAG and the runtime
-contract matters as much as the queue primitive: local overflow policy per
-edge, declared routing and stamp-correlated joins, graph-local fusion, metrics
-and placement settings, inspectable plan and metrics, and compiler-checked
-payload reuse.
+Choose Lattice when the application is a fixed typed DAG. That is the center
+of this project, and it is where the benchmark evidence is strongest: local
+overflow policy per edge, declared routing and stamp-correlated joins,
+graph-local fusion, metrics and placement settings, inspectable plan and
+metrics, compiler-checked payload reuse, and automatic specialization of the
+physical runtime plan.
 
 ## Scope
 
 The checked-in notes show Lattice strongest when the benchmark uses the graph
-contract: single-producer source specialization and eligible linear fusion.
-The manually fused reference row gives Lattice the same one-call-site shape as
-Disruptor and measures a clear Lattice win. The broader end-to-end matrix also
-shows that not every physical or routing-heavy shape wins against Disruptor.
-**Lattice's value is the graph contract**:
-preallocated payload paths, semantic joins, deterministic backpressure, and
-fusion that preserves the logical graph.
+contract: single-producer source specialization, physical graph execution,
+eligible linear fusion, source-inline execution, and compiler-checked payload
+reuse. The manually fused reference row gives Lattice the same one-call-site
+shape as Disruptor and measures a clear Lattice win. The broader end-to-end
+matrix also shows that not every physical or routing-heavy shape wins against
+Disruptor, but that boundary does not weaken the core claim:
+**Lattice's value is the graph contract**. Preallocated payload paths, semantic
+joins, deterministic backpressure, and fusion that preserves the logical graph
+are first-class runtime features, not conventions layered on top of a queue.
 
 If your workload is "one ring, one hand-fused handler doing the work of many
 stages", include the one-stage Lattice row before drawing conclusions. If your

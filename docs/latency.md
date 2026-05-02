@@ -63,6 +63,11 @@ The physical comparison is mixed, not a clean sweep: Disruptor physical is
 lower at mean, p50, and p90, while Lattice strict topology is lower at p99 and
 p99.9 in this isolated run.
 
+For latency-sensitive static graph services, the p99 result is one of the most
+important rows in the set. It shows that Lattice's physical runtime can improve
+tail behavior even when central tendency favors the single-ring Disruptor
+shape.
+
 The explicit Lattice CPU-pinned physical row is retained as a Lattice placement
 reference. It is not the headline row; strict topology is the better Lattice
 physical p99 profile in this run.

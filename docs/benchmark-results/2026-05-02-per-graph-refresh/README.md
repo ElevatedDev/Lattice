@@ -57,6 +57,11 @@ operation waits until the sink/handler completes the same sequence. The
 Lattice side of that row is source-inline elided: the eligible fused chain runs
 on the producer thread and the physical source edge is removed.
 
+These rows are the core public evidence for Lattice as a static graph runtime:
+the physical graph publish path is ahead, the fused static path is ahead, the
+equal-call-site reference path is ahead, and the source-inline completed path
+is ahead.
+
 ## End-To-End Throughput
 
 | Workload | Lattice | Disruptor | Ratio |
@@ -68,8 +73,10 @@ on the producer thread and the physical source edge is removed.
 | Dependency/join completed | 1,362,877 ops/s | 2,381,730 ops/s | 0.57x |
 
 The broader matrix is intentionally not a single winner-takes-all claim.
-Physical source/sink and routing-heavy shapes still favor Disruptor on this
-host, while the inline-fused static pipeline is the Lattice fast path.
+Physical source/sink and routing-heavy completed-throughput shapes still favor
+Disruptor on this host, while the inline-fused static pipeline is the Lattice
+fast path. Treat those Disruptor wins as current boundary rows; they do not
+erase the stronger static-graph evidence above.
 
 ## Isolated End-To-End Latency
 
