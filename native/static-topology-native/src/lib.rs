@@ -5,11 +5,19 @@
 //! none of these functions belong in a per-message hot path.
 
 use core::ffi::c_void;
+use jni_macro::jni_method;
 
 type JInt = i32;
 type JLong = i64;
 type JClass = *mut c_void;
 type JNIEnv = *mut c_void;
+
+mod jni {
+    pub type JNIEnv = super::JNIEnv;
+    pub mod objects {
+        pub type JClass = super::super::JClass;
+    }
+}
 
 #[allow(dead_code)]
 const CAP_LINUX: u64 = 1 << 0;
@@ -31,95 +39,59 @@ enum CpuListSelector {
     Group { used: usize, group: usize },
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_nativeCapabilities0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JLong {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn native_capabilities_0() -> JLong {
     platform::native_capabilities() as JLong
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_maxCpuCount0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn max_cpu_count_0() -> JInt {
     platform::max_cpu_count()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_configuredCpuCount0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn configured_cpu_count_0() -> JInt {
     platform::configured_cpu_count()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_onlineCpuCount0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn online_cpu_count_0() -> JInt {
     platform::online_cpu_count()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_currentCpu0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn current_cpu_0() -> JInt {
     platform::current_cpu()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_currentNumaNode0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn current_numa_node_0() -> JInt {
     platform::current_numa_node()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_numaNodeOfCpu0(
-    _env: JNIEnv,
-    _class: JClass,
-    cpu: JInt,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn numa_node_of_cpu_0(cpu: JInt) -> JInt {
     platform::numa_node_of_cpu(cpu)
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_isCpuAllowed0(
-    _env: JNIEnv,
-    _class: JClass,
-    cpu: JInt,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn is_cpu_allowed_0(cpu: JInt) -> JInt {
     platform::is_cpu_allowed(cpu)
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpu0(
-    _env: JNIEnv,
-    _class: JClass,
-    cpu: JInt,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn pin_current_thread_to_cpu_0(cpu: JInt) -> JInt {
     platform::pin_current_thread_to_cpu(cpu)
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToNumaNode0(
-    _env: JNIEnv,
-    _class: JClass,
-    numa_node: JInt,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn pin_current_thread_to_numa_node_0(numa_node: JInt) -> JInt {
     platform::pin_current_thread_to_numa_node(numa_node)
 }
 
 #[allow(clippy::too_many_arguments)]
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCurrentThreadToCpuMask0(
-    _env: JNIEnv,
-    _class: JClass,
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn pin_current_thread_to_cpu_mask_0(
     word0: JLong,
     word1: JLong,
     word2: JLong,
@@ -143,21 +115,13 @@ pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_pinCu
     ])
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_setLocalAllocationPolicy0(
-    _env: JNIEnv,
-    _class: JClass,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn set_local_allocation_policy_0() -> JInt {
     platform::set_local_allocation_policy()
 }
 
-#[no_mangle]
-pub extern "system" fn Java_com_lattice_nativeaccess_NativeTopologyNatives_firstTouchMemory0(
-    _env: JNIEnv,
-    _class: JClass,
-    address: JLong,
-    bytes: JLong,
-) -> JInt {
+#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+pub fn first_touch_memory_0(address: JLong, bytes: JLong) -> JInt {
     platform::first_touch_memory(address, bytes)
 }
 
