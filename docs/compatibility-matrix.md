@@ -34,6 +34,12 @@ library does not imply Linux-equivalent NUMA behavior; check
 `NativeTopology.capabilities()` or `GraphMetrics.placementReport()` before
 making placement or benchmark claims for a platform.
 
+On Linux, single-CPU pinning is exact. CPU-set pinning is any-of placement: the
+native backend intersects the requested set with the worker thread's current
+allowed affinity before applying it. This keeps Lattice aligned with cgroups,
+`taskset`, and service managers; an empty effective set is reported as a
+placement failure.
+
 ## Disruptor
 
 Disruptor 4.0.0 is on the **JMH classpath only**. It is not a runtime

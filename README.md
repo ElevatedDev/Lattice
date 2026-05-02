@@ -335,6 +335,12 @@ placement requests degrade through startup diagnostics and metrics by default.
 Set `GraphPlacementSpec.off().strict(true)` on the graph to fail startup when
 requested placement cannot be applied.
 
+For Linux CPU-set policies, Lattice treats the set as "run on any of these
+CPUs that the scheduler currently allows." That means explicit worker pinning
+respects cgroups, `taskset`, and service manager CPU limits while still making
+use of a partial overlap. If there is no overlap, startup degrades or fails
+according to the graph's strict-placement setting.
+
 ## Documentation
 
 The `/docs` directory is ready to use as the GitHub Pages source. Until Pages
