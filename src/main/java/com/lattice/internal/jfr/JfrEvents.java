@@ -8,17 +8,15 @@ import jdk.jfr.Name;
 
 public final class JfrEvents {
 
-    private static final boolean ENABLED = Boolean.getBoolean("lattice.jfr");
-
     private JfrEvents() {
     }
 
     public static boolean enabled() {
-        return ENABLED;
+        return false;
     }
 
     public static void graphStarted(final String graphName) {
-        if (!ENABLED || !GraphStarted.EVENT_TYPE.isEnabled()) {
+        if (!GraphStarted.EVENT_TYPE.isEnabled()) {
             return;
         }
         final GraphStarted event = new GraphStarted();
@@ -27,7 +25,7 @@ public final class JfrEvents {
     }
 
     public static void graphStopped(final String graphName, final String state) {
-        if (!ENABLED || !GraphStopped.EVENT_TYPE.isEnabled()) {
+        if (!GraphStopped.EVENT_TYPE.isEnabled()) {
             return;
         }
         final GraphStopped event = new GraphStopped();
@@ -37,7 +35,7 @@ public final class JfrEvents {
     }
 
     public static void stageException(final String graphName, final String stageName, final Throwable failure) {
-        if (!ENABLED || !StageException.EVENT_TYPE.isEnabled()) {
+        if (!StageException.EVENT_TYPE.isEnabled()) {
             return;
         }
         final StageException event = new StageException();
@@ -49,7 +47,7 @@ public final class JfrEvents {
     }
 
     public static void edgeBackpressure(final String graphName, final String from, final String to) {
-        if (!ENABLED || !EdgeBackpressure.EVENT_TYPE.isEnabled()) {
+        if (!EdgeBackpressure.EVENT_TYPE.isEnabled()) {
             return;
         }
         final EdgeBackpressure event = new EdgeBackpressure();
@@ -60,7 +58,7 @@ public final class JfrEvents {
     }
 
     public static void edgeStall(final String graphName, final String from, final String to, final long nanos) {
-        if (!ENABLED || !EdgeStall.EVENT_TYPE.isEnabled()) {
+        if (!EdgeStall.EVENT_TYPE.isEnabled()) {
             return;
         }
         final EdgeStall event = new EdgeStall();
@@ -72,7 +70,7 @@ public final class JfrEvents {
     }
 
     public static void batchProcessed(final String graphName, final String stageName, final int size, final long nanos) {
-        if (!ENABLED || !BatchProcessed.EVENT_TYPE.isEnabled()) {
+        if (!BatchProcessed.EVENT_TYPE.isEnabled()) {
             return;
         }
         final BatchProcessed event = new BatchProcessed();
@@ -84,7 +82,7 @@ public final class JfrEvents {
     }
 
     public static void workerBlocked(final String graphName, final String stageName) {
-        if (!ENABLED || !WorkerBlocked.EVENT_TYPE.isEnabled()) {
+        if (!WorkerBlocked.EVENT_TYPE.isEnabled()) {
             return;
         }
         final WorkerBlocked event = new WorkerBlocked();
@@ -94,7 +92,7 @@ public final class JfrEvents {
     }
 
     public static void workerParked(final String graphName, final String stageName) {
-        if (!ENABLED || !WorkerParked.EVENT_TYPE.isEnabled()) {
+        if (!WorkerParked.EVENT_TYPE.isEnabled()) {
             return;
         }
         final WorkerParked event = new WorkerParked();
@@ -112,7 +110,7 @@ public final class JfrEvents {
         final int observedNumaNode,
         final String status
     ) {
-        if (!ENABLED || !WorkerPlacement.EVENT_TYPE.isEnabled()) {
+        if (!WorkerPlacement.EVENT_TYPE.isEnabled()) {
             return;
         }
         final WorkerPlacement event = new WorkerPlacement();
@@ -132,7 +130,7 @@ public final class JfrEvents {
         final int expectedCpu,
         final int observedCpu
     ) {
-        if (!ENABLED || !AffinityMismatch.EVENT_TYPE.isEnabled()) {
+        if (!AffinityMismatch.EVENT_TYPE.isEnabled()) {
             return;
         }
         final AffinityMismatch event = new AffinityMismatch();
@@ -149,7 +147,7 @@ public final class JfrEvents {
         final int expectedNumaNode,
         final int observedNumaNode
     ) {
-        if (!ENABLED || !NumaMismatch.EVENT_TYPE.isEnabled()) {
+        if (!NumaMismatch.EVENT_TYPE.isEnabled()) {
             return;
         }
         final NumaMismatch event = new NumaMismatch();

@@ -24,11 +24,11 @@ NUMA behavior is part of the claim.
   -XX:+AlwaysPreTouch
   -XX:+UnlockDiagnosticVMOptions
   -XX:+UseParallelGC
-  -Dlattice.metrics.hotCounters=false
-  -Dlattice.metrics.residence=false
-  -Dlattice.metrics.stageHistograms=false
-  -Dlattice.runtime.fusedLogicalEdgeMetrics=false
   ```
+
+  Graph runtime behavior is configured per benchmark graph through
+  `FusionSpec`, `MetricsSpec`, `GraphPlacementSpec`, and `DiagnosticsSpec`,
+  not through process-global runtime properties.
 
 ## Run
 

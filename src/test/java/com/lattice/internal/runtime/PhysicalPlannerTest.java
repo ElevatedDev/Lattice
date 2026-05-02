@@ -2,10 +2,15 @@ package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
+import com.lattice.graph.DiagnosticsSpec;
+import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.GraphPlan;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.internal.graph.CompiledGraph;
 import com.lattice.internal.graph.EdgeDefinition;
+import com.lattice.internal.graph.GraphRuntimeConfig;
 import com.lattice.internal.graph.NodeDefinition;
 import com.lattice.placement.PinPolicy;
 import com.lattice.routing.DispatchSpec;
@@ -19,8 +24,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,9 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PhysicalPlannerTest {
 
     private static final Class<String> MESSAGE_TYPE = String.class;
-    private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
-    private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
-    private static final String INLINE_SOURCE_ELISION_PROPERTY = "lattice.fusion.inlineSource.elidePhysical";
     private static final StageLogic<String, String> PASS_THROUGH = (input, output, context) -> output.push(input);
     private static final BatchStageLogic<String, String> BATCH_PASS_THROUGH = (batch, output, context) -> {
         for (int i = 0; i < batch.size(); i++) {
@@ -42,30 +42,9 @@ class PhysicalPlannerTest {
         }
     };
 
-    private String previousFusionEnabled;
-    private String previousInlineSourceFusion;
-    private String previousInlineSourceElision;
-
-    @BeforeEach
-    void captureProperties() {
-        previousFusionEnabled = System.getProperty(FUSION_ENABLED_PROPERTY);
-        previousInlineSourceFusion = System.getProperty(INLINE_SOURCE_FUSION_PROPERTY);
-        previousInlineSourceElision = System.getProperty(INLINE_SOURCE_ELISION_PROPERTY);
-    }
-
-    @AfterEach
-    void restoreProperties() {
-        restoreProperty(FUSION_ENABLED_PROPERTY, previousFusionEnabled);
-        restoreProperty(INLINE_SOURCE_FUSION_PROPERTY, previousInlineSourceFusion);
-        restoreProperty(INLINE_SOURCE_ELISION_PROPERTY, previousInlineSourceElision);
-    }
-
     @Test
     void fusionDisabledLeavesLogicalWorkersAndRecordsFallback() {
-        System.setProperty(FUSION_ENABLED_PROPERTY, "false");
-        System.setProperty(INLINE_SOURCE_FUSION_PROPERTY, "true");
-
-        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageSink("fusion-disabled", false));
+        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageSink("fusion-disabled", false, disabledRuntime()));
 
         assertEquals(List.of("a", "sink"), plan.workerOrder());
         assertTrue(plan.fusedSinks().isEmpty());
@@ -111,10 +90,7 @@ class PhysicalPlannerTest {
 
     @Test
     void inlineSourcePhysicalElisionRemovesOwnerWorkerAndSourceSenderWhenOptedIn() {
-        enableFusion();
-        System.setProperty(INLINE_SOURCE_ELISION_PROPERTY, "true");
-
-        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageStageSink("inline-chain-elided", false));
+        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageStageSink("inline-chain-elided", false, inlineElisionRuntime()));
 
         assertTrue(plan.workerOrder().isEmpty());
         assertEquals(1, plan.lifecycleParticipantCount());
@@ -316,8 +292,6 @@ class PhysicalPlannerTest {
     }
 
     private static void enableFusion() {
-        System.setProperty(FUSION_ENABLED_PROPERTY, "true");
-        System.setProperty(INLINE_SOURCE_FUSION_PROPERTY, "true");
     }
 
     private static boolean hasFallback(final PhysicalPlan plan, final FallbackReason reason) {
@@ -325,6 +299,14 @@ class PhysicalPlannerTest {
     }
 
     private static CompiledGraph sourceStageSink(final String graphName, final boolean customHandler) {
+        return sourceStageSink(graphName, customHandler, inlineRuntime());
+    }
+
+    private static CompiledGraph sourceStageSink(
+            final String graphName,
+            final boolean customHandler,
+            final GraphRuntimeConfig runtimeConfig
+    ) {
         return compiled(
                 graphName,
                 customHandler,
@@ -332,11 +314,20 @@ class PhysicalPlannerTest {
                 List.of(
                         sourceEdge("source", "a", EdgeSpec.spscRing(16)),
                         workerEdge("a", "sink", EdgeSpec.spscRing(16))
-                )
+                ),
+                runtimeConfig
         );
     }
 
     private static CompiledGraph sourceStageStageSink(final String graphName, final boolean customHandler) {
+        return sourceStageStageSink(graphName, customHandler, inlineRuntime());
+    }
+
+    private static CompiledGraph sourceStageStageSink(
+            final String graphName,
+            final boolean customHandler,
+            final GraphRuntimeConfig runtimeConfig
+    ) {
         return compiled(
                 graphName,
                 customHandler,
@@ -345,7 +336,8 @@ class PhysicalPlannerTest {
                         sourceEdge("source", "a", EdgeSpec.spscRing(16)),
                         workerEdge("a", "b", EdgeSpec.spscRing(16)),
                         workerEdge("b", "sink", EdgeSpec.spscRing(16))
-                )
+                ),
+                runtimeConfig
         );
     }
 
@@ -354,6 +346,16 @@ class PhysicalPlannerTest {
             final boolean customHandler,
             final List<NodeDefinition> nodes,
             final List<EdgeDefinition> edges
+    ) {
+        return compiled(graphName, customHandler, nodes, edges, inlineRuntime());
+    }
+
+    private static CompiledGraph compiled(
+            final String graphName,
+            final boolean customHandler,
+            final List<NodeDefinition> nodes,
+            final List<EdgeDefinition> edges,
+            final GraphRuntimeConfig runtimeConfig
     ) {
         final Map<String, NodeDefinition> nodeMap = new LinkedHashMap<>();
         for (final NodeDefinition node : nodes) {
@@ -380,7 +382,29 @@ class PhysicalPlannerTest {
                 Map.of(),
                 workerOrder,
                 StageExceptionHandler.failGraph(),
-                customHandler
+                customHandler,
+                runtimeConfig
+        );
+    }
+
+    private static GraphRuntimeConfig disabledRuntime() {
+        return runtime(FusionSpec.disabled());
+    }
+
+    private static GraphRuntimeConfig inlineRuntime() {
+        return runtime(FusionSpec.defaults().inlineSources(true));
+    }
+
+    private static GraphRuntimeConfig inlineElisionRuntime() {
+        return runtime(FusionSpec.defaults().inlineSources(true).elideInlineSourcePhysicalPath(true));
+    }
+
+    private static GraphRuntimeConfig runtime(final FusionSpec fusionSpec) {
+        return new GraphRuntimeConfig(
+                fusionSpec,
+                MetricsSpec.off(),
+                GraphPlacementSpec.off(),
+                DiagnosticsSpec.off()
         );
     }
 

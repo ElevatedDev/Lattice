@@ -127,6 +127,34 @@ public interface StaticGraph extends AutoCloseable {
     interface Builder {
 
         /**
+         * Sets graph-level fusion controls.
+         *
+         * @return this builder
+         */
+        Builder fusion(FusionSpec spec);
+
+        /**
+         * Sets graph-level metrics controls.
+         *
+         * @return this builder
+         */
+        Builder metrics(MetricsSpec spec);
+
+        /**
+         * Sets graph-level runtime-derived placement controls.
+         *
+         * @return this builder
+         */
+        Builder placement(GraphPlacementSpec spec);
+
+        /**
+         * Sets graph-level diagnostics controls.
+         *
+         * @return this builder
+         */
+        Builder diagnostics(DiagnosticsSpec spec);
+
+        /**
          * Adds a multi-producer source.
          *
          * @param name source name

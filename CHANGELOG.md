@@ -61,6 +61,11 @@ state is pre-1.0.
 
 ### Added
 
+- Per-graph runtime configuration on `StaticGraph.Builder`:
+  `fusion(FusionSpec)`, `metrics(MetricsSpec)`,
+  `placement(GraphPlacementSpec)`, and `diagnostics(DiagnosticsSpec)`.
+  These replace process-global fusion, metrics, placement, first-touch, and
+  JFR runtime flags for graph behavior.
 - Phase 5 documentation set under `docs/`, including getting started, graph
   DSL, edge semantics, ordering guarantees, backpressure, observability,
   operations, failure modes, compatibility, API, release, examples, and
@@ -72,9 +77,8 @@ state is pre-1.0.
 - Open-source repository scaffolding: GitHub Actions CI/release artifact
   workflows, issue template, pull request template, Dependabot config, and
   `.gitattributes`.
-- `-Dlattice.fusion.validateTypes` (default `false`) to re-enable defensive
-  per-event runtime type assertions inside fused chains while developing
-  custom stage logic.
+- `FusionSpec.validateTypes(true)` to re-enable defensive per-event runtime
+  type assertions inside fused chains while developing custom stage logic.
 - `OptimalPathBenchmark`, a completion-gated Lattice-vs-Disruptor comparison
   that waits for sink/handler completion of the same sequence instead of
   measuring enqueue rate only.
@@ -97,12 +101,13 @@ state is pre-1.0.
   security expectations for public contributions.
 - `SECURITY.md` rewritten for pre-1.0 support status and private vulnerability
   reporting.
-- Inline source-side fusion is enabled by default through
-  `lattice.fusion.inlineSource=true`, but only for graphs that explicitly opt
-  into `SourceMode.SINGLE_PRODUCER` and satisfy the fusion eligibility rules.
+- Inline source-side fusion is now a per-graph opt-in through
+  `FusionSpec.inlineSources(true)`. Normal downstream fusion remains enabled by
+  default through `FusionSpec.defaults()`, while source physical-path elision is
+  separately gated by `elideInlineSourcePhysicalPath(true)`.
 - The fused stage/sink chain executor was tightened for the JIT by using final
-  successor references, specialized benign/retaining hop variants, static-final
-  metrics/JFR gates, and optional intra-fused type validation.
+  successor references, specialized benign/retaining hop variants, a default
+  no-observability fast path, and optional intra-fused type validation.
 - `SpscRingEdge` producer and consumer cursor caches now use dedicated
   cache-line-padded boxes.
 - `SourceEmitter.emit` uses the trusted fast path when the source is

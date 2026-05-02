@@ -4,6 +4,7 @@ import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.WorkerState;
@@ -26,10 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase2RuntimeTest {
 
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off().hotCounters(true);
+
     @Test
     void singleProducerSourceRunsOverSpscIngress() throws Exception {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("single-producer-ingress")
+        final StaticGraph graph = graph("single-producer-ingress")
             .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
             .sink("egress", Integer.class, consumed::add, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(32))
@@ -51,7 +54,7 @@ class Phase2RuntimeTest {
     @Test
     void batchAndSingleMessageStagesCoexistInOneGraph() throws Exception {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("batch-mixed")
+        final StaticGraph graph = graph("batch-mixed")
             .source("ingress", Integer.class)
             .batchStage(
                 "batch-double",
@@ -96,7 +99,7 @@ class Phase2RuntimeTest {
     void timedBackpressureReturnsFalseAndRecordsOverload() throws Exception {
         final CountDownLatch sinkEntered = new CountDownLatch(1);
         final CountDownLatch releaseSink = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("timed-backpressure")
+        final StaticGraph graph = graph("timed-backpressure")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> {
                 sinkEntered.countDown();
@@ -130,7 +133,7 @@ class Phase2RuntimeTest {
     @Test
     void quiesceAndResumeAreDeterministic() throws Exception {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("quiesce")
+        final StaticGraph graph = graph("quiesce")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, consumed::add, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(32))
@@ -158,7 +161,7 @@ class Phase2RuntimeTest {
 
     @Test
     void exceptionHandlerCanPoisonOnlyTheFailingStage() throws Exception {
-        final StaticGraph graph = StaticGraph.builder("poison")
+        final StaticGraph graph = graph("poison")
             .exceptionHandler((graphName, stageName, failure, context) -> StageExceptionAction.POISON_STAGE)
             .source("ingress", Integer.class)
             .stage("explode", Integer.class, Integer.class, (value, out, ctx) -> {
@@ -188,5 +191,9 @@ class Phase2RuntimeTest {
             Thread.sleep(10);
         }
         assertTrue(condition.getAsBoolean());
+    }
+
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 }

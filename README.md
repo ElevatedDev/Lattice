@@ -45,6 +45,10 @@ Minimal graph:
 
 ```java
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.DiagnosticsSpec;
+import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphPlacementSpec;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
@@ -55,6 +59,8 @@ record Order(int id, boolean valid) {}
 record ValidOrder(int id) {}
 
 StaticGraph graph = StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults())
+    .metrics(MetricsSpec.off())
     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
     .stage("validate", Order.class, ValidOrder.class,
         (order, out, ctx) -> {
@@ -110,7 +116,7 @@ The hot path is intentionally narrow:
 
 - Sources publish into bounded SPSC or MPSC edges, or run an eligible fused
   chain directly on the source thread when `SourceMode.SINGLE_PRODUCER` proves
-  ownership.
+  ownership and `FusionSpec.inlineSources(true)` is enabled for that graph.
 - Stages are single-owner callbacks. A stage sees one message or one batch at a
   time and pushes through typed `Output` handles.
 - Linear SPSC chains can be fused so logical stages remain visible in the plan
@@ -119,8 +125,36 @@ The hot path is intentionally narrow:
   the compiler rejects shapes where reuse would be unsafe.
 - Routing nodes (`dispatch`, `broadcast`, `partition`) and joins are graph
   primitives rather than ad hoc queue consumers.
-- Metrics and placement diagnostics are graph/stage/edge objects, with
-  low-observability benchmark flags available for clean throughput evidence.
+- Runtime controls are graph-local: `FusionSpec`, `MetricsSpec`,
+  `GraphPlacementSpec`, and `DiagnosticsSpec` replace process-global fusion,
+  metrics, placement, and JFR flags.
+
+## Per-Graph Runtime Controls
+
+Runtime behavior is configured on each `StaticGraph.Builder`:
+
+```java
+StaticGraph graph = StaticGraph.builder("orders")
+    .fusion(FusionSpec.defaults()
+        .inlineSources(true)
+        .elideInlineSourcePhysicalPath(true))
+    .metrics(MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true))
+    .placement(GraphPlacementSpec.off()
+        .strict(true))
+    .diagnostics(DiagnosticsSpec.off()
+        .jfr(true))
+    .build();
+```
+
+Defaults are fusion on, metrics off, source inline off, source physical-path
+elision off, topology-aware placement off, strict placement off, first-touch
+placement off, and JFR off. Source-inline fusion is an execution-thread
+contract: stage and sink logic may run on the caller of `emitter.emit(...)`.
+It is blocked when explicit effective placement or topology-aware placement is
+in effect so pinned/topology-placed stage logic remains on the placed owner
+worker.
 
 ## Runtime Guarantees
 
@@ -237,8 +271,8 @@ Linux exposes the full native placement surface. Windows and macOS expose
 narrower capability bits; see the [Compatibility Matrix](docs/compatibility-matrix.md)
 before making platform-specific placement claims. Without the native library,
 placement requests degrade through startup diagnostics and metrics by default.
-Set `-Dlattice.placement.strict=true` to fail startup when requested placement
-cannot be applied.
+Set `GraphPlacementSpec.off().strict(true)` on the graph to fail startup when
+requested placement cannot be applied.
 
 ## Documentation
 

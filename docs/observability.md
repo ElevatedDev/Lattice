@@ -13,24 +13,46 @@ There is no logging on the hot path.
 | `WaitMetrics`  | per worker | Park reasons, spins, yields, parks, wake counts. |
 | `PlacementStatus` | per worker | Requested vs effective CPU set, NUMA node, native lib status. |
 
-## Hot-Counter Toggles
+## Per-Graph Metrics Controls
 
-Hot counters and per-stage histograms are gated by static final flags so
-the JIT can fold them away when they are off:
+Metrics are off by default. Enable only the surfaces needed by the graph:
 
-```bash
--Dlattice.metrics.hotCounters=false       # default true
--Dlattice.metrics.stageHistograms=false   # default false
--Dlattice.metrics.residence=false         # default false
--Dlattice.runtime.fusedLogicalEdgeMetrics=false
+```java
+StaticGraph graph = StaticGraph.builder("orders")
+    .metrics(MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true)
+        .stageHistograms(true)
+        .residenceTiming(true))
+    .build();
 ```
 
-Recommended max-throughput profile (used by the JMH suite) turns all four
-off; the entire metrics call shell folds away on the fused hot path.
+`hotCounters(true)` turns on graph, stage, edge, wait, and routing counters.
+`fusedLogicalEdgeCounters(true)` records logical traffic for edges removed by
+fusion or source-path elision; it is dormant unless hot counters are also on.
+`stageHistograms(true)` allocates HdrHistogram instances for batch/service
+timing. `residenceTiming(true)` adds timestamp reads on edge offer/poll paths.
+
+For max-throughput runs, keep `MetricsSpec.off()` so the default fused hot path
+uses the no-observability executor.
 
 ## JFR
 
-`-Dlattice.jfr=true` enables Lattice's JFR event types:
+JFR event emission is also per graph:
+
+```java
+StaticGraph graph = StaticGraph.builder("orders")
+    .diagnostics(DiagnosticsSpec.off().jfr(true))
+    .build();
+```
+
+Capture those events with normal JVM recording options, for example:
+
+```bash
+-XX:StartFlightRecording=filename=lattice.jfr,settings=profile,dumponexit=true
+```
+
+The emitted event types include:
 
 - `lattice.GraphLifecycle`, `lattice.WorkerStart`, `lattice.WorkerStop`
 - `lattice.EdgeOverflow`, `lattice.StageException`
@@ -44,8 +66,8 @@ profiling channel; per-event histograms are not.
 `graph.metrics().placementStatus()` returns one row per worker with the
 requested affinity, the effective CPU set the OS allowed, the NUMA node, and
 whether the native backend was loaded. Without the native backend, placement
-requests are recorded as advisory unless `-Dlattice.placement.strict=true` is
-set, in which case `start()` fails.
+requests are recorded as advisory unless
+`GraphPlacementSpec.off().strict(true)` is set on the graph, in which case
+`start()` fails.
 
 See also [Operations Runbook](operations-runbook.md).
-

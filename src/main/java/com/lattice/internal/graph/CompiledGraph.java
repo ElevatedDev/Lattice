@@ -15,6 +15,7 @@ public record CompiledGraph(
     Map<String, Map<String, EdgeDefinition>> redirectBySourceAndTarget,
     List<String> workerOrder,
     StageExceptionHandler exceptionHandler,
-    boolean customExceptionHandler
+    boolean customExceptionHandler,
+    GraphRuntimeConfig runtimeConfig
 ) {
 }

@@ -1,5 +1,6 @@
 package com.lattice.metrics;
 
+import com.lattice.graph.MetricsSpec;
 import org.HdrHistogram.Histogram;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
@@ -9,21 +10,16 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * Live metrics for one stage worker.
  * <p>
- * Hot-path counters can be disabled with {@code lattice.metrics.hotCounters}.
- * Batch and service-time histograms are opt-in through
- * {@code lattice.metrics.stageHistograms}; histogram accessors return defensive
- * copies.
+ * Hot-path counters and histograms are graph-level opt-ins; histogram accessors
+ * return defensive copies.
  * Runtime update methods such as {@code recordConsume()} are exposed for the
  * runtime implementation and should not be called by applications.
  */
 public final class StageMetrics implements WaitMetrics {
 
-    private static final boolean HISTOGRAMS_ENABLED = Boolean.getBoolean("lattice.metrics.stageHistograms");
-    private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
-        System.getProperty("lattice.metrics.hotCounters", "true")
-    );
-
     private final String name;
+    private final boolean hotCountersEnabled;
+    private final boolean histogramsEnabled;
     private final LongAdder emittedCount = new LongAdder();
     private final LongAdder consumedCount = new LongAdder();
     private final LongAdder stageExceptions = new LongAdder();
@@ -46,10 +42,8 @@ public final class StageMetrics implements WaitMetrics {
     private final LongAdder missingJoinBranches = new LongAdder();
     private final LongAdder retainedHandles = new LongAdder();
     private final LongAdder releasedHandles = new LongAdder();
-    private final Histogram batchSizeHistogram = HISTOGRAMS_ENABLED ? new Histogram(1, 1_000_000, 3) : null;
-    private final Histogram serviceTimeNanosHistogram = HISTOGRAMS_ENABLED
-        ? new Histogram(1, 60_000_000_000L, 3)
-        : null;
+    private final Histogram batchSizeHistogram;
+    private final Histogram serviceTimeNanosHistogram;
     private volatile WorkerState workerState = WorkerState.NEW;
     private volatile PlacementStatus placementStatus = PlacementStatus.NOT_REQUESTED;
     private volatile String placementMessage = "";
@@ -67,14 +61,34 @@ public final class StageMetrics implements WaitMetrics {
      * Creates metrics for a named stage.
      */
     public StageMetrics(final String name) {
-        this.name = name;
+        this(name, MetricsSpec.off());
     }
 
     /**
-     * Returns whether hot-path counters are enabled for this JVM.
+     * Creates metrics for a named stage.
+     */
+    public StageMetrics(final String name, final MetricsSpec metricsSpec) {
+        this.name = name;
+        this.hotCountersEnabled = metricsSpec.hotCounters();
+        this.histogramsEnabled = metricsSpec.stageHistograms();
+        this.batchSizeHistogram = histogramsEnabled ? new Histogram(1, 1_000_000, 3) : null;
+        this.serviceTimeNanosHistogram = histogramsEnabled
+            ? new Histogram(1, 60_000_000_000L, 3)
+            : null;
+    }
+
+    /**
+     * Returns the source-compatible default hot-counter state.
      */
     public static boolean hotCountersEnabled() {
-        return HOT_COUNTERS_ENABLED;
+        return false;
+    }
+
+    /**
+     * Returns whether hot-path counters are enabled for this stage.
+     */
+    public boolean hotCounters() {
+        return hotCountersEnabled;
     }
 
     /**
@@ -270,10 +284,17 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     /**
-     * Returns whether stage histograms are enabled for this JVM.
+     * Returns whether stage histograms are enabled by default.
      */
     public static boolean histogramsEnabled() {
-        return HISTOGRAMS_ENABLED;
+        return false;
+    }
+
+    /**
+     * Returns whether stage histograms are enabled for this stage.
+     */
+    public boolean histograms() {
+        return histogramsEnabled;
     }
 
     /**
@@ -347,21 +368,21 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public void recordEmit() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         emittedCount.increment();
     }
 
     public void recordConsume() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         if (count > 0) {
@@ -370,24 +391,39 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public void recordException() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         stageExceptions.increment();
     }
 
     public void recordFailedOutput() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         failedOutputs.increment();
     }
 
     public void recordFailedOutputs(final long count) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (count > 0L) {
             failedOutputs.add(count);
         }
     }
 
     public void recordBlockedOutput() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         blockedOutputs.increment();
     }
 
     public void recordBlockedNanos(final long nanos) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (nanos > 0L) {
             blockedNanos.add(nanos);
         }
@@ -395,7 +431,7 @@ public final class StageMetrics implements WaitMetrics {
 
     @Override
     public void recordSpin() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         spinCount.increment();
@@ -403,7 +439,7 @@ public final class StageMetrics implements WaitMetrics {
 
     @Override
     public void recordYield() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         yieldCount.increment();
@@ -411,18 +447,17 @@ public final class StageMetrics implements WaitMetrics {
 
     @Override
     public void recordPark() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         parkCount.increment();
     }
 
     public void recordBatch(final int size, final long serviceTimeNanos) {
-        if (!HOT_COUNTERS_ENABLED) {
-            return;
+        if (hotCountersEnabled) {
+            batchesProcessed.increment();
+            processedMessages.add(size);
         }
-        batchesProcessed.increment();
-        processedMessages.add(size);
         if (batchSizeHistogram != null && size > 0) {
             batchSizeHistogram.recordValue(clampToHistogram(batchSizeHistogram, size));
         }
@@ -432,63 +467,63 @@ public final class StageMetrics implements WaitMetrics {
     }
 
     public void recordRoutingDecision() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         routingDecisions.increment();
     }
 
     public void recordBranchIsolationAction() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         branchIsolationActions.increment();
     }
 
     public void recordOpenJoinGroup() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         openJoinGroups.increment();
     }
 
     public void recordCompletedJoinGroup() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         completedJoinGroups.increment();
     }
 
     public void recordTimedOutJoinGroup() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         timedOutJoinGroups.increment();
     }
 
     public void recordDuplicateJoinStamp() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         duplicateJoinStamps.increment();
     }
 
     public void recordMissingJoinBranch() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         missingJoinBranches.increment();
     }
 
     public void recordRetainedHandle() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         retainedHandles.increment();
     }
 
     public void recordReleasedHandle() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         releasedHandles.increment();
@@ -516,10 +551,10 @@ public final class StageMetrics implements WaitMetrics {
         this.expectedNumaNode = expectedNumaNode;
         this.observedNumaNode = observedNumaNode;
         this.allocationOwner = allocationOwner == null ? "" : allocationOwner;
-        if (affinityViolation) {
+        if (hotCountersEnabled && affinityViolation) {
             affinityViolations.increment();
         }
-        if (numaViolation) {
+        if (hotCountersEnabled && numaViolation) {
             numaViolations.increment();
         }
     }

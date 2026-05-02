@@ -1,6 +1,7 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.MpscRingEdge;
@@ -45,10 +46,6 @@ class HotPathGuardrailTest {
     private static final StageSpec GRAPH_STAGE = StageSpec.singleThreaded().wait(GRAPH_WAIT);
     private static final EdgeSpec GRAPH_SPSC = EdgeSpec.spscRing(GRAPH_RING_CAPACITY).wait(GRAPH_WAIT);
     private static final EdgeSpec GRAPH_MPSC = EdgeSpec.mpscRing(GRAPH_RING_CAPACITY).wait(GRAPH_WAIT);
-    private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
-    private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
-    private static final String INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY =
-        "lattice.fusion.inlineSource.elidePhysical";
 
     @Test
     void spscOfferPollSteadyStateDoesNotAllocate() {
@@ -267,14 +264,10 @@ class HotPathGuardrailTest {
         final boolean inlineSourceFusion,
         final AtomicLong consumed
     ) {
-        final String previousFusion = System.getProperty(FUSION_ENABLED_PROPERTY);
-        final String previousInline = System.getProperty(INLINE_SOURCE_FUSION_PROPERTY);
-        final String previousInlineElision = System.getProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY);
-        setBooleanProperty(FUSION_ENABLED_PROPERTY, fusionEnabled);
-        setBooleanProperty(INLINE_SOURCE_FUSION_PROPERTY, inlineSourceFusion);
-        setBooleanProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY, false);
-        try {
-            return StaticGraph.builder(graphName)
+        return StaticGraph.builder(graphName)
+                .fusion(fusionEnabled
+                    ? FusionSpec.defaults().inlineSources(inlineSourceFusion)
+                    : FusionSpec.disabled())
                 .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
                 .stage("normalize", Signal.class, Signal.class, HotPathGuardrailTest::increment, GRAPH_STAGE)
                 .stage("risk", Signal.class, Signal.class, HotPathGuardrailTest::increment, GRAPH_STAGE)
@@ -285,11 +278,6 @@ class HotPathGuardrailTest {
                 .edge("risk", "validate", GRAPH_SPSC)
                 .edge("validate", "egress", GRAPH_SPSC)
                 .build();
-        } finally {
-            restoreProperty(FUSION_ENABLED_PROPERTY, previousFusion);
-            restoreProperty(INLINE_SOURCE_FUSION_PROPERTY, previousInline);
-            restoreProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY, previousInlineElision);
-        }
     }
 
     private static RunningGraph startMpscIngressGraph(final String graphName) {
@@ -300,23 +288,12 @@ class HotPathGuardrailTest {
     }
 
     private static StaticGraph buildMpscIngressGraph(final String graphName, final Consumer<Signal> sink) {
-        final String previousFusion = System.getProperty(FUSION_ENABLED_PROPERTY);
-        final String previousInline = System.getProperty(INLINE_SOURCE_FUSION_PROPERTY);
-        final String previousInlineElision = System.getProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY);
-        setBooleanProperty(FUSION_ENABLED_PROPERTY, true);
-        setBooleanProperty(INLINE_SOURCE_FUSION_PROPERTY, true);
-        setBooleanProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY, false);
-        try {
-            return StaticGraph.builder(graphName)
+        return StaticGraph.builder(graphName)
+                .fusion(FusionSpec.defaults().inlineSources(true))
                 .source("ingress", Signal.class, SourceMode.MULTI_PRODUCER)
                 .sink("egress", Signal.class, sink, GRAPH_STAGE)
                 .edge("ingress", "egress", GRAPH_MPSC)
                 .build();
-        } finally {
-            restoreProperty(FUSION_ENABLED_PROPERTY, previousFusion);
-            restoreProperty(INLINE_SOURCE_FUSION_PROPERTY, previousInline);
-            restoreProperty(INLINE_SOURCE_PHYSICAL_ELISION_PROPERTY, previousInlineElision);
-        }
     }
 
     private static void emitRange(
@@ -380,18 +357,6 @@ class HotPathGuardrailTest {
             return method.invoke(record);
         } catch (final ReflectiveOperationException ex) {
             throw new AssertionError(ex);
-        }
-    }
-
-    private static void setBooleanProperty(final String name, final boolean value) {
-        System.setProperty(name, Boolean.toString(value));
-    }
-
-    private static void restoreProperty(final String name, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(name);
-        } else {
-            System.setProperty(name, previousValue);
         }
     }
 

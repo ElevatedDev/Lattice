@@ -1,6 +1,8 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.nativeaccess.NativeCapabilities;
@@ -31,10 +33,6 @@ import org.openjdk.jmh.annotations.TearDown;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class NativePlacementComparisonBenchmark {
 
-    private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
-    private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
-    private static final String FIRST_TOUCH_PROPERTY = "lattice.firstTouch.enabled";
-    private static final String STRICT_PLACEMENT_PROPERTY = "lattice.placement.strict";
     private static final String CPU_A_PROPERTY = "lattice.bench.cpuA";
     private static final String CPU_B_PROPERTY = "lattice.bench.cpuB";
     private static final String CPU_C_PROPERTY = "lattice.bench.cpuC";
@@ -48,21 +46,13 @@ public class NativePlacementComparisonBenchmark {
 
     @Benchmark
     @Fork(jvmArgsAppend = {
-        "-Dlattice.native.enabled=false",
-        "-Dlattice.placement.strict=false",
-        "-Dlattice.fusion.enabled=false",
-        "-Dlattice.fusion.inlineSource=false"
+        "-Dlattice.native.enabled=false"
     })
     public long pinnedCompletedWithoutNative(final NoNativePinnedState state) {
         return emitAndWait(state);
     }
 
     @Benchmark
-    @Fork(jvmArgsAppend = {
-        "-Dlattice.placement.strict=true",
-        "-Dlattice.fusion.enabled=false",
-        "-Dlattice.fusion.inlineSource=false"
-    })
     public long pinnedCompletedWithNative(
         final NativePinnedState state,
         final NativeProducerThreadState producerThreadState
@@ -125,10 +115,6 @@ public class NativePlacementComparisonBenchmark {
         StaticGraph graph;
         Emitter<Order> emitter;
         long cursor;
-        String previousFusion;
-        String previousInlineSourceFusion;
-        String previousFirstTouch;
-        String previousStrictPlacement;
 
         BasePinnedState() {
             for (int i = 0; i < orders.length; i++) {
@@ -138,21 +124,16 @@ public class NativePlacementComparisonBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            previousFusion = System.getProperty(FUSION_ENABLED_PROPERTY);
-            previousInlineSourceFusion = System.getProperty(INLINE_SOURCE_FUSION_PROPERTY);
-            previousFirstTouch = System.getProperty(FIRST_TOUCH_PROPERTY);
-            previousStrictPlacement = System.getProperty(STRICT_PLACEMENT_PROPERTY);
-            System.setProperty(FUSION_ENABLED_PROPERTY, "false");
-            System.setProperty(INLINE_SOURCE_FUSION_PROPERTY, "false");
-            System.setProperty(FIRST_TOUCH_PROPERTY, "true");
-            System.setProperty(STRICT_PLACEMENT_PROPERTY, Boolean.toString(requireNativePlacement()));
-
             if (requireNativePlacement()) {
                 validateNativePlacement();
             }
 
             try {
                 graph = StaticGraph.builder(graphName())
+                    .fusion(FusionSpec.disabled())
+                    .placement(GraphPlacementSpec.off()
+                        .strict(requireNativePlacement())
+                        .firstTouch(true))
                     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
                     .stage("parse", Order.class, Order.class, NativePlacementComparisonBenchmark::parse,
                         pinnedStageSpec(stageCpu()))
@@ -181,7 +162,6 @@ public class NativePlacementComparisonBenchmark {
                     graph.stop(STOP_TIMEOUT);
                 }
             } finally {
-                restoreProperties();
                 requireCompleted(graphName(), completedSequence);
             }
         }
@@ -363,14 +343,6 @@ public class NativePlacementComparisonBenchmark {
                     failure.addSuppressed(ex);
                 }
             }
-            restoreProperties();
-        }
-
-        private void restoreProperties() {
-            restoreProperty(FUSION_ENABLED_PROPERTY, previousFusion);
-            restoreProperty(INLINE_SOURCE_FUSION_PROPERTY, previousInlineSourceFusion);
-            restoreProperty(FIRST_TOUCH_PROPERTY, previousFirstTouch);
-            restoreProperty(STRICT_PLACEMENT_PROPERTY, previousStrictPlacement);
         }
     }
 
@@ -429,11 +401,4 @@ public class NativePlacementComparisonBenchmark {
         }
     }
 
-    private static void restoreProperty(final String property, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(property);
-        } else {
-            System.setProperty(property, previousValue);
-        }
-    }
 }

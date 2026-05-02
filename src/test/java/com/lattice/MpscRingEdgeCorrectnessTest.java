@@ -1,6 +1,7 @@
 package com.lattice;
 
 import com.lattice.internal.edge.MpscRingEdge;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
 import com.lattice.metrics.StageMetrics;
@@ -104,15 +105,18 @@ class MpscRingEdgeCorrectnessTest {
     }
 
     private static EdgeMetrics edgeMetrics() {
-        return new EdgeMetrics("source", "sink");
+        return new EdgeMetrics("source", "sink", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS,
+            MetricsSpec.off().hotCounters(true));
     }
 
     private static GraphMetrics graphMetrics() {
+        final MetricsSpec metricsSpec = MetricsSpec.off().hotCounters(true);
         final Map<String, StageMetrics> stages = new LinkedHashMap<>();
-        stages.put("source", new StageMetrics("source"));
-        stages.put("sink", new StageMetrics("sink"));
+        stages.put("source", new StageMetrics("source", metricsSpec));
+        stages.put("sink", new StageMetrics("sink", metricsSpec));
         final Map<String, EdgeMetrics> edges = new LinkedHashMap<>();
-        edges.put("source->sink", new EdgeMetrics("source", "sink"));
-        return new GraphMetrics("mpsc-test", stages, edges);
+        edges.put("source->sink", new EdgeMetrics("source", "sink", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS,
+            metricsSpec));
+        return new GraphMetrics("mpsc-test", stages, edges, metricsSpec);
     }
 }

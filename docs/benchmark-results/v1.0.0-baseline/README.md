@@ -19,13 +19,13 @@ artifact set refreshed on 2026-04-29 for the 1.0.0 open-source hardening pass.
 CPU:  Intel i7-7700 @ 3.6 GHz, 4c/8t, 1 NUMA node
 JDK:  OpenJDK 21.0.10+7-Ubuntu-124.04
 JVM:  -Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UseParallelGC
-      -Dlattice.metrics.hotCounters=false
-      -Dlattice.metrics.residence=false
-      -Dlattice.metrics.stageHistograms=false
-      -Dlattice.runtime.fusedLogicalEdgeMetrics=false
-      -Dlattice.runtime.inlineDepthTracking=false
 Native: not loaded; placement rows use pinning=false
 ```
+
+The original 2026-04-29 artifact set predates the per-graph runtime API and
+used process-global flags for fusion and metrics. Current benchmark sources set
+the equivalent behavior per graph with `FusionSpec`, `MetricsSpec`,
+`GraphPlacementSpec`, and `DiagnosticsSpec`.
 
 ## Figures
 

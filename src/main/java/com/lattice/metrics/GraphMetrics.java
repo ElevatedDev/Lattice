@@ -1,5 +1,6 @@
 package com.lattice.metrics;
 
+import com.lattice.graph.MetricsSpec;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -20,11 +21,8 @@ import java.util.concurrent.atomic.LongAdder;
  * runtime implementation and should not be called by applications.
  */
 public final class GraphMetrics {
-    private static final boolean HOT_COUNTERS_ENABLED = Boolean.parseBoolean(
-        System.getProperty("lattice.metrics.hotCounters", "true")
-    );
-
     private final String graphName;
+    private final boolean hotCountersEnabled;
     private final LongAdder emittedCount = new LongAdder();
     private final LongAdder consumedCount = new LongAdder();
     private final LongAdder failedOffers = new LongAdder();
@@ -49,7 +47,20 @@ public final class GraphMetrics {
         final Map<String, StageMetrics> stageMetrics,
         final Map<String, EdgeMetrics> edgeMetrics
     ) {
+        this(graphName, stageMetrics, edgeMetrics, MetricsSpec.off());
+    }
+
+    /**
+     * Creates graph metrics from already-created stage and edge metrics.
+     */
+    public GraphMetrics(
+        final String graphName,
+        final Map<String, StageMetrics> stageMetrics,
+        final Map<String, EdgeMetrics> edgeMetrics,
+        final MetricsSpec metricsSpec
+    ) {
         this.graphName = graphName;
+        this.hotCountersEnabled = metricsSpec.hotCounters();
         this.stageMetrics = Collections.unmodifiableMap(new LinkedHashMap<>(stageMetrics));
         this.edgeMetrics = Collections.unmodifiableMap(new LinkedHashMap<>(edgeMetrics));
     }
@@ -160,6 +171,13 @@ public final class GraphMetrics {
     }
 
     /**
+     * Returns whether hot-path counters are enabled for this graph.
+     */
+    public boolean hotCounters() {
+        return hotCountersEnabled;
+    }
+
+    /**
      * Returns the immutable edge metrics map keyed as {@code from->to}.
      */
     public Map<String, EdgeMetrics> edges() {
@@ -200,21 +218,21 @@ public final class GraphMetrics {
     }
 
     public void recordEmit() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         emittedCount.increment();
     }
 
     public void recordConsume() {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         consumedCount.increment();
     }
 
     public void recordConsume(final int count) {
-        if (!HOT_COUNTERS_ENABLED) {
+        if (!hotCountersEnabled) {
             return;
         }
         if (count > 0) {
@@ -223,20 +241,32 @@ public final class GraphMetrics {
     }
 
     public void recordFailedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         failedOffers.increment();
     }
 
     public void recordFailedOffers(final long count) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (count > 0L) {
             failedOffers.add(count);
         }
     }
 
     public void recordBlockedOffer() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         blockedOffers.increment();
     }
 
     public void recordBackpressureNanos(final long nanos) {
+        if (!hotCountersEnabled) {
+            return;
+        }
         if (nanos > 0L) {
             backpressureNanos.add(nanos);
         }
@@ -244,7 +274,9 @@ public final class GraphMetrics {
 
     public void activateOverload() {
         if (overloaded.compareAndSet(false, true)) {
-            overloadActivations.increment();
+            if (hotCountersEnabled) {
+                overloadActivations.increment();
+            }
         }
     }
 
@@ -255,18 +287,30 @@ public final class GraphMetrics {
     }
 
     public void recordStageException() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         stageExceptions.increment();
     }
 
     public void recordDroppedMessage() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         droppedMessages.increment();
     }
 
     public void recordRedirectedMessage() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         redirectedMessages.increment();
     }
 
     public void recordCoalescedMessage() {
+        if (!hotCountersEnabled) {
+            return;
+        }
         coalescedMessages.increment();
     }
 

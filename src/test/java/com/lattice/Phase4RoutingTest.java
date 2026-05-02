@@ -3,6 +3,7 @@ package com.lattice;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.routing.BroadcastSpec;
 import com.lattice.routing.DispatchSpec;
@@ -27,12 +28,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase4RoutingTest {
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
+
 
     @Test
     void dispatchRoundRobinDeliversEachItemToExactlyOneBranch() throws Exception {
         final List<Integer> left = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> right = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("dispatch")
+        final StaticGraph graph = graph("dispatch")
             .source("ingress", Integer.class)
             .dispatch("route", Integer.class, DispatchSpec.roundRobin(), StageSpec.singleThreaded())
             .sink("left", Integer.class, left::add, StageSpec.singleThreaded())
@@ -61,7 +66,7 @@ class Phase4RoutingTest {
     void dispatchKeyedAndWeightedModesUseStableBranchSelection() throws Exception {
         final List<Integer> even = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> odd = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph keyed = StaticGraph.builder("keyed-dispatch")
+        final StaticGraph keyed = graph("keyed-dispatch")
             .source("ingress", Integer.class)
             .dispatch("route", Integer.class, DispatchSpec.keyed(value -> value), StageSpec.singleThreaded())
             .sink("even", Integer.class, even::add, StageSpec.singleThreaded())
@@ -83,7 +88,7 @@ class Phase4RoutingTest {
 
         final List<Integer> light = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> heavy = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph weighted = StaticGraph.builder("weighted-dispatch")
+        final StaticGraph weighted = graph("weighted-dispatch")
             .source("ingress", Integer.class)
             .dispatch("route", Integer.class, DispatchSpec.weighted(1, 3), StageSpec.singleThreaded())
             .sink("light", Integer.class, light::add, StageSpec.singleThreaded())
@@ -108,7 +113,7 @@ class Phase4RoutingTest {
     void broadcastCopyDeliversEveryItemToEveryRequiredBranch() throws Exception {
         final List<Integer> journal = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> risk = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("broadcast")
+        final StaticGraph graph = graph("broadcast")
             .source("ingress", Integer.class)
             .broadcast("fanout", Integer.class, BroadcastSpec.copy(), StageSpec.singleThreaded())
             .sink("journal", Integer.class, journal::add, StageSpec.singleThreaded())
@@ -135,7 +140,7 @@ class Phase4RoutingTest {
         final CountDownLatch slowEntered = new CountDownLatch(1);
         final CountDownLatch releaseSlow = new CountDownLatch(1);
         final List<Integer> fast = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("broadcast-isolation")
+        final StaticGraph graph = graph("broadcast-isolation")
             .source("ingress", Integer.class)
             .broadcast("fanout", Integer.class, BroadcastSpec.<Integer>copy().withBranchIsolation(),
                 StageSpec.singleThreaded())
@@ -175,7 +180,7 @@ class Phase4RoutingTest {
     void partitionByKeyPreservesPerKeyFifoWithinLane() throws Exception {
         final List<Integer> lane0 = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> lane1 = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("partition")
+        final StaticGraph graph = graph("partition")
             .source("ingress", Integer.class)
             .partition("partition", Integer.class, PartitionSpec.byKey(value -> value % 2, 2), StageSpec.singleThreaded())
             .sink("lane0", Integer.class, lane0::add, StageSpec.singleThreaded())
@@ -202,7 +207,7 @@ class Phase4RoutingTest {
     @Test
     void partitionHotLaneSignalsSkewThreshold() throws Exception {
         final List<Integer> lane = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("partition-skew")
+        final StaticGraph graph = graph("partition-skew")
             .source("ingress", Integer.class)
             .partition("partition", Integer.class,
                 PartitionSpec.<Integer, Integer>byKey(value -> 0, 1).hotKeyThreshold(4),
@@ -227,7 +232,7 @@ class Phase4RoutingTest {
     void stampedAllOfJoinCorrelatesSourcesByStamp() throws Exception {
         final List<String> joined = Collections.synchronizedList(new ArrayList<>());
         final JoinSpec<String> joinSpec = JoinSpec.allOf(Phase4RoutingTest::formatJoin);
-        final StaticGraph graph = StaticGraph.builder("join-all")
+        final StaticGraph graph = graph("join-all")
             .stampedSource("orders", String.class)
             .stampedSource("risk", String.class)
             .join("join", String.class, joinSpec, StageSpec.singleThreaded())
@@ -257,7 +262,7 @@ class Phase4RoutingTest {
         final CountDownLatch entered = new CountDownLatch(1);
         final CountDownLatch release = new CountDownLatch(1);
         final List<Long> stamps = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("stable-stamps")
+        final StaticGraph graph = graph("stable-stamps")
             .stampedSource("ingress", String.class)
             .sink("egress", Stamped.class, stamped -> {
                 stamps.add(((Stamped<?>) stamped).stamp());
@@ -290,7 +295,7 @@ class Phase4RoutingTest {
     @Test
     void joinsSupportAnyOfPartialTimeoutDuplicateFailAndHandleRelease() throws Exception {
         final List<String> any = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph anyGraph = StaticGraph.builder("join-any")
+        final StaticGraph anyGraph = graph("join-any")
             .stampedSource("left", String.class)
             .stampedSource("right", String.class)
             .join("join", String.class, JoinSpec.anyOf(group -> group.triggeringSource() + ":" + group.stamp()),
@@ -311,7 +316,7 @@ class Phase4RoutingTest {
         assertTrue(any.get(0).endsWith(":0"));
 
         final List<String> partial = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph partialGraph = StaticGraph.builder("join-partial")
+        final StaticGraph partialGraph = graph("join-partial")
             .stampedSource("left", String.class)
             .stampedSource("right", String.class)
             .join("join", String.class, JoinSpec.allOf(group -> "partial:" + group.stamp())
@@ -331,7 +336,7 @@ class Phase4RoutingTest {
         assertEquals(1, partialGraph.metrics().stage("join").missingJoinBranches());
 
         final AtomicBoolean failed = new AtomicBoolean();
-        final StaticGraph duplicateFail = StaticGraph.builder("join-duplicate")
+        final StaticGraph duplicateFail = graph("join-duplicate")
             .source("left", Integer.class)
             .source("right", Integer.class)
             .join("join", Integer.class, JoinSpec.<Integer>allOf(group -> 1)
@@ -350,7 +355,7 @@ class Phase4RoutingTest {
         assertTrue(failed.get());
 
         final SlabPool<String> pool = new SlabPool<>("join-release", 1);
-        final StaticGraph releaseGraph = StaticGraph.builder("join-release")
+        final StaticGraph releaseGraph = graph("join-release")
             .source("left", SlabHandle.class)
             .source("right", SlabHandle.class)
             .join("join", String.class, JoinSpec.<String>allOf(group -> "unused").stamp(ignored -> 1),
@@ -368,7 +373,7 @@ class Phase4RoutingTest {
         assertEquals(0, pool.leakedCount());
 
         final List<String> aborted = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph abortGraph = StaticGraph.builder("join-abort")
+        final StaticGraph abortGraph = graph("join-abort")
             .stampedSource("left", String.class)
             .stampedSource("right", String.class)
             .join("join", String.class, JoinSpec.allOf(group -> "partial")
@@ -390,7 +395,7 @@ class Phase4RoutingTest {
         final SlabPool<String> pool = new SlabPool<>("phase4", 4);
         final List<String> left = Collections.synchronizedList(new ArrayList<>());
         final List<String> right = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("slab-broadcast")
+        final StaticGraph graph = graph("slab-broadcast")
             .source("ingress", SlabHandle.class)
             .broadcast("fanout", SlabHandle.class, BroadcastSpec.slabHandles(), StageSpec.singleThreaded())
             .sink("left", SlabHandle.class, handle -> left.add(((SlabHandle<?>) handle).payload().toString()),
@@ -413,7 +418,7 @@ class Phase4RoutingTest {
         assertEquals(0, pool.leakedCount());
 
         final SlabPool<String> stampedPool = new SlabPool<>("stamped-slab", 1);
-        final StaticGraph stamped = StaticGraph.builder("stamped-slab")
+        final StaticGraph stamped = graph("stamped-slab")
             .stampedSource("ingress", SlabHandle.class)
             .sink("egress", Stamped.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -430,7 +435,7 @@ class Phase4RoutingTest {
         final CountDownLatch entered = new CountDownLatch(1);
         final CountDownLatch release = new CountDownLatch(1);
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("drop-latest")
+        final StaticGraph graph = graph("drop-latest")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, value -> {
                 entered.countDown();
@@ -464,7 +469,7 @@ class Phase4RoutingTest {
     void dropOldestAndRedirectOverflowAreExplicitAndObservable() throws Exception {
         final CountDownLatch entered = new CountDownLatch(1);
         final CountDownLatch release = new CountDownLatch(1);
-        final StaticGraph dropOldest = StaticGraph.builder("drop-oldest")
+        final StaticGraph dropOldest = graph("drop-oldest")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> {
                 entered.countDown();
@@ -493,7 +498,7 @@ class Phase4RoutingTest {
         final CountDownLatch mainEntered = new CountDownLatch(1);
         final CountDownLatch releaseMain = new CountDownLatch(1);
         final List<Integer> dlq = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph redirect = StaticGraph.builder("redirect")
+        final StaticGraph redirect = graph("redirect")
             .source("ingress", Integer.class)
             .sink("main", Integer.class, ignored -> {
                 mainEntered.countDown();
@@ -527,7 +532,7 @@ class Phase4RoutingTest {
     void coalescingOverflowIsExplicitAndObservable() throws Exception {
         final CountDownLatch entered = new CountDownLatch(1);
         final CountDownLatch release = new CountDownLatch(1);
-        final StaticGraph graph = StaticGraph.builder("coalesce")
+        final StaticGraph graph = graph("coalesce")
             .source("ingress", Event.class)
             .sink("egress", Event.class, ignored -> {
                 entered.countDown();
@@ -572,6 +577,10 @@ class Phase4RoutingTest {
             Thread.sleep(10);
         }
         assertTrue(condition.getAsBoolean());
+    }
+
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 
     private record Event(int key, int value) {

@@ -75,7 +75,7 @@ final class EdgeSender {
         this.mayCarryOwnedHandle = messageType == Object.class
             || messageType.isAssignableFrom(SlabHandle.class)
             || messageType.isAssignableFrom(Stamped.class);
-        this.hotMetricsEnabled = StageMetrics.hotCountersEnabled();
+        this.hotMetricsEnabled = ownerMetrics.hotCounters();
         this.waitMetrics = hotMetricsEnabled ? new CombinedWaitMetrics(ownerMetrics, edgeMetrics) : null;
         this.policyTimeoutNanos = overflowKind == OverflowPolicy.OverflowKind.BLOCK_FOR
             ? spec.overflowPolicy().timeout().toNanos()
@@ -85,7 +85,7 @@ final class EdgeSender {
         this.edgeFrom = edge.from();
         this.edgeTo = edge.to();
         this.edgeName = edgeFrom + "->" + edgeTo;
-        this.jfrEnabled = JfrEvents.enabled();
+        this.jfrEnabled = coordinator.jfrEnabled();
     }
 
     void redirectSender(final EdgeSender redirectSender) {

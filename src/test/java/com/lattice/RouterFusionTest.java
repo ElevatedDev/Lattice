@@ -1,7 +1,9 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.routing.BroadcastSpec;
 import com.lattice.routing.DispatchSpec;
@@ -21,9 +23,9 @@ class RouterFusionTest {
 
     private static final Duration STOP_TIMEOUT = Duration.ofSeconds(5);
     private static final StageSpec STAGE = StageSpec.singleThreaded();
-    private static final String FUSION_ENABLED_PROPERTY = "lattice.fusion.enabled";
-    private static final String INLINE_SOURCE_FUSION_PROPERTY = "lattice.fusion.inlineSource";
-    private static final String INLINE_SOURCE_ELISION_PROPERTY = "lattice.fusion.inlineSource.elidePhysical";
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
 
     @Test
     void stageToDispatchFusionMatchesPhysicalAndKeepsLogicalMetrics() throws Exception {
@@ -67,6 +69,8 @@ class RouterFusionTest {
             final List<Integer> right = new CopyOnWriteArrayList<>();
             final List<String> consumerThreads = new CopyOnWriteArrayList<>();
             final StaticGraph graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .metrics(TEST_METRICS)
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 100),
                     STAGE)
@@ -96,6 +100,8 @@ class RouterFusionTest {
             final List<Integer> risk = new CopyOnWriteArrayList<>();
             final List<String> consumerThreads = new CopyOnWriteArrayList<>();
             final StaticGraph graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .metrics(TEST_METRICS)
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 100),
                     STAGE)
@@ -125,6 +131,8 @@ class RouterFusionTest {
             final List<Integer> lane1 = new CopyOnWriteArrayList<>();
             final List<String> consumerThreads = new CopyOnWriteArrayList<>();
             final StaticGraph graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .metrics(TEST_METRICS)
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 100),
                     STAGE)
@@ -254,27 +262,7 @@ class RouterFusionTest {
 
     private static RouterRun withFusion(final boolean enabled, final ThrowingSupplier<RouterRun> run)
         throws Exception {
-        final String previousFusion = System.getProperty(FUSION_ENABLED_PROPERTY);
-        final String previousInline = System.getProperty(INLINE_SOURCE_FUSION_PROPERTY);
-        final String previousInlineElision = System.getProperty(INLINE_SOURCE_ELISION_PROPERTY);
-        System.setProperty(FUSION_ENABLED_PROPERTY, Boolean.toString(enabled));
-        System.setProperty(INLINE_SOURCE_FUSION_PROPERTY, "false");
-        System.setProperty(INLINE_SOURCE_ELISION_PROPERTY, "false");
-        try {
-            return run.get();
-        } finally {
-            restoreProperty(FUSION_ENABLED_PROPERTY, previousFusion);
-            restoreProperty(INLINE_SOURCE_FUSION_PROPERTY, previousInline);
-            restoreProperty(INLINE_SOURCE_ELISION_PROPERTY, previousInlineElision);
-        }
-    }
-
-    private static void restoreProperty(final String name, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(name);
-        } else {
-            System.setProperty(name, previousValue);
-        }
+        return run.get();
     }
 
     @FunctionalInterface

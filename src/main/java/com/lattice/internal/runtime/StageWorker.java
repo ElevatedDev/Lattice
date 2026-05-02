@@ -52,19 +52,7 @@ final class StageWorker implements Runnable {
     private static final int PROCESS_PARTITION = 5;
     private static final int PROCESS_JOIN = 6;
     private static final int MAX_WEIGHTED_DISPATCH_SCHEDULE = 1_000_000;
-    private static final int DEFAULT_SINGLE_MESSAGE_BATCH_SIZE = Math.max(
-        1,
-        Integer.getInteger("lattice.runtime.singleMessageBatchSize", 64)
-    );
-
-    private static final boolean FUSED_LOGICAL_EDGE_METRICS = Boolean.parseBoolean(
-        System.getProperty("lattice.runtime.fusedLogicalEdgeMetrics", "true")
-    );
-
-    private static final boolean LOGICAL_METRICS_ON =
-        StageMetrics.hotCountersEnabled() && FUSED_LOGICAL_EDGE_METRICS;
-
-    private static final boolean LATTICE_VALIDATE_FUSED = Boolean.getBoolean("lattice.fusion.validateTypes");
+    private static final int DEFAULT_SINGLE_MESSAGE_BATCH_SIZE = 64;
 
     private static final MessageEdge[] NO_EDGES = new MessageEdge[0];
 
@@ -116,6 +104,8 @@ final class StageWorker implements Runnable {
     private final boolean timeBatches;
     private final boolean hotMetricsEnabled;
     private final boolean edgeHotMetricsEnabled;
+    private final boolean logicalMetricsEnabled;
+    private final boolean validateFusedTypes;
     private final boolean messageMayCarryOwnedHandle;
     private final boolean directSinkDrain;
     private final int[] weightedSchedule;
@@ -165,11 +155,6 @@ final class StageWorker implements Runnable {
         this.outputSenders = outputSenders.clone();
         this.outputMetrics = outputMetrics(this.outputSenders);
         this.ownedEdges = ownedEdges.clone();
-        final LinearStageSinkLoop linearStageSinkLoop = linearStageSinkLoop(fusedSink, fusedStage);
-        this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
-            : fusedStage != null ? new DirectStageOutput(fusedStage)
-            : fusedRouter != null ? new DirectRouterOutput(fusedRouter)
-            : fusedSink == null ? output : new DirectSinkOutput(fusedSink);
         this.sinkProcessor = this::processSinkItem;
         this.fusedSink = fusedSink;
         this.fusedStage = fusedStage;
@@ -216,11 +201,18 @@ final class StageWorker implements Runnable {
         this.weightedSchedule = dispatchSpec == null ? new int[0] : weightedSchedule(dispatchSpec, outputSenders.length);
         this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
         this.partitionHotKeyThreshold = partitionSpec == null ? 0L : partitionSpec.hotKeyThreshold();
-        this.jfrEnabled = JfrEvents.enabled();
-        this.timeBatches = StageMetrics.histogramsEnabled() || jfrEnabled;
-        this.hotMetricsEnabled = StageMetrics.hotCountersEnabled();
-        this.edgeHotMetricsEnabled = EdgeMetrics.hotCountersEnabled();
+        this.jfrEnabled = coordinator.jfrEnabled();
+        this.timeBatches = metrics.histograms() || jfrEnabled;
+        this.hotMetricsEnabled = metrics.hotCounters();
+        this.edgeHotMetricsEnabled = coordinator.metrics().hotCounters();
+        this.logicalMetricsEnabled = coordinator.fusedLogicalEdgeCountersEnabled();
+        this.validateFusedTypes = coordinator.validateFusedTypes();
         this.waitMetrics = hotMetricsEnabled ? metrics : null;
+        final LinearStageSinkLoop linearStageSinkLoop = linearStageSinkLoop(fusedSink, fusedStage);
+        this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
+            : fusedStage != null ? new DirectStageOutput(fusedStage)
+            : fusedRouter != null ? new DirectRouterOutput(fusedRouter)
+            : fusedSink == null ? output : new DirectSinkOutput(fusedSink);
         this.outputMask = powerOfTwoMask(outputSenders.length);
     }
 
@@ -306,7 +298,7 @@ final class StageWorker implements Runnable {
                 throw new ClassCastException(stageName + " received " + item.getClass().getName()
                     + ", expected " + inputTypeName);
             }
-            if (StageMetrics.hotCountersEnabled()) {
+            if (hotMetricsEnabled) {
                 metrics.recordConsume();
             }
             try {
@@ -328,7 +320,7 @@ final class StageWorker implements Runnable {
             } catch (final Throwable ex) {
                 throw new FusedStageException(stageName, metrics, context, ex);
             }
-            if (StageMetrics.hotCountersEnabled()) {
+            if (hotMetricsEnabled) {
                 metrics.recordBatch(1, 0L);
             }
         }
@@ -400,7 +392,14 @@ final class StageWorker implements Runnable {
         WorkerState terminalState = WorkerState.STOPPED;
         boolean bootstrapped = false;
         try {
-            final PlacementResult placement = PlacementBootstrap.bootstrap(stageName, pinPolicy, ownedEdges);
+            final PlacementResult placement = PlacementBootstrap.bootstrap(
+                stageName,
+                pinPolicy,
+                ownedEdges,
+                coordinator.strictPlacement(),
+                coordinator.firstTouchPlacement(),
+                coordinator.placementBootstrapDelayMillis()
+            );
             this.batch = new ArrayBatch(batchLimit);
             this.batchItems = batch.items();
             this.batchSources = processingMode == PROCESS_JOIN ? new int[batchLimit] : null;
@@ -1421,8 +1420,7 @@ final class StageWorker implements Runnable {
         final GraphMetrics graphMetrics,
         final StageMetrics consumerMetrics
     ) {
-        // Single static-final gate; the JIT folds the entire call away when off.
-        if (!LOGICAL_METRICS_ON) {
+        if (!logicalMetricsEnabled) {
             return;
         }
         logicalEdgeMetrics.recordEmit();
@@ -1678,12 +1676,12 @@ final class StageWorker implements Runnable {
                 throw new NullPointerException(router.name + " cannot consume null");
             }
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            if (LATTICE_VALIDATE_FUSED) {
+            if (validateFusedTypes) {
                 validate(outbound);
             }
             recordLogicalTransfer(router.ownerMetrics, router.logicalEdgeMetrics, router.graphMetrics, router.metrics);
 
-            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final boolean timeBatchesLocal = timeBatches;
             final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
                 if (retainForScope) {
@@ -1694,10 +1692,10 @@ final class StageWorker implements Runnable {
                     route(outbound);
                 }
                 final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     router.metrics.recordBatch(1, serviceNanos);
                 }
-                if (JfrEvents.enabled()) {
+                if (jfrEnabled) {
                     JfrEvents.batchProcessed(graphName, router.name, 1, serviceNanos);
                 }
             } catch (final Throwable ex) {
@@ -1886,13 +1884,13 @@ final class StageWorker implements Runnable {
                 throw new NullPointerException(sink.name + " cannot consume null");
             }
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            if (LATTICE_VALIDATE_FUSED) {
+            if (validateFusedTypes) {
                 validate(outbound);
             }
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {
@@ -1946,12 +1944,12 @@ final class StageWorker implements Runnable {
                 throw new NullPointerException(stage.name + " cannot consume null");
             }
             final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
-            if (LATTICE_VALIDATE_FUSED) {
+            if (validateFusedTypes) {
                 validate(outbound);
             }
             recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
-            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final boolean timeBatchesLocal = timeBatches;
             final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
                 if (retainForScope) {
@@ -1974,13 +1972,13 @@ final class StageWorker implements Runnable {
 
         private void processDirectStage(final Object outbound, final long started, final boolean timeBatchesLocal) throws Exception {
             stage.logic.onMessage(outbound, output, stage.context);
-            if (StageMetrics.hotCountersEnabled()) {
+            if (hotMetricsEnabled) {
                 final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                 stage.metrics.recordBatch(1, serviceNanos);
-                if (JfrEvents.enabled()) {
+                if (jfrEnabled) {
                     JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
                 }
-            } else if (JfrEvents.enabled()) {
+            } else if (jfrEnabled) {
                 final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                 JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
             }
@@ -2014,8 +2012,16 @@ final class StageWorker implements Runnable {
             this.retainForScope = mayCarryOwnedHandle(stages) || mayCarryOwnedHandle(sink);
             this.outputs = new Output[stages.length + 1];
             final boolean retain = retainForScope;
+            final boolean fastBenign = !retain
+                && !hotMetricsEnabled
+                && !jfrEnabled
+                && !timeBatches
+                && !validateFusedTypes
+                && !logicalMetricsEnabled;
             if (sink != null) {
-                outputs[stages.length] = retain ? new RetainingLinearSinkOutput() : new BenignLinearSinkOutput();
+                outputs[stages.length] = retain
+                    ? new RetainingLinearSinkOutput()
+                    : fastBenign ? new FastLinearSinkOutput() : new BenignLinearSinkOutput();
             } else if (tailOutput != null) {
                 outputs[stages.length] = tailOutput;
             } else {
@@ -2025,7 +2031,9 @@ final class StageWorker implements Runnable {
                 final boolean entry = i == 0;
                 outputs[i] = retain
                     ? new RetainingLinearStageOutput(i, outputs[i + 1])
-                    : new BenignLinearStageOutput(i, outputs[i + 1], entry);
+                    : fastBenign
+                        ? new FastLinearStageOutput(i, outputs[i + 1])
+                        : new BenignLinearStageOutput(i, outputs[i + 1], entry);
             }
         }
 
@@ -2040,20 +2048,33 @@ final class StageWorker implements Runnable {
                 if (item == null) {
                     throw new NullPointerException(stage.name + " cannot consume null");
                 }
-                if (LATTICE_VALIDATE_FUSED) {
+                if (validateFusedTypes) {
                     validate(stage, item);
                 }
                 recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
                 stage.logic.onMessage(item, next, stage.context);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                     stage.metrics.recordBatch(1, serviceNanos);
-                    if (JfrEvents.enabled()) {
+                    if (jfrEnabled) {
                         JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
                     }
-                } else if (JfrEvents.enabled()) {
+                } else if (jfrEnabled) {
                     JfrEvents.batchProcessed(graphName, stage.name, 1, System.nanoTime() - started);
                 }
+            } catch (final FusedStageException ex) {
+                throw ex;
+            } catch (final Throwable ex) {
+                throw new FusedStageException(stage.name, stage.metrics, stage.context, ex);
+            }
+        }
+
+        private void emitStageFast(final FusedStage stage, final Output<Object> next, final Object item) {
+            try {
+                if (item == null) {
+                    throw new NullPointerException(stage.name + " cannot consume null");
+                }
+                stage.logic.onMessage(item, next, stage.context);
             } catch (final FusedStageException ex) {
                 throw ex;
             } catch (final Throwable ex) {
@@ -2066,14 +2087,25 @@ final class StageWorker implements Runnable {
                 if (item == null) {
                     throw new NullPointerException(sink.name + " cannot consume null");
                 }
-                if (LATTICE_VALIDATE_FUSED) {
+                if (validateFusedTypes) {
                     validate(sink, item);
                 }
                 recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
                 sink.consumer.accept(item);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     sink.metrics.recordBatch(1, 0L);
                 }
+            } catch (final Throwable ex) {
+                throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
+            }
+        }
+
+        private void emitSinkFast(final Object item) {
+            try {
+                if (item == null) {
+                    throw new NullPointerException(sink.name + " cannot consume null");
+                }
+                sink.consumer.accept(item);
             } catch (final Throwable ex) {
                 throw new FusedStageException(sink.name, sink.metrics, sink.context, ex);
             }
@@ -2084,20 +2116,20 @@ final class StageWorker implements Runnable {
                 throw new NullPointerException(stage.name + " cannot consume null");
             }
             final Object outbound = HandleOwnership.prepareForEnqueue(item);
-            if (LATTICE_VALIDATE_FUSED) {
+            if (validateFusedTypes) {
                 validate(stage, outbound);
             }
             recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
 
-            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final boolean timeBatchesLocal = timeBatches;
             final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
                 try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
                     stage.logic.onMessage(outbound, next, stage.context);
-                    if (StageMetrics.hotCountersEnabled()) {
+                    if (hotMetricsEnabled) {
                         final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                         stage.metrics.recordBatch(1, serviceNanos);
-                        if (JfrEvents.enabled()) {
+                        if (jfrEnabled) {
                             JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
                         }
                     }
@@ -2116,13 +2148,13 @@ final class StageWorker implements Runnable {
                 throw new NullPointerException(sink.name + " cannot consume null");
             }
             final Object outbound = HandleOwnership.prepareForEnqueue(item);
-            if (LATTICE_VALIDATE_FUSED) {
+            if (validateFusedTypes) {
                 validate(sink, outbound);
             }
             recordLogicalTransfer(sink.ownerMetrics, sink.logicalEdgeMetrics, sink.graphMetrics, sink.metrics);
             try {
                 sink.consumer.accept(outbound);
-                if (StageMetrics.hotCountersEnabled()) {
+                if (hotMetricsEnabled) {
                     sink.metrics.recordBatch(1, 0L);
                 }
             } catch (final Throwable ex) {
@@ -2171,6 +2203,33 @@ final class StageWorker implements Runnable {
             }
         }
 
+        private final class FastLinearStageOutput implements Output<Object> {
+            private final FusedStage stage;
+            private final Output<Object> next;
+
+            private FastLinearStageOutput(final int index, final Output<Object> next) {
+                this.stage = stages[index];
+                this.next = next;
+            }
+
+            @Override
+            public void push(final Object item) {
+                emitStageFast(stage, next, item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitStageFast(stage, next, item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitStageFast(stage, next, item);
+                return true;
+            }
+        }
+
         private final class BenignLinearStageOutput implements Output<Object> {
             private final FusedStage stage;
             private final Output<Object> next;
@@ -2194,6 +2253,25 @@ final class StageWorker implements Runnable {
             @Override
             public boolean tryPush(final Object item) {
                 emitStageBenign(stage, next, item);
+                return true;
+            }
+        }
+
+        private final class FastLinearSinkOutput implements Output<Object> {
+            @Override
+            public void push(final Object item) {
+                emitSinkFast(item);
+            }
+
+            @Override
+            public boolean push(final Object item, final Duration timeout) {
+                emitSinkFast(item);
+                return true;
+            }
+
+            @Override
+            public boolean tryPush(final Object item) {
+                emitSinkFast(item);
                 return true;
             }
         }

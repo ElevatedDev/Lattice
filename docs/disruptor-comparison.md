@@ -26,10 +26,10 @@ and [`benchmarks/baseline/`](../benchmarks/baseline/) follow these rules:
 
 - JMH 1.36 (via the `me.champeau.jmh` Gradle plugin 0.7.3).
 - JDK 21.0.10.
-- JVM args (also set in `build.gradle`): `-Xms2g -Xmx2g -XX:+AlwaysPreTouch
-  -XX:+UseParallelGC`, inline source fusion enabled, hot metrics disabled,
-  fused logical edge metrics disabled, and inline-depth tracking disabled for
-  the benchmark hot path.
+- JVM args: `-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UseParallelGC`.
+  Fusion, source inline, source-path elision, metrics, placement, and JFR are
+  configured per benchmark graph through `FusionSpec`, `MetricsSpec`,
+  `GraphPlacementSpec`, and `DiagnosticsSpec`.
 - Disruptor 4.0.0 on the JMH classpath only (never bundled in the published
   jar).
 - The longer head-to-head matrix uses 3 forks, 5 x 5 s warmup, and 8 x 5 s

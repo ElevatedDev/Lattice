@@ -17,18 +17,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class SourceEmitter<T> implements Emitter<T> {
 
-    private static final VarHandle INLINE_ACTIVE;
-
-    private static final boolean INLINE_DEPTH_TRACKING_ENABLED = Boolean.parseBoolean(
-        System.getProperty("lattice.runtime.inlineDepthTracking", "true")
-    );
-    private static final boolean INLINE_LOGICAL_EDGE_METRICS = EdgeMetrics.hotCountersEnabled()
-        && Boolean.parseBoolean(System.getProperty("lattice.runtime.fusedLogicalEdgeMetrics", "true"));
+    private static final VarHandle INLINE_DEPTH;
 
     static {
         try {
-            INLINE_ACTIVE = MethodHandles.lookup().findVarHandle(
-                SourceEmitter.class, "inlineActive", boolean.class);
+            INLINE_DEPTH = MethodHandles.lookup().findVarHandle(
+                SourceEmitter.class, "inlineDepth", int.class);
         } catch (final ReflectiveOperationException ex) {
             throw new ExceptionInInitializerError(ex);
         }
@@ -42,6 +36,8 @@ final class SourceEmitter<T> implements Emitter<T> {
     private final boolean singleProducer;
     private final RuntimeCoordinator coordinator;
     private final GraphMetrics graphMetrics;
+    private final boolean hotMetricsEnabled;
+    private final boolean inlineLogicalEdgeMetricsEnabled;
     private volatile boolean closed;
     private long nextStamp;
 
@@ -52,11 +48,10 @@ final class SourceEmitter<T> implements Emitter<T> {
     /**
      * In-flight inline emits admitted on the producer thread. Published before the state
      * re-check and cleared after the fused chain returns, so quiesce and termination cannot
-     * miss producer-thread stage work. Inline source fusion is single-producer only, so the
-     * nesting depth itself can stay producer-thread local while the active flag is published.
+     * miss producer-thread stage work. Inline source fusion is single-producer only, so nested
+     * depth updates after the outer admission can stay producer-thread local.
      */
     @SuppressWarnings("unused") // accessed via VarHandle
-    private boolean inlineActive;
     private int inlineDepth;
 
     SourceEmitter(
@@ -76,6 +71,8 @@ final class SourceEmitter<T> implements Emitter<T> {
         this.singleProducer = sourceMode == SourceMode.SINGLE_PRODUCER;
         this.coordinator = coordinator;
         this.graphMetrics = coordinator.metrics();
+        this.hotMetricsEnabled = metrics.hotCounters();
+        this.inlineLogicalEdgeMetricsEnabled = coordinator.fusedLogicalEdgeCountersEnabled();
     }
 
     @Override
@@ -172,8 +169,8 @@ final class SourceEmitter<T> implements Emitter<T> {
         } finally {
             if (trackDepth) {
                 exitInline(depth);
+                notifyInlineExit(depth);
             }
-            notifyInlineExit();
         }
     }
 
@@ -182,9 +179,10 @@ final class SourceEmitter<T> implements Emitter<T> {
         final boolean trackDepth = trackInlineDepth();
         if (trackDepth) {
             depth = inlineDepth;
-            inlineDepth = (int) depth + 1;
             if (depth == 0L) {
-                INLINE_ACTIVE.setOpaque(this, true);
+                INLINE_DEPTH.setOpaque(this, 1);
+            } else {
+                inlineDepth = (int) depth + 1;
             }
             if (closed || graphState.get() != GraphState.RUNNING) {
                 exitInline(depth);
@@ -204,17 +202,17 @@ final class SourceEmitter<T> implements Emitter<T> {
         } finally {
             if (trackDepth) {
                 exitInline(depth);
+                notifyInlineExit(depth);
             }
-            notifyInlineExit();
         }
         return true;
     }
 
     private void recordInlineEmit() {
-        if (StageMetrics.hotCountersEnabled()) {
+        if (hotMetricsEnabled) {
             metrics.recordEmit();
         }
-        if (!INLINE_LOGICAL_EDGE_METRICS) {
+        if (!inlineLogicalEdgeMetricsEnabled) {
             return;
         }
         final EdgeMetrics ingressMetrics = inlineIngressMetrics;
@@ -229,9 +227,10 @@ final class SourceEmitter<T> implements Emitter<T> {
 
     private long enterInline() {
         final int depth = inlineDepth;
-        inlineDepth = depth + 1;
         if (depth == 0) {
-            INLINE_ACTIVE.setOpaque(this, true);
+            INLINE_DEPTH.setOpaque(this, 1);
+        } else {
+            inlineDepth = depth + 1;
         }
         try {
             ensureOpenAndRunning();
@@ -243,17 +242,21 @@ final class SourceEmitter<T> implements Emitter<T> {
     }
 
     private void exitInline(final long depth) {
-        inlineDepth = (int) depth;
         if (depth == 0L) {
-            INLINE_ACTIVE.setOpaque(this, false);
+            INLINE_DEPTH.setOpaque(this, 0);
+        } else {
+            inlineDepth = (int) depth;
         }
     }
 
     private boolean trackInlineDepth() {
-        return INLINE_DEPTH_TRACKING_ENABLED || inlineLifecycle != null;
+        return inlineOutput != null || inlineLifecycle != null;
     }
 
-    private void notifyInlineExit() {
+    private void notifyInlineExit(final long depth) {
+        if (depth != 0L || !closed) {
+            return;
+        }
         final InlineLifecycleParticipant lifecycle = inlineLifecycle;
         if (lifecycle != null) {
             lifecycle.afterInlineExit();
@@ -286,14 +289,14 @@ final class SourceEmitter<T> implements Emitter<T> {
 
     /**
      * Counts producer-thread inline emits that have been admitted but have not completed.
-     * The release/acquire pair with {@link RuntimeCoordinator#hasInFlightWork()} keeps
-     * quiesce and graph termination from observing the inline path as idle too early.
+     * Opaque access is enough here because quiesce and termination only need to see
+     * whether producer-thread inline execution is active; no data is guarded by this flag.
      */
     long pendingInline() {
         if (!trackInlineDepth()) {
             return 0L;
         }
-        return (boolean) INLINE_ACTIVE.getOpaque(this) ? 1L : 0L;
+        return (int) INLINE_DEPTH.getOpaque(this) > 0 ? 1L : 0L;
     }
 
     private static GraphRuntimeException publicEmitFailure(final String stageName, final Throwable cause) {

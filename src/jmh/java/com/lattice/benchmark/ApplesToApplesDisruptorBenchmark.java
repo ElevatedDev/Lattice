@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
@@ -335,28 +336,20 @@ public class ApplesToApplesDisruptorBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-            System.setProperty("lattice.fusion.enabled", "true");
-            System.setProperty("lattice.fusion.inlineSource", "true");
-            try {
-                graph = StaticGraph.builder("aa-lattice-manually-fused-reference")
-                    .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
-                    .stage(
-                        "tripleIncrement",
-                        Signal.class,
-                        Signal.class,
-                        ApplesToApplesDisruptorBenchmark::tripleIncrement,
-                        STAGE
-                    )
-                    .sink("egress", Signal.class, signal -> consumed++, STAGE)
-                    .edge("ingress", "tripleIncrement", SPSC_FUSIBLE)
-                    .edge("tripleIncrement", "egress", SPSC_FUSIBLE)
-                    .build();
-            } finally {
-                restoreFusion(previousFusion);
-                restoreInlineFusion(previousInline);
-            }
+            graph = StaticGraph.builder("aa-lattice-manually-fused-reference")
+                .fusion(FusionSpec.defaults().inlineSources(true))
+                .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                .stage(
+                    "tripleIncrement",
+                    Signal.class,
+                    Signal.class,
+                    ApplesToApplesDisruptorBenchmark::tripleIncrement,
+                    STAGE
+                )
+                .sink("egress", Signal.class, signal -> consumed++, STAGE)
+                .edge("ingress", "tripleIncrement", SPSC_FUSIBLE)
+                .edge("tripleIncrement", "egress", SPSC_FUSIBLE)
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Signal.class);
         }
@@ -377,28 +370,18 @@ public class ApplesToApplesDisruptorBenchmark {
         abstract void setup();
 
         void setup(final boolean fused) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-            setFusion(fused);
-            if (fused) {
-                System.setProperty("lattice.fusion.inlineSource", "true");
-            }
-            try {
-                graph = StaticGraph.builder("aa-lattice-pipeline-" + (fused ? "fused" : "physical"))
-                    .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
-                    .stage("normalize", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
-                    .stage("risk", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
-                    .stage("validate", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
-                    .sink("egress", Signal.class, signal -> consumed++, STAGE)
-                    .edge("ingress", "normalize", SPSC_FUSIBLE)
-                    .edge("normalize", "risk", SPSC_FUSIBLE)
-                    .edge("risk", "validate", SPSC_FUSIBLE)
-                    .edge("validate", "egress", SPSC_FUSIBLE)
-                    .build();
-            } finally {
-                restoreFusion(previousFusion);
-                restoreInlineFusion(previousInline);
-            }
+            graph = StaticGraph.builder("aa-lattice-pipeline-" + (fused ? "fused" : "physical"))
+                .fusion(fused ? FusionSpec.defaults().inlineSources(true) : FusionSpec.disabled())
+                .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                .stage("normalize", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .stage("risk", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .stage("validate", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .sink("egress", Signal.class, signal -> consumed++, STAGE)
+                .edge("ingress", "normalize", SPSC_FUSIBLE)
+                .edge("normalize", "risk", SPSC_FUSIBLE)
+                .edge("risk", "validate", SPSC_FUSIBLE)
+                .edge("validate", "egress", SPSC_FUSIBLE)
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Signal.class);
         }
@@ -726,27 +709,4 @@ public class ApplesToApplesDisruptorBenchmark {
         };
     }
 
-    private static void setFusion(final boolean fused) {
-        if (fused) {
-            System.setProperty("lattice.fusion.enabled", "true");
-        } else {
-            System.setProperty("lattice.fusion.enabled", "false");
-        }
-    }
-
-    private static void restoreFusion(final String previousFusion) {
-        if (previousFusion == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previousFusion);
-        }
-    }
-
-    private static void restoreInlineFusion(final String previousInline) {
-        if (previousInline == null) {
-            System.clearProperty("lattice.fusion.inlineSource");
-        } else {
-            System.setProperty("lattice.fusion.inlineSource", previousInline);
-        }
-    }
 }

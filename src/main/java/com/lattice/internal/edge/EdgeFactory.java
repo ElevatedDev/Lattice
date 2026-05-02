@@ -15,7 +15,7 @@ public final class EdgeFactory {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics
     ) {
-        return create(definition, metrics, graphMetrics, definition.sourceIngress());
+        return create(definition, metrics, graphMetrics, definition.sourceIngress(), false);
     }
 
     public static MessageEdge create(
@@ -23,6 +23,16 @@ public final class EdgeFactory {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics,
         final boolean sourceIngressCloseGuard
+    ) {
+        return create(definition, metrics, graphMetrics, sourceIngressCloseGuard, false);
+    }
+
+    public static MessageEdge create(
+        final EdgeDefinition definition,
+        final EdgeMetrics metrics,
+        final GraphMetrics graphMetrics,
+        final boolean sourceIngressCloseGuard,
+        final boolean workerFirstTouch
     ) {
         final MessageEdge edge;
         if (definition.spec().kind() == EdgeSpec.EdgeKind.SPSC_RING) {
@@ -47,14 +57,10 @@ public final class EdgeFactory {
                 plainClaim(definition.spec())
             );
         }
-        if (!firstTouchEnabled()) {
+        if (!workerFirstTouch) {
             edge.firstTouch("graph-builder");
         }
         return edge;
-    }
-
-    private static boolean firstTouchEnabled() {
-        return Boolean.parseBoolean(System.getProperty("lattice.firstTouch.enabled", "true"));
     }
 
     private static boolean plainClaim(final EdgeSpec spec) {

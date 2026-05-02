@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.routing.BroadcastSpec;
@@ -196,29 +197,21 @@ public class EndToEndPathBenchmark {
         abstract void setup();
 
         void setup(final boolean fusionEnabled, final boolean inlineSourceFusion, final String graphName) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            final String previousInline = System.getProperty("lattice.fusion.inlineSource");
-            setBooleanProperty("lattice.fusion.enabled", fusionEnabled);
-            setBooleanProperty("lattice.fusion.inlineSource", inlineSourceFusion);
-            try {
-                graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
-                    .stage("parse", Order.class, Order.class, EndToEndPathBenchmark::parse, STAGE)
-                    .stage("enrich", Order.class, Order.class, EndToEndPathBenchmark::enrich, STAGE)
-                    .stage("risk", Order.class, Order.class, EndToEndPathBenchmark::risk, STAGE)
-                    .sink("commit", Order.class, order -> {
-                        serialize(order);
-                        completedSequence.lazySet(order.sequence);
-                    }, STAGE)
-                    .edge("ingress", "parse", SPSC)
-                    .edge("parse", "enrich", SPSC)
-                    .edge("enrich", "risk", SPSC)
-                    .edge("risk", "commit", SPSC)
-                    .build();
-            } finally {
-                restoreProperty("lattice.fusion.enabled", previousFusion);
-                restoreProperty("lattice.fusion.inlineSource", previousInline);
-            }
+            graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults().inlineSources(inlineSourceFusion) : FusionSpec.disabled())
+                .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
+                .stage("parse", Order.class, Order.class, EndToEndPathBenchmark::parse, STAGE)
+                .stage("enrich", Order.class, Order.class, EndToEndPathBenchmark::enrich, STAGE)
+                .stage("risk", Order.class, Order.class, EndToEndPathBenchmark::risk, STAGE)
+                .sink("commit", Order.class, order -> {
+                    serialize(order);
+                    completedSequence.lazySet(order.sequence);
+                }, STAGE)
+                .edge("ingress", "parse", SPSC)
+                .edge("parse", "enrich", SPSC)
+                .edge("enrich", "risk", SPSC)
+                .edge("risk", "commit", SPSC)
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Order.class);
         }
@@ -700,18 +693,6 @@ public class EndToEndPathBenchmark {
             thread.setDaemon(true);
             return thread;
         };
-    }
-
-    private static void setBooleanProperty(final String property, final boolean value) {
-        System.setProperty(property, Boolean.toString(value));
-    }
-
-    private static void restoreProperty(final String property, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(property);
-        } else {
-            System.setProperty(property, previousValue);
-        }
     }
 
     private static long[] sideTable() {

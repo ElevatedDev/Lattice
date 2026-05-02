@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.placement.MemoryMode;
 import com.lattice.placement.PinPolicy;
@@ -29,8 +30,6 @@ import org.openjdk.jmh.annotations.TearDown;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class PlacementBenchmark {
 
-    private static final String FIRST_TOUCH_PROPERTY = "lattice.firstTouch.enabled";
-    private static final String STRICT_PLACEMENT_PROPERTY = "lattice.placement.strict";
     private static final String CPU_A_PROPERTY = "lattice.bench.cpuA";
     private static final String CPU_B_PROPERTY = "lattice.bench.cpuB";
     private static final String CPU_CROSS_PROPERTY = "lattice.bench.cpuCross";
@@ -89,21 +88,16 @@ public class PlacementBenchmark {
 
         StaticGraph graph;
         Emitter<Long> emitter;
-        String previousFirstTouch;
-        String previousPlacementStrict;
 
         @Setup(Level.Trial)
         public void setup() {
             validateSpscPlacement(placement, pinning);
-            previousFirstTouch = System.getProperty(FIRST_TOUCH_PROPERTY);
-            previousPlacementStrict = System.getProperty(STRICT_PLACEMENT_PROPERTY);
-            System.setProperty(FIRST_TOUCH_PROPERTY, Boolean.toString(firstTouchPlacement));
-            if (pinning) {
-                System.setProperty(STRICT_PLACEMENT_PROPERTY, Boolean.TRUE.toString());
-            }
 
             try {
                 graph = StaticGraph.builder("placement-spsc")
+                    .placement(GraphPlacementSpec.off()
+                        .strict(pinning)
+                        .firstTouch(firstTouchPlacement))
                     .source("ingress", Long.class)
                     .stage("stage", Long.class, Long.class, (value, out, ctx) -> out.push(value + 1L),
                         StageSpec.singleThreaded().pin(stagePolicy(placement, pinning)))
@@ -118,8 +112,6 @@ public class PlacementBenchmark {
                 emitter = graph.emitter("ingress", Long.class);
             } catch (final RuntimeException | Error ex) {
                 cleanupFailedSetup(graph, emitter, ex);
-                restoreSystemProperty(FIRST_TOUCH_PROPERTY, previousFirstTouch);
-                restoreSystemProperty(STRICT_PLACEMENT_PROPERTY, previousPlacementStrict);
                 throw ex;
             }
         }
@@ -134,8 +126,6 @@ public class PlacementBenchmark {
                     graph.stop(Duration.ofSeconds(10));
                 }
             } finally {
-                restoreSystemProperty(FIRST_TOUCH_PROPERTY, previousFirstTouch);
-                restoreSystemProperty(STRICT_PLACEMENT_PROPERTY, previousPlacementStrict);
                 final String benchmarkName = "spscPlacement-" + placement + "-pinning-" + pinning
                     + "-firstTouch-" + firstTouchPlacement + "-" + memory;
                 enqueueLatency.print(benchmarkName, "enqueue");
@@ -164,21 +154,16 @@ public class PlacementBenchmark {
 
         StaticGraph graph;
         Emitter<Long> emitter;
-        String previousFirstTouch;
-        String previousPlacementStrict;
 
         @Setup(Level.Trial)
         public void setup() {
             validateMpscPlacement(placement, pinning);
-            previousFirstTouch = System.getProperty(FIRST_TOUCH_PROPERTY);
-            previousPlacementStrict = System.getProperty(STRICT_PLACEMENT_PROPERTY);
-            System.setProperty(FIRST_TOUCH_PROPERTY, Boolean.toString(firstTouchPlacement));
-            if (pinning) {
-                System.setProperty(STRICT_PLACEMENT_PROPERTY, Boolean.TRUE.toString());
-            }
 
             try {
                 graph = StaticGraph.builder("placement-mpsc")
+                    .placement(GraphPlacementSpec.off()
+                        .strict(pinning)
+                        .firstTouch(firstTouchPlacement))
                     .source("ingress", Long.class)
                     .sink("egress", Long.class, emittedAtNanos -> {
                         consumed.incrementAndGet();
@@ -190,8 +175,6 @@ public class PlacementBenchmark {
                 emitter = graph.emitter("ingress", Long.class);
             } catch (final RuntimeException | Error ex) {
                 cleanupFailedSetup(graph, emitter, ex);
-                restoreSystemProperty(FIRST_TOUCH_PROPERTY, previousFirstTouch);
-                restoreSystemProperty(STRICT_PLACEMENT_PROPERTY, previousPlacementStrict);
                 throw ex;
             }
         }
@@ -206,8 +189,6 @@ public class PlacementBenchmark {
                     graph.stop(Duration.ofSeconds(10));
                 }
             } finally {
-                restoreSystemProperty(FIRST_TOUCH_PROPERTY, previousFirstTouch);
-                restoreSystemProperty(STRICT_PLACEMENT_PROPERTY, previousPlacementStrict);
                 final String benchmarkName = "mpscPlacement-" + placement + "-pinning-" + pinning
                     + "-firstTouch-" + firstTouchPlacement + "-" + memory;
                 enqueueLatency.print(benchmarkName, "enqueue");
@@ -427,14 +408,6 @@ public class PlacementBenchmark {
 
     private static int cpu(final String property, final int fallback) {
         return Integer.getInteger(property, fallback);
-    }
-
-    private static void restoreSystemProperty(final String property, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(property);
-        } else {
-            System.setProperty(property, previousValue);
-        }
     }
 
     private static void cleanupFailedSetup(final StaticGraph graph, final Emitter<?> emitter, final Throwable failure) {

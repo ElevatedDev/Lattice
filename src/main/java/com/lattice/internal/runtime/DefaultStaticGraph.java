@@ -5,6 +5,7 @@ import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.EdgeFactory;
@@ -13,6 +14,7 @@ import com.lattice.internal.graph.CompiledGraph;
 import com.lattice.internal.graph.EdgeDefinition;
 import com.lattice.internal.graph.NodeDefinition;
 import com.lattice.internal.jfr.JfrEvents;
+import com.lattice.internal.placement.PlacementBootstrap;
 import com.lattice.internal.placement.TopologyAwarePlacement;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.GraphMetrics;
@@ -61,9 +63,10 @@ public final class DefaultStaticGraph implements StaticGraph {
     public DefaultStaticGraph(final CompiledGraph compiled) {
         this.compiled = compiled;
         this.runtimePlan = PhysicalPlanner.plan(compiled);
+        final MetricsSpec metricsSpec = compiled.runtimeConfig().metrics();
         final Map<String, StageMetrics> stageMetrics = new LinkedHashMap<>();
         for (final GraphPlan.Node node : compiled.plan().nodes()) {
-            stageMetrics.put(node.name(), new StageMetrics(node.name()));
+            stageMetrics.put(node.name(), new StageMetrics(node.name(), metricsSpec));
         }
 
         final Map<String, EdgeMetrics> edgeMetrics = new LinkedHashMap<>();
@@ -72,19 +75,26 @@ public final class DefaultStaticGraph implements StaticGraph {
                     edge.from(),
                     edge.to(),
                     runtimePlan.edgeDecision(edge.key()).allocationOwner(),
-                    edge.spec().memoryMode().kind()
+                    edge.spec().memoryMode().kind(),
+                    metricsSpec
             ));
         }
 
         this.topologyAwarePins = TopologyAwarePlacement.plan(compiled, runtimePlan.workerOrder());
-        this.metrics = new GraphMetrics(compiled.plan().name(), stageMetrics, edgeMetrics);
+        this.metrics = new GraphMetrics(compiled.plan().name(), stageMetrics, edgeMetrics, metricsSpec);
         this.termination = new CountDownLatch(runtimePlan.lifecycleParticipantCount());
         this.coordinator = new RuntimeCoordinator(
             compiled.plan().name(),
             state,
             failure,
             metrics,
-            runtimePlan.lifecycleParticipantCount()
+            runtimePlan.lifecycleParticipantCount(),
+            compiled.runtimeConfig().jfrEnabled(),
+            compiled.runtimeConfig().fusedLogicalEdgeCountersEnabled(),
+            compiled.runtimeConfig().fusion().validateTypes(),
+            compiled.runtimeConfig().placement().strict(),
+            compiled.runtimeConfig().placement().firstTouch(),
+            PlacementBootstrap.bootstrapDelayMillisForTests()
         ) {
             @Override
             void workerStopped() {
@@ -191,7 +201,9 @@ public final class DefaultStaticGraph implements StaticGraph {
         for (int i = 0; i < sources.length; i++) {
             sources[i].markStarted();
         }
-        JfrEvents.graphStarted(compiled.plan().name());
+        if (coordinator.jfrEnabled()) {
+            JfrEvents.graphStarted(compiled.plan().name());
+        }
         coordinator.releaseWorkers();
     }
 
@@ -377,7 +389,8 @@ public final class DefaultStaticGraph implements StaticGraph {
                     definition,
                     metricsForEdge,
                     metrics,
-                    decision == null ? definition.sourceIngress() : decision.sourceIngressCloseGuard()
+                    decision == null ? definition.sourceIngress() : decision.sourceIngressCloseGuard(),
+                    compiled.runtimeConfig().placement().firstTouch()
             ));
         }
         edgeArray = edgesByKey.values().toArray(MessageEdge[]::new);

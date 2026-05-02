@@ -1,9 +1,11 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.internal.edge.MpscRingEdge;
@@ -48,22 +50,22 @@ class OpenSourceSanityTest {
 
     @Test
     void publicApiRejectsInvalidBuilderAndSpecInputs() {
-        assertThrows(NullPointerException.class, () -> StaticGraph.builder(null));
-        assertThrows(IllegalArgumentException.class, () -> StaticGraph.builder(" "));
+        assertThrows(NullPointerException.class, () -> graph(null));
+        assertThrows(IllegalArgumentException.class, () -> graph(" "));
         assertThrows(IllegalArgumentException.class, () -> EdgeSpec.mpscRing(0));
         assertThrows(NullPointerException.class, () -> EdgeSpec.mpscRing(8).overflow(null));
         assertThrows(IllegalArgumentException.class, () -> PreallocationSpec.fixedPool(new Reusable[0]));
         assertThrows(IllegalArgumentException.class, () -> JoinSpec.allOf(group -> 1).capacity(0));
 
-        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("missing-source")
+        assertThrows(GraphBuildException.class, () -> graph("missing-source")
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .build());
-        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("unknown-edge-target")
+        assertThrows(GraphBuildException.class, () -> graph("unknown-edge-target")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "missing", EdgeSpec.mpscRing(8))
             .build());
-        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("duplicate-edge")
+        assertThrows(GraphBuildException.class, () -> graph("duplicate-edge")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -77,7 +79,7 @@ class OpenSourceSanityTest {
         for (int i = 0; i < pool.length; i++) {
             pool[i] = new Reusable(i);
         }
-        final StaticGraph graph = StaticGraph.builder("fixed-preallocated")
+        final StaticGraph graph = graph("fixed-preallocated")
             .preallocatedSource("ingress", Reusable.class, PreallocationSpec.fixedPool(pool))
             .sink("egress", Reusable.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -129,7 +131,7 @@ class OpenSourceSanityTest {
             .stampLong(item -> ((JoinItem) item).stamp());
         assertTrue(spec.longStamp());
 
-        final StaticGraph graph = StaticGraph.builder("long-stamp-join")
+        final StaticGraph graph = graph("long-stamp-join")
             .source("left", JoinItem.class)
             .source("right", JoinItem.class)
             .join("join", String.class, spec, StageSpec.singleThreaded())
@@ -157,7 +159,7 @@ class OpenSourceSanityTest {
     @Test
     void missingBranchDiscardPolicyDropsIncompleteGroupsAndRecordsThem() throws Exception {
         final List<String> joined = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("join-discard-missing")
+        final StaticGraph graph = graph("join-discard-missing")
             .stampedSource("left", String.class)
             .stampedSource("right", String.class)
             .join("join", String.class,
@@ -182,9 +184,10 @@ class OpenSourceSanityTest {
 
     @Test
     void metricsCountersFollowConfiguredHotCounterContract() {
-        final StageMetrics stage = new StageMetrics("stage");
-        final EdgeMetrics edge = new EdgeMetrics("from", "to");
-        final GraphMetrics graph = graphMetrics("metrics", stage, edge);
+        final MetricsSpec metricsSpec = MetricsSpec.off().hotCounters(true);
+        final StageMetrics stage = new StageMetrics("stage", metricsSpec);
+        final EdgeMetrics edge = new EdgeMetrics("from", "to", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS, metricsSpec);
+        final GraphMetrics graph = graphMetrics("metrics", stage, edge, metricsSpec);
 
         stage.recordConsume();
         stage.recordBatch(3, 10);
@@ -193,13 +196,12 @@ class OpenSourceSanityTest {
         graph.recordEmit();
         graph.recordConsume();
 
-        final long expectedHotCounterValue = StageMetrics.hotCountersEnabled() ? 1 : 0;
-        assertEquals(expectedHotCounterValue, stage.consumedCount());
-        assertEquals(StageMetrics.hotCountersEnabled() ? 3 : 0, stage.processedMessages());
-        assertEquals(expectedHotCounterValue, edge.emittedCount());
-        assertEquals(expectedHotCounterValue, edge.consumedCount());
-        assertEquals(expectedHotCounterValue, graph.emittedCount());
-        assertEquals(expectedHotCounterValue, graph.consumedCount());
+        assertEquals(1, stage.consumedCount());
+        assertEquals(3, stage.processedMessages());
+        assertEquals(1, edge.emittedCount());
+        assertEquals(1, edge.consumedCount());
+        assertEquals(1, graph.emittedCount());
+        assertEquals(1, graph.consumedCount());
 
         stage.recordException();
         edge.recordFailedOffer();
@@ -211,7 +213,7 @@ class OpenSourceSanityTest {
 
     @Test
     void lifecycleStopBeforeStartPreventsLaterEmissionOrRestart() {
-        final StaticGraph graph = StaticGraph.builder("lifecycle-before-start")
+        final StaticGraph graph = graph("lifecycle-before-start")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -229,7 +231,7 @@ class OpenSourceSanityTest {
 
     @Test
     void abortBeforeStartIsStoppedAndIdempotent() {
-        final StaticGraph graph = StaticGraph.builder("abort-before-start")
+        final StaticGraph graph = graph("abort-before-start")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -350,11 +352,10 @@ class OpenSourceSanityTest {
     }
 
     private static PipelineResult runPipelineWithFusion(final boolean enabled) throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", Boolean.toString(enabled));
-        try {
-            final List<Integer> outputs = Collections.synchronizedList(new ArrayList<>());
-            final StaticGraph graph = StaticGraph.builder(enabled ? "fused-equivalence" : "physical-equivalence")
+        final List<Integer> outputs = Collections.synchronizedList(new ArrayList<>());
+        final StaticGraph graph = graph(enabled ? "fused-equivalence" : "physical-equivalence")
+                .fusion(enabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .metrics(MetricsSpec.off().hotCounters(true).fusedLogicalEdgeCounters(true))
                 .source("ingress", Integer.class)
                 .stage("normalize", Integer.class, Integer.class, (value, out, ctx) -> out.push(value + 1),
                     StageSpec.singleThreaded())
@@ -369,28 +370,21 @@ class OpenSourceSanityTest {
                 .edge("validate", "egress", EdgeSpec.spscRing(64))
                 .build();
 
-            graph.start();
-            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
-            for (int i = 0; i < 20; i++) {
-                ingress.emit(i);
-            }
-            ingress.close();
-
-            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
-            assertEquals(GraphState.STOPPED, graph.state());
-            return new PipelineResult(
-                List.copyOf(outputs),
-                graph.metrics().stage("normalize").consumedCount(),
-                graph.metrics().stage("validate").consumedCount(),
-                graph.metrics().stage("egress").consumedCount()
-            );
-        } finally {
-            if (previous == null) {
-                System.clearProperty("lattice.fusion.enabled");
-            } else {
-                System.setProperty("lattice.fusion.enabled", previous);
-            }
+        graph.start();
+        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+        for (int i = 0; i < 20; i++) {
+            ingress.emit(i);
         }
+        ingress.close();
+
+        assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+        assertEquals(GraphState.STOPPED, graph.state());
+        return new PipelineResult(
+            List.copyOf(outputs),
+            graph.metrics().stage("normalize").consumedCount(),
+            graph.metrics().stage("validate").consumedCount(),
+            graph.metrics().stage("egress").consumedCount()
+        );
     }
 
     private static String formatLongStampJoin(final JoinGroup group) {
@@ -400,19 +394,27 @@ class OpenSourceSanityTest {
     }
 
     private static EdgeMetrics edgeMetrics() {
-        return new EdgeMetrics("source", "sink");
+        return new EdgeMetrics("source", "sink", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS,
+            MetricsSpec.off().hotCounters(true));
+    }
+
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name)
+            .metrics(MetricsSpec.off().hotCounters(true).fusedLogicalEdgeCounters(true));
     }
 
     private static GraphMetrics graphMetrics() {
-        final StageMetrics source = new StageMetrics("source");
-        final StageMetrics sink = new StageMetrics("sink");
+        final MetricsSpec metricsSpec = MetricsSpec.off().hotCounters(true);
+        final StageMetrics source = new StageMetrics("source", metricsSpec);
+        final StageMetrics sink = new StageMetrics("sink", metricsSpec);
         final Map<String, StageMetrics> stages = new LinkedHashMap<>();
         stages.put(source.name(), source);
         stages.put(sink.name(), sink);
-        final EdgeMetrics edge = new EdgeMetrics("source", "sink");
+        final EdgeMetrics edge = new EdgeMetrics("source", "sink", "", MemoryMode.MemoryKind.ON_HEAP_SLOTS,
+            metricsSpec);
         final Map<String, EdgeMetrics> edges = new LinkedHashMap<>();
         edges.put(edge.from() + "->" + edge.to(), edge);
-        return new GraphMetrics("edge-test", stages, edges);
+        return new GraphMetrics("edge-test", stages, edges, metricsSpec);
     }
 
     private static GraphMetrics graphMetrics(
@@ -420,11 +422,20 @@ class OpenSourceSanityTest {
         final StageMetrics stage,
         final EdgeMetrics edge
     ) {
+        return graphMetrics(name, stage, edge, MetricsSpec.off());
+    }
+
+    private static GraphMetrics graphMetrics(
+        final String name,
+        final StageMetrics stage,
+        final EdgeMetrics edge,
+        final MetricsSpec metricsSpec
+    ) {
         final Map<String, StageMetrics> stages = new LinkedHashMap<>();
         stages.put(stage.name(), stage);
         final Map<String, EdgeMetrics> edges = new LinkedHashMap<>();
         edges.put(edge.from() + "->" + edge.to(), edge);
-        return new GraphMetrics(name, stages, edges);
+        return new GraphMetrics(name, stages, edges, metricsSpec);
     }
 
     private record Reusable(int id) {

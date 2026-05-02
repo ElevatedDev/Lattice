@@ -1,9 +1,11 @@
 package com.lattice;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.GraphBuildException;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
@@ -32,11 +34,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 class OpenSourceValidationHardeningTest {
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off()
+        .hotCounters(true)
+        .fusedLogicalEdgeCounters(true);
+
 
     @Test
     void closeDrainsSourcesAndGraphCannotBeRestarted() throws Exception {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("lifecycle-close")
+        final StaticGraph graph = graph("lifecycle-close")
             .source("ingress", Integer.class)
             .sink("egress", Integer.class, consumed::add, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(16))
@@ -62,7 +68,7 @@ class OpenSourceValidationHardeningTest {
     void keyedDispatchTreatsNullKeyAsStableBranchZero() throws Exception {
         final List<Integer> left = Collections.synchronizedList(new ArrayList<>());
         final List<Integer> right = Collections.synchronizedList(new ArrayList<>());
-        final StaticGraph graph = StaticGraph.builder("dispatch-null-key")
+        final StaticGraph graph = graph("dispatch-null-key")
             .source("ingress", Integer.class)
             .dispatch("route", Integer.class, DispatchSpec.keyed(ignored -> null), StageSpec.singleThreaded())
             .sink("left", Integer.class, left::add, StageSpec.singleThreaded())
@@ -99,7 +105,7 @@ class OpenSourceValidationHardeningTest {
         final PreallocationSpec<ReusableMessage> spec = PreallocationSpec.fixedPool(pool);
         pool[0] = replacement;
 
-        final StaticGraph graph = StaticGraph.builder("preallocated-fixed-pool")
+        final StaticGraph graph = graph("preallocated-fixed-pool")
             .preallocatedSource("ingress", ReusableMessage.class, spec)
             .sink("egress", ReusableMessage.class, ignored -> { }, StageSpec.singleThreaded())
             .edge("ingress", "egress", EdgeSpec.mpscRing(8))
@@ -120,7 +126,7 @@ class OpenSourceValidationHardeningTest {
 
     @Test
     void preallocatedFactoryPoolRejectsNullItemsWithBuildException() {
-        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("preallocated-null-pool")
+        assertThrows(GraphBuildException.class, () -> graph("preallocated-null-pool")
             .preallocatedSource("ingress", ReusableMessage.class,
                 PreallocationSpec.<ReusableMessage>pool(ignored -> null).poolSize(128))
             .sink("egress", ReusableMessage.class, ignored -> { }, StageSpec.singleThreaded())
@@ -130,12 +136,10 @@ class OpenSourceValidationHardeningTest {
 
     @Test
     void fusionDoesNotElideRoutingFanoutOrSinkWorkers() throws Exception {
-        final String previous = System.getProperty("lattice.fusion.enabled");
-        System.setProperty("lattice.fusion.enabled", "true");
-        try {
-            final List<String> leftThreads = new CopyOnWriteArrayList<>();
-            final List<String> rightThreads = new CopyOnWriteArrayList<>();
-            final StaticGraph graph = StaticGraph.builder("fusion-fanout-boundary")
+        final List<String> leftThreads = new CopyOnWriteArrayList<>();
+        final List<String> rightThreads = new CopyOnWriteArrayList<>();
+        final StaticGraph graph = graph("fusion-fanout-boundary")
+                .fusion(FusionSpec.defaults())
                 .source("ingress", Integer.class)
                 .dispatch("route", Integer.class, DispatchSpec.roundRobin(), StageSpec.singleThreaded())
                 .sink("left", Integer.class, ignored -> leftThreads.add(Thread.currentThread().getName()),
@@ -155,16 +159,13 @@ class OpenSourceValidationHardeningTest {
             assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
             assertTrue(leftThreads.stream().allMatch(name -> name.endsWith("-left")));
             assertTrue(rightThreads.stream().allMatch(name -> name.endsWith("-right")));
-            assertEquals(List.of("route", "left", "right"), graph.plan().workerOrder());
-        } finally {
-            restoreFusionProperty(previous);
-        }
+        assertEquals(List.of("route", "left", "right"), graph.plan().workerOrder());
     }
 
     @Test
     void placementFallbackRecordsUnavailableStatusWhenNativeIsAbsent() throws Exception {
         assumeFalse(NativeTopology.isLoaded(), "native topology library is available in this environment");
-        final StaticGraph graph = StaticGraph.builder("placement-fallback-diagnostics")
+        final StaticGraph graph = graph("placement-fallback-diagnostics")
             .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
             .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded().pin(PinPolicy.cpu(0)))
             .edge("ingress", "egress", EdgeSpec.spscRing(8))
@@ -218,14 +219,10 @@ class OpenSourceValidationHardeningTest {
         assertTrue(eventNames.contains("com.lattice.NumaMismatch"));
     }
 
-    private static void restoreFusionProperty(final String previous) {
-        if (previous == null) {
-            System.clearProperty("lattice.fusion.enabled");
-        } else {
-            System.setProperty("lattice.fusion.enabled", previous);
-        }
+    static final class ReusableMessage {
     }
 
-    static final class ReusableMessage {
+    private static StaticGraph.Builder graph(final String name) {
+        return StaticGraph.builder(name).metrics(TEST_METRICS);
     }
 }

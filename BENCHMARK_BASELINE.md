@@ -27,14 +27,13 @@ Common JVM flags:
 -XX:+AlwaysPreTouch
 -XX:+UnlockDiagnosticVMOptions
 -XX:+UseParallelGC
--Dlattice.fusion.enabled=true
--Dlattice.fusion.inlineSource=true
--Dlattice.metrics.hotCounters=false
--Dlattice.metrics.residence=false
--Dlattice.metrics.stageHistograms=false
--Dlattice.runtime.fusedLogicalEdgeMetrics=false
--Dlattice.runtime.inlineDepthTracking=false
 ```
+
+This 2026-04-29 artifact set predates the per-graph runtime API and used
+process-global flags for fusion and metrics. Current benchmark sources set the
+equivalent behavior per graph with `FusionSpec`, `MetricsSpec`,
+`GraphPlacementSpec`, and `DiagnosticsSpec`; the JVM flags above are now only
+the GC/heap profile.
 
 See [`benchmarks/baseline/env.txt`](benchmarks/baseline/env.txt) for exact
 include patterns and artifact profiles.
@@ -137,7 +136,7 @@ Representative command:
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
   "com.lattice.benchmark.OptimalPathBenchmark.*" \
   -f 3 -wi 5 -i 8 -w 5s -r 5s -bm thrpt -tu s \
-  -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC -Dlattice.fusion.enabled=true -Dlattice.fusion.inlineSource=true -Dlattice.metrics.hotCounters=false -Dlattice.metrics.residence=false -Dlattice.metrics.stageHistograms=false -Dlattice.runtime.fusedLogicalEdgeMetrics=false -Dlattice.runtime.inlineDepthTracking=false" \
+  -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC" \
   -rf json -rff benchmarks/baseline/optimal-path-completed.json
 ```
 

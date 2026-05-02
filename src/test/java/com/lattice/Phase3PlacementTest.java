@@ -3,6 +3,7 @@ package com.lattice;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphState;
+import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
 import com.lattice.metrics.EdgeMetrics;
 import com.lattice.metrics.PlacementStatus;
@@ -21,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase3PlacementTest {
+    private static final MetricsSpec TEST_METRICS = MetricsSpec.off().hotCounters(true);
+
 
     @Test
     void planExposesPlacementAndAllocationOwners() {
@@ -49,6 +52,7 @@ class Phase3PlacementTest {
     void placementFallbackAndFirstTouchRunEndToEnd() throws Exception {
         final List<Integer> consumed = Collections.synchronizedList(new ArrayList<>());
         final StaticGraph graph = StaticGraph.builder("phase3-run")
+            .metrics(TEST_METRICS)
             .source("ingress", Integer.class)
             .stage("double", Integer.class, Integer.class, (value, out, ctx) -> out.push(value * 2),
                 StageSpec.singleThreaded().pin(PinPolicy.inheritCpuset()))

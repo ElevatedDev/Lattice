@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.PreallocationSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
@@ -255,36 +256,27 @@ public class TopologyBenchmark {
         }
 
         void setupGraph(final String graphName, final SourceMode sourceMode, final boolean fusionEnabled) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            if (fusionEnabled) {
-                System.setProperty("lattice.fusion.enabled", "true");
-            } else {
-                System.setProperty("lattice.fusion.enabled", "false");
-            }
-            try {
-                graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class, sourceMode)
-                    .stage(
-                        "validate",
-                        Order.class,
-                        ValidOrder.class,
-                        (order, out, ctx) -> {
-                            if (order.valid()) {
-                                out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
-                            }
-                        },
-                        StageSpec.singleThreaded()
-                    )
-                    .sink("egress", ValidOrder.class, order -> {
-                        consumed.incrementAndGet();
-                        endToEndLatency.recordElapsedSince(order.emittedAtNanos());
-                    }, StageSpec.singleThreaded())
-                    .edge("ingress", "validate", EdgeSpec.mpscRing(RING_SIZE))
-                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
-                    .build();
-            } finally {
-                restoreFusionProperty(previousFusion);
-            }
+            graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .source("ingress", Order.class, sourceMode)
+                .stage(
+                    "validate",
+                    Order.class,
+                    ValidOrder.class,
+                    (order, out, ctx) -> {
+                        if (order.valid()) {
+                            out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
+                        }
+                    },
+                    StageSpec.singleThreaded()
+                )
+                .sink("egress", ValidOrder.class, order -> {
+                    consumed.incrementAndGet();
+                    endToEndLatency.recordElapsedSince(order.emittedAtNanos());
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "validate", EdgeSpec.mpscRing(RING_SIZE))
+                .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Order.class);
         }
@@ -299,14 +291,6 @@ public class TopologyBenchmark {
             graph.stop(Duration.ofSeconds(10));
             enqueueLatency.print(benchmarkName, "enqueue");
             endToEndLatency.print(benchmarkName, "endToEnd");
-        }
-
-        private static void restoreFusionProperty(final String previousFusion) {
-            if (previousFusion == null) {
-                System.clearProperty("lattice.fusion.enabled");
-            } else {
-                System.setProperty("lattice.fusion.enabled", previousFusion);
-            }
         }
     }
 
@@ -371,44 +355,35 @@ public class TopologyBenchmark {
         }
 
         void setupGraph(final String graphName, final SourceMode sourceMode, final boolean fusionEnabled) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            if (fusionEnabled) {
-                System.setProperty("lattice.fusion.enabled", "true");
-            } else {
-                System.setProperty("lattice.fusion.enabled", "false");
-            }
-            try {
-                graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class, sourceMode)
-                    .stage(
-                        "normalize",
-                        Order.class,
-                        Order.class,
-                        (order, out, ctx) -> out.push(order),
-                        StageSpec.singleThreaded()
-                    )
-                    .stage(
-                        "validate",
-                        Order.class,
-                        ValidOrder.class,
-                        (order, out, ctx) -> {
-                            if (order.valid()) {
-                                out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
-                            }
-                        },
-                        StageSpec.singleThreaded()
-                    )
-                    .sink("egress", ValidOrder.class, order -> {
-                        consumed.incrementAndGet();
-                        endToEndLatency.recordElapsedSince(order.emittedAtNanos());
-                    }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
-                    .edge("normalize", "validate", EdgeSpec.spscRing(RING_SIZE))
-                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
-                    .build();
-            } finally {
-                restoreFusionProperty(previousFusion);
-            }
+            graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .source("ingress", Order.class, sourceMode)
+                .stage(
+                    "normalize",
+                    Order.class,
+                    Order.class,
+                    (order, out, ctx) -> out.push(order),
+                    StageSpec.singleThreaded()
+                )
+                .stage(
+                    "validate",
+                    Order.class,
+                    ValidOrder.class,
+                    (order, out, ctx) -> {
+                        if (order.valid()) {
+                            out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
+                        }
+                    },
+                    StageSpec.singleThreaded()
+                )
+                .sink("egress", ValidOrder.class, order -> {
+                    consumed.incrementAndGet();
+                    endToEndLatency.recordElapsedSince(order.emittedAtNanos());
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                .edge("normalize", "validate", EdgeSpec.spscRing(RING_SIZE))
+                .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Order.class);
         }
@@ -423,14 +398,6 @@ public class TopologyBenchmark {
             graph.stop(Duration.ofSeconds(10));
             enqueueLatency.print(benchmarkName, "enqueue");
             endToEndLatency.print(benchmarkName, "endToEnd");
-        }
-
-        private static void restoreFusionProperty(final String previousFusion) {
-            if (previousFusion == null) {
-                System.clearProperty("lattice.fusion.enabled");
-            } else {
-                System.setProperty("lattice.fusion.enabled", previousFusion);
-            }
         }
     }
 
@@ -480,52 +447,43 @@ public class TopologyBenchmark {
         }
 
         void setupGraph(final String graphName, final SourceMode sourceMode, final boolean fusionEnabled) {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            if (fusionEnabled) {
-                System.setProperty("lattice.fusion.enabled", "true");
-            } else {
-                System.setProperty("lattice.fusion.enabled", "false");
-            }
-            try {
-                graph = StaticGraph.builder(graphName)
-                    .source("ingress", Order.class, sourceMode)
-                    .stage(
-                        "normalize",
-                        Order.class,
-                        Order.class,
-                        (order, out, ctx) -> out.push(order),
-                        StageSpec.singleThreaded()
-                    )
-                    .stage(
-                        "risk",
-                        Order.class,
-                        Order.class,
-                        (order, out, ctx) -> out.push(order),
-                        StageSpec.singleThreaded()
-                    )
-                    .stage(
-                        "validate",
-                        Order.class,
-                        ValidOrder.class,
-                        (order, out, ctx) -> {
-                            if (order.valid()) {
-                                out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
-                            }
-                        },
-                        StageSpec.singleThreaded()
-                    )
-                    .sink("egress", ValidOrder.class, order -> {
-                        consumed.incrementAndGet();
-                        endToEndLatency.recordElapsedSince(order.emittedAtNanos());
-                    }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
-                    .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
-                    .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
-                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
-                    .build();
-            } finally {
-                restoreFusionProperty(previousFusion);
-            }
+            graph = StaticGraph.builder(graphName)
+                .fusion(fusionEnabled ? FusionSpec.defaults() : FusionSpec.disabled())
+                .source("ingress", Order.class, sourceMode)
+                .stage(
+                    "normalize",
+                    Order.class,
+                    Order.class,
+                    (order, out, ctx) -> out.push(order),
+                    StageSpec.singleThreaded()
+                )
+                .stage(
+                    "risk",
+                    Order.class,
+                    Order.class,
+                    (order, out, ctx) -> out.push(order),
+                    StageSpec.singleThreaded()
+                )
+                .stage(
+                    "validate",
+                    Order.class,
+                    ValidOrder.class,
+                    (order, out, ctx) -> {
+                        if (order.valid()) {
+                            out.push(new ValidOrder(order.id(), order.emittedAtNanos()));
+                        }
+                    },
+                    StageSpec.singleThreaded()
+                )
+                .sink("egress", ValidOrder.class, order -> {
+                    consumed.incrementAndGet();
+                    endToEndLatency.recordElapsedSince(order.emittedAtNanos());
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
+                .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
+                .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
+                .build();
             graph.start();
             emitter = graph.emitter("ingress", Order.class);
         }
@@ -540,14 +498,6 @@ public class TopologyBenchmark {
             graph.stop(Duration.ofSeconds(10));
             enqueueLatency.print(benchmarkName, "enqueue");
             endToEndLatency.print(benchmarkName, "endToEnd");
-        }
-
-        private static void restoreFusionProperty(final String previousFusion) {
-            if (previousFusion == null) {
-                System.clearProperty("lattice.fusion.enabled");
-            } else {
-                System.setProperty("lattice.fusion.enabled", previousFusion);
-            }
         }
     }
 
@@ -595,56 +545,47 @@ public class TopologyBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            final String previousFusion = System.getProperty("lattice.fusion.enabled");
-            System.setProperty("lattice.fusion.enabled", "true");
-            try {
-                graph = StaticGraph.builder("three-stage-sink-preallocated-fused")
-                    .preallocatedSource(
-                        "ingress",
-                        ReusableOrder.class,
-                        PreallocationSpec.pool(ignored -> new ReusableOrder()).poolSize(POOL_SIZE)
-                    )
-                    .stage(
-                        "normalize",
-                        ReusableOrder.class,
-                        ReusableOrder.class,
-                        (order, out, ctx) -> out.push(order),
-                        StageSpec.singleThreaded()
-                    )
-                    .stage(
-                        "risk",
-                        ReusableOrder.class,
-                        ReusableOrder.class,
-                        (order, out, ctx) -> out.push(order),
-                        StageSpec.singleThreaded()
-                    )
-                    .stage(
-                        "validate",
-                        ReusableOrder.class,
-                        ReusableOrder.class,
-                        (order, out, ctx) -> {
-                            if (order.valid) {
-                                out.push(order);
-                            }
-                        },
-                        StageSpec.singleThreaded()
-                    )
-                    .sink("egress", ReusableOrder.class, order -> {
-                        consumed.incrementAndGet();
-                        endToEndLatency.recordElapsedSince(order.emittedAtNanos);
-                    }, StageSpec.singleThreaded())
-                    .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
-                    .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
-                    .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
-                    .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
-                    .build();
-            } finally {
-                if (previousFusion == null) {
-                    System.clearProperty("lattice.fusion.enabled");
-                } else {
-                    System.setProperty("lattice.fusion.enabled", previousFusion);
-                }
-            }
+            graph = StaticGraph.builder("three-stage-sink-preallocated-fused")
+                .fusion(FusionSpec.defaults())
+                .preallocatedSource(
+                    "ingress",
+                    ReusableOrder.class,
+                    PreallocationSpec.pool(ignored -> new ReusableOrder()).poolSize(POOL_SIZE)
+                )
+                .stage(
+                    "normalize",
+                    ReusableOrder.class,
+                    ReusableOrder.class,
+                    (order, out, ctx) -> out.push(order),
+                    StageSpec.singleThreaded()
+                )
+                .stage(
+                    "risk",
+                    ReusableOrder.class,
+                    ReusableOrder.class,
+                    (order, out, ctx) -> out.push(order),
+                    StageSpec.singleThreaded()
+                )
+                .stage(
+                    "validate",
+                    ReusableOrder.class,
+                    ReusableOrder.class,
+                    (order, out, ctx) -> {
+                        if (order.valid) {
+                            out.push(order);
+                        }
+                    },
+                    StageSpec.singleThreaded()
+                )
+                .sink("egress", ReusableOrder.class, order -> {
+                    consumed.incrementAndGet();
+                    endToEndLatency.recordElapsedSince(order.emittedAtNanos);
+                }, StageSpec.singleThreaded())
+                .edge("ingress", "normalize", EdgeSpec.mpscRing(RING_SIZE))
+                .edge("normalize", "risk", EdgeSpec.spscRing(RING_SIZE))
+                .edge("risk", "validate", EdgeSpec.spscRing(RING_SIZE))
+                .edge("validate", "egress", EdgeSpec.spscRing(RING_SIZE))
+                .build();
             graph.start();
             emitter = graph.preallocatedEmitter("ingress", ReusableOrder.class);
         }

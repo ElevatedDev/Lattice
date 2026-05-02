@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
@@ -143,9 +144,8 @@ public class RealisticWorkloadBenchmark {
 
         @Setup(Level.Trial)
         public void setup() {
-            // Inline-source fusion is on by default; the entire chain runs on the producer.
-            System.setProperty("lattice.fusion.enabled", "true");
             graph = StaticGraph.builder("realistic-lattice")
+                .fusion(FusionSpec.defaults().inlineSources(true))
                 .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
                 .stage("parse", Order.class, Order.class, (order, out, ctx) -> {
                     parse(order);
@@ -272,4 +272,3 @@ public class RealisticWorkloadBenchmark {
         };
     }
 }
-

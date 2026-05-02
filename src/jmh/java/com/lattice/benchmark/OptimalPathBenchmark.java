@@ -1,6 +1,7 @@
 package com.lattice.benchmark;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.FusionSpec;
 import com.lattice.graph.SourceMode;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.Emitter;
@@ -66,17 +67,14 @@ public class OptimalPathBenchmark {
         final AtomicLong completedSequence = new AtomicLong(-1L);
         StaticGraph graph;
         Emitter<Order> emitter;
-        String previousFusion;
-        String previousInlineSource;
 
         @Setup(Level.Trial)
         public void setup() {
-            previousFusion = System.getProperty("lattice.fusion.enabled");
-            previousInlineSource = System.getProperty("lattice.fusion.inlineSource");
-            System.setProperty("lattice.fusion.enabled", "true");
-            System.setProperty("lattice.fusion.inlineSource", "true");
             try {
                 graph = StaticGraph.builder("optimal-lattice-inline-fused")
+                    .fusion(FusionSpec.defaults()
+                        .inlineSources(true)
+                        .elideInlineSourcePhysicalPath(true))
                     .source("ingress", Order.class, SourceMode.SINGLE_PRODUCER)
                     .stage("parse", Order.class, Order.class, OptimalPathBenchmark::parse, STAGE)
                     .stage("enrich", Order.class, Order.class, OptimalPathBenchmark::enrich, STAGE)
@@ -93,7 +91,6 @@ public class OptimalPathBenchmark {
                 graph.start();
                 emitter = graph.emitter("ingress", Order.class);
             } catch (final RuntimeException | Error ex) {
-                restoreProperties();
                 throw ex;
             }
         }
@@ -108,14 +105,8 @@ public class OptimalPathBenchmark {
                     graph.stop(STOP_TIMEOUT);
                 }
             } finally {
-                restoreProperties();
                 requireCompleted("latticeInlineFusedCompleted", completedSequence);
             }
-        }
-
-        private void restoreProperties() {
-            restoreProperty("lattice.fusion.enabled", previousFusion);
-            restoreProperty("lattice.fusion.inlineSource", previousInlineSource);
         }
     }
 
@@ -296,11 +287,4 @@ public class OptimalPathBenchmark {
         };
     }
 
-    private static void restoreProperty(final String property, final String previousValue) {
-        if (previousValue == null) {
-            System.clearProperty(property);
-        } else {
-            System.setProperty(property, previousValue);
-        }
-    }
 }

@@ -10,7 +10,7 @@
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="Style">
 <link rel="stylesheet" type="text/css" href="script-dir/jquery-ui.min.css" title="Style">
 <script type="text/javascript" src="script.js"></script>
-<script type="text/javascript" src="script-dir/jquery-3.6.1.min.js"></script>
+<script type="text/javascript" src="script-dir/jquery-3.7.1.min.js"></script>
 <script type="text/javascript" src="script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="index-page">
@@ -523,6 +523,10 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:D">D</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/FusionSpec.html#defaults()" class="member-name-link">defaults()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Enables normal downstream fusion and keeps source-inline execution off.</div>
+</dd>
 <dt><a href="com/lattice/metrics/PlacementStatus.html#DEGRADED" class="member-name-link">DEGRADED</a> - Enum constant in enum class com.lattice.metrics.<a href="com/lattice/metrics/PlacementStatus.html" title="enum class in com.lattice.metrics">PlacementStatus</a></dt>
 <dd>
 <div class="block">Placement ran with a fallback or partial match.</div>
@@ -531,6 +535,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns current logical depth, derived from emitted, consumed, and dropped
  oldest counts.</div>
+</dd>
+<dt><a href="com/lattice/graph/StaticGraph.Builder.html#diagnostics(com.lattice.graph.DiagnosticsSpec)" class="member-name-link">diagnostics(DiagnosticsSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
+<dd>
+<div class="block">Sets graph-level diagnostics controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/DiagnosticsSpec.html" class="type-name-link" title="class in com.lattice.graph">DiagnosticsSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Graph-level diagnostic event controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#disabled()" class="member-name-link">disabled()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Disables all runtime fusion and uses the physical graph shape.</div>
 </dd>
 <dt><a href="com/lattice/stage/BatchPolicy.html#disabled()" class="member-name-link">disabled()</a> - Static method in class com.lattice.stage.<a href="com/lattice/stage/BatchPolicy.html" title="class in com.lattice.stage">BatchPolicy</a></dt>
 <dd>
@@ -652,6 +668,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates edge metrics with allocation metadata.</div>
 </dd>
+<dt><a href="com/lattice/metrics/EdgeMetrics.html#%3Cinit%3E(java.lang.String,java.lang.String,java.lang.String,com.lattice.placement.MemoryMode.MemoryKind,com.lattice.graph.MetricsSpec)" class="member-name-link">EdgeMetrics(String, String, String, MemoryMode.MemoryKind, MetricsSpec)</a> - Constructor for class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
+<dd>
+<div class="block">Creates edge metrics with allocation metadata.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#edges()" class="member-name-link">edges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Returns the immutable compiled edge list.</div>
@@ -667,6 +687,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/edge/EdgeSpec.EdgeKind.html" class="type-name-link" title="enum class in com.lattice.edge">EdgeSpec.EdgeKind</a> - Enum Class in <a href="com/lattice/edge/package-summary.html">com.lattice.edge</a></dt>
 <dd>
 <div class="block">Edge implementation families supported by the public API.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#elideInlineSourcePhysicalPath()" class="member-name-link">elideInlineSourcePhysicalPath()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns whether eligible source-inline physical paths may be elided.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#elideInlineSourcePhysicalPath(boolean)" class="member-name-link">elideInlineSourcePhysicalPath(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that allows physical source edge/worker elision for
+ eligible source-inline chains.</div>
 </dd>
 <dt><a href="com/lattice/stage/Emitter.html#emit(T)" class="member-name-link">emit(T)</a> - Method in interface com.lattice.stage.<a href="com/lattice/stage/Emitter.html" title="interface in com.lattice.stage">Emitter</a></dt>
 <dd>
@@ -707,6 +736,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/stage/Emitter.html" class="type-name-link" title="interface in com.lattice.stage">Emitter&lt;T&gt;</a> - Interface in <a href="com/lattice/stage/package-summary.html">com.lattice.stage</a></dt>
 <dd>
 <div class="block">Publishes items into a normal graph source.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#enabled()" class="member-name-link">enabled()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns whether graph fusion is enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#enabled(boolean)" class="member-name-link">enabled(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that allows or disables graph fusion.</div>
 </dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></dt>
 <dd>
@@ -828,9 +865,18 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="com/lattice/nativeaccess/NativeTopologySnapshot.html#failureMessage()" class="member-name-link">failureMessage()</a> - Method in class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeTopologySnapshot.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#firstTouch()" class="member-name-link">firstTouch()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns whether workers should first-touch owned edge storage.</div>
+</dd>
 <dt><a href="com/lattice/nativeaccess/NativeCapabilities.html#firstTouch()" class="member-name-link">firstTouch()</a> - Method in record class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeCapabilities.html" title="class in com.lattice.nativeaccess">NativeCapabilities</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>firstTouch</code> record component.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#firstTouch(boolean)" class="member-name-link">firstTouch(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that controls whether workers first-touch owned edge
+ storage after placement.</div>
 </dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#firstTouchCount()" class="member-name-link">firstTouchCount()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
@@ -870,6 +916,23 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates placement metadata from a public pin policy.</div>
 </dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#fusedLogicalEdgeCounters()" class="member-name-link">fusedLogicalEdgeCounters()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns whether logical counters for fused/elided edges are enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#fusedLogicalEdgeCounters(boolean)" class="member-name-link">fusedLogicalEdgeCounters(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns a copy with logical counters for fused/elided edges enabled or
+ disabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/StaticGraph.Builder.html#fusion(com.lattice.graph.FusionSpec)" class="member-name-link">fusion(FusionSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
+<dd>
+<div class="block">Sets graph-level fusion controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html" class="type-name-link" title="class in com.lattice.graph">FusionSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Graph-level fusion controls.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:G">G</h2>
 <dl class="index">
@@ -893,6 +956,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates graph metrics from already-created stage and edge metrics.</div>
 </dd>
+<dt><a href="com/lattice/metrics/GraphMetrics.html#%3Cinit%3E(java.lang.String,java.util.Map,java.util.Map,com.lattice.graph.MetricsSpec)" class="member-name-link">GraphMetrics(String, Map&lt;String, StageMetrics&gt;, Map&lt;String, EdgeMetrics&gt;, MetricsSpec)</a> - Constructor for class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></dt>
+<dd>
+<div class="block">Creates graph metrics from already-created stage and edge metrics.</div>
+</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" class="type-name-link" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a> - Record Class in <a href="com/lattice/metrics/package-summary.html">com.lattice.metrics</a></dt>
 <dd>
 <div class="block">Stage placement row used by <a href="com/lattice/metrics/GraphMetrics.html#placementReport()"><code>GraphMetrics.placementReport()</code></a>.</div>
@@ -904,6 +971,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/stage/StageContext.html#graphName()" class="member-name-link">graphName()</a> - Method in interface com.lattice.stage.<a href="com/lattice/stage/StageContext.html" title="interface in com.lattice.stage">StageContext</a></dt>
 <dd>
 <div class="block">Returns the graph name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html" class="type-name-link" title="class in com.lattice.graph">GraphPlacementSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Graph-level controls for runtime-derived placement behavior.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.html" class="type-name-link" title="class in com.lattice.graph">GraphPlan</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
 <dd>
@@ -980,17 +1051,41 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns sampled high-water logical depth.</div>
 </dd>
+<dt><a href="com/lattice/metrics/StageMetrics.html#histograms()" class="member-name-link">histograms()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
+<dd>
+<div class="block">Returns whether stage histograms are enabled for this stage.</div>
+</dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#histogramsEnabled()" class="member-name-link">histogramsEnabled()</a> - Static method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
-<div class="block">Returns whether stage histograms are enabled for this JVM.</div>
+<div class="block">Returns whether stage histograms are enabled by default.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#hotCounters()" class="member-name-link">hotCounters()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns whether hot-path counters are enabled.</div>
+</dd>
+<dt><a href="com/lattice/metrics/EdgeMetrics.html#hotCounters()" class="member-name-link">hotCounters()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
+<dd>
+<div class="block">Returns whether hot-path counters are enabled for this edge.</div>
+</dd>
+<dt><a href="com/lattice/metrics/GraphMetrics.html#hotCounters()" class="member-name-link">hotCounters()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></dt>
+<dd>
+<div class="block">Returns whether hot-path counters are enabled for this graph.</div>
+</dd>
+<dt><a href="com/lattice/metrics/StageMetrics.html#hotCounters()" class="member-name-link">hotCounters()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
+<dd>
+<div class="block">Returns whether hot-path counters are enabled for this stage.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#hotCounters(boolean)" class="member-name-link">hotCounters(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns a copy with hot-path counters enabled or disabled.</div>
 </dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#hotCountersEnabled()" class="member-name-link">hotCountersEnabled()</a> - Static method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
-<div class="block">Returns whether hot-path counters are enabled for this JVM.</div>
+<div class="block">Returns the source-compatible default hot-counter state.</div>
 </dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#hotCountersEnabled()" class="member-name-link">hotCountersEnabled()</a> - Static method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
-<div class="block">Returns whether hot-path counters are enabled for this JVM.</div>
+<div class="block">Returns the source-compatible default hot-counter state.</div>
 </dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#hotKeySignals()" class="member-name-link">hotKeySignals()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
@@ -1027,6 +1122,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/graph/GraphPlan.Placement.html#inheritsCpuset()" class="member-name-link">inheritsCpuset()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Placement.html" title="class in com.lattice.graph">GraphPlan.Placement</a></dt>
 <dd>
 <div class="block">Returns whether this worker inherits the process CPU set.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#inlineSources()" class="member-name-link">inlineSources()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns whether source-inline execution is allowed.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#inlineSources(boolean)" class="member-name-link">inlineSources(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that allows source-inline execution when planner safety
+ checks pass.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.Node.html#inputType()" class="member-name-link">inputType()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Node.html" title="class in com.lattice.graph">GraphPlan.Node</a></dt>
 <dd>
@@ -1065,6 +1169,14 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:J">J</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/DiagnosticsSpec.html#jfr()" class="member-name-link">jfr()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/DiagnosticsSpec.html" title="class in com.lattice.graph">DiagnosticsSpec</a></dt>
+<dd>
+<div class="block">Returns whether JFR event emission is enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/DiagnosticsSpec.html#jfr(boolean)" class="member-name-link">jfr(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/DiagnosticsSpec.html" title="class in com.lattice.graph">DiagnosticsSpec</a></dt>
+<dd>
+<div class="block">Returns a copy with JFR event emission enabled or disabled.</div>
+</dd>
 <dt><a href="com/lattice/graph/StaticGraph.Builder.html#join(java.lang.String,java.lang.Class,com.lattice.routing.JoinSpec,com.lattice.stage.StageSpec)" class="member-name-link">join(String, Class&lt;O&gt;, JoinSpec&lt;? extends O&gt;, StageSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
 <dd>
 <div class="block">Adds a join stage that correlates inputs by stamp.</div>
@@ -1279,6 +1391,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns metrics for the current stage.</div>
 </dd>
+<dt><a href="com/lattice/graph/StaticGraph.Builder.html#metrics(com.lattice.graph.MetricsSpec)" class="member-name-link">metrics(MetricsSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
+<dd>
+<div class="block">Sets graph-level metrics controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html" class="type-name-link" title="class in com.lattice.graph">MetricsSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Graph-level metrics controls.</div>
+</dd>
 <dt><a href="com/lattice/routing/JoinSpec.html#missingBranches(com.lattice.routing.JoinSpec.MissingBranchPolicy)" class="member-name-link">missingBranches(JoinSpec.MissingBranchPolicy)</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinSpec.html" title="class in com.lattice.routing">JoinSpec</a></dt>
 <dd>
 <div class="block">Returns a copy with the policy used when an input branch closes or times
@@ -1471,6 +1591,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates a stamped payload.</div>
 </dd>
+<dt><a href="com/lattice/graph/DiagnosticsSpec.html#off()" class="member-name-link">off()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/DiagnosticsSpec.html" title="class in com.lattice.graph">DiagnosticsSpec</a></dt>
+<dd>
+<div class="block">Creates a diagnostics spec with diagnostics disabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#off()" class="member-name-link">off()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Creates a placement spec with runtime-derived placement disabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#off()" class="member-name-link">off()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Creates a metrics spec with all metrics disabled.</div>
+</dd>
 <dt><a href="com/lattice/placement/MemoryMode.MemoryKind.html#OFF_HEAP_HANDLES" class="member-name-link">OFF_HEAP_HANDLES</a> - Enum constant in enum class com.lattice.placement.<a href="com/lattice/placement/MemoryMode.MemoryKind.html" title="enum class in com.lattice.placement">MemoryMode.MemoryKind</a></dt>
 <dd>
 <div class="block">Off-heap handle and sequence metadata.</div>
@@ -1645,6 +1777,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/placement/PinPolicy.PinKind.html" class="type-name-link" title="enum class in com.lattice.placement">PinPolicy.PinKind</a> - Enum Class in <a href="com/lattice/placement/package-summary.html">com.lattice.placement</a></dt>
 <dd>
 <div class="block">Placement request kinds.</div>
+</dd>
+<dt><a href="com/lattice/graph/StaticGraph.Builder.html#placement(com.lattice.graph.GraphPlacementSpec)" class="member-name-link">placement(GraphPlacementSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
+<dd>
+<div class="block">Sets graph-level runtime-derived placement controls.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#placement(java.lang.String)" class="member-name-link">placement(String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
@@ -1955,9 +2091,21 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a copy of residence-time histogram data.</div>
 </dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#residenceTiming()" class="member-name-link">residenceTiming()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns whether edge residence-time tracking is enabled.</div>
+</dd>
+<dt><a href="com/lattice/metrics/EdgeMetrics.html#residenceTiming()" class="member-name-link">residenceTiming()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
+<dd>
+<div class="block">Returns whether residence-time tracking is enabled for this edge.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#residenceTiming(boolean)" class="member-name-link">residenceTiming(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns a copy with edge residence-time tracking enabled or disabled.</div>
+</dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#residenceTimingEnabled()" class="member-name-link">residenceTimingEnabled()</a> - Static method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
-<div class="block">Returns whether residence timing is enabled for this JVM.</div>
+<div class="block">Returns whether residence timing is enabled by default.</div>
 </dd>
 <dt><a href="com/lattice/graph/StaticGraph.html#resume()" class="member-name-link">resume()</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph">StaticGraph</a></dt>
 <dd>
@@ -2158,6 +2306,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates a stage handle.</div>
 </dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#stageHistograms()" class="member-name-link">stageHistograms()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns whether stage histograms are enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/MetricsSpec.html#stageHistograms(boolean)" class="member-name-link">stageHistograms(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
+<dd>
+<div class="block">Returns a copy with stage batch/service histograms enabled or disabled.</div>
+</dd>
 <dt><a href="com/lattice/stage/StageLogic.html" class="type-name-link" title="interface in com.lattice.stage">StageLogic&lt;I,<wbr>O&gt;</a> - Interface in <a href="com/lattice/stage/package-summary.html">com.lattice.stage</a></dt>
 <dd>
 <div class="block">User callback for single-message stage processing.</div>
@@ -2167,6 +2323,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Live metrics for one stage worker.</div>
 </dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#%3Cinit%3E(java.lang.String)" class="member-name-link">StageMetrics(String)</a> - Constructor for class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
+<dd>
+<div class="block">Creates metrics for a named stage.</div>
+</dd>
+<dt><a href="com/lattice/metrics/StageMetrics.html#%3Cinit%3E(java.lang.String,com.lattice.graph.MetricsSpec)" class="member-name-link">StageMetrics(String, MetricsSpec)</a> - Constructor for class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
 <div class="block">Creates metrics for a named stage.</div>
 </dd>
@@ -2303,6 +2463,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns stage stop time, or <code>null</code> until stopped.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#strict()" class="member-name-link">strict()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns whether placement failures should fail graph startup.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#strict(boolean)" class="member-name-link">strict(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that controls whether placement failures fail startup.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:T">T</h2>
 <dl class="index">
@@ -2334,6 +2502,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#to()" class="member-name-link">to()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
 <div class="block">Returns the target node name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#topologyAware()" class="member-name-link">topologyAware()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns whether topology-aware placement is enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphPlacementSpec.html#topologyAware(boolean)" class="member-name-link">topologyAware(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that enables or disables topology-derived stage placement.</div>
 </dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html#toString()" class="member-name-link">toString()</a> - Method in record class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></dt>
 <dd>
@@ -2382,6 +2558,15 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:V">V</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/FusionSpec.html#validateTypes()" class="member-name-link">validateTypes()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns whether fused direct-call type assertions are enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/FusionSpec.html#validateTypes(boolean)" class="member-name-link">validateTypes(boolean)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
+<dd>
+<div class="block">Returns a copy that enables runtime type assertions on fused direct-call
+ paths.</div>
+</dd>
 <dt><a href="com/lattice/routing/Stamped.html#value()" class="member-name-link">value()</a> - Method in record class com.lattice.routing.<a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing">Stamped</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/lattice/routing/Stamped.html#param-value"><code>value</code></a> record component.</div>
