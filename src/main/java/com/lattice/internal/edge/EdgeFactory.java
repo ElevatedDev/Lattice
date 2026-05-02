@@ -15,6 +15,15 @@ public final class EdgeFactory {
         final EdgeMetrics metrics,
         final GraphMetrics graphMetrics
     ) {
+        return create(definition, metrics, graphMetrics, definition.sourceIngress());
+    }
+
+    public static MessageEdge create(
+        final EdgeDefinition definition,
+        final EdgeMetrics metrics,
+        final GraphMetrics graphMetrics,
+        final boolean sourceIngressCloseGuard
+    ) {
         final MessageEdge edge;
         if (definition.spec().kind() == EdgeSpec.EdgeKind.SPSC_RING) {
             edge = new SpscRingEdge(
@@ -25,7 +34,7 @@ public final class EdgeFactory {
                 metrics,
                 graphMetrics,
                 plainClaim(definition.spec()),
-                definition.sourceIngress()
+                sourceIngressCloseGuard
             );
         } else {
             edge = new MpscRingEdge(

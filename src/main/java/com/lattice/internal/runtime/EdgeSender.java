@@ -130,11 +130,15 @@ final class EdgeSender {
 
     void emitTrustedFromSource(final Object item) {
         validateItem(item);
-        if (!canUseTrustedFastPath()) {
+        if (canUseTrustedFastPath()) {
+            emitBlockingFastPathTrusted(item);
+            return;
+        }
+        if (mayCarryOwnedHandle) {
             emit(item);
             return;
         }
-        emitBlockingFastPathTrusted(item);
+        emitPrepared(item);
     }
 
     private boolean canUseSourceFastPath() {

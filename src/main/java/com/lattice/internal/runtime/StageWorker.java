@@ -81,6 +81,7 @@ final class StageWorker implements Runnable {
     private final MessageEdge.ItemProcessor sinkProcessor;
     private final FusedSink fusedSink;
     private final FusedStage fusedStage;
+    private final FusedRouter fusedRouter;
     private final StageMetrics metrics;
     private final RuntimeCoordinator coordinator;
     private final RuntimeStageContext context;
@@ -146,13 +147,14 @@ final class StageWorker implements Runnable {
         final Output<Object> output,
         final FusedSink fusedSink,
         final FusedStage fusedStage,
+        final FusedRouter fusedRouter,
         final PinPolicy effectivePinPolicy,
         final StageMetrics metrics,
         final RuntimeCoordinator coordinator,
         final StageExceptionHandler exceptionHandler
     ) {
-        if (fusedSink != null && fusedStage != null) {
-            throw new IllegalArgumentException("a worker cannot fuse both a sink and a stage");
+        if ((fusedSink != null ? 1 : 0) + (fusedStage != null ? 1 : 0) + (fusedRouter != null ? 1 : 0) > 1) {
+            throw new IllegalArgumentException("a worker cannot fuse multiple output targets");
         }
         this.graphName = coordinator.graphName();
         this.stageName = node.name();
@@ -166,10 +168,12 @@ final class StageWorker implements Runnable {
         final LinearStageSinkLoop linearStageSinkLoop = linearStageSinkLoop(fusedSink, fusedStage);
         this.output = linearStageSinkLoop != null ? linearStageSinkLoop.entryOutput()
             : fusedStage != null ? new DirectStageOutput(fusedStage)
+            : fusedRouter != null ? new DirectRouterOutput(fusedRouter)
             : fusedSink == null ? output : new DirectSinkOutput(fusedSink);
         this.sinkProcessor = this::processSinkItem;
         this.fusedSink = fusedSink;
         this.fusedStage = fusedStage;
+        this.fusedRouter = fusedRouter;
         this.metrics = metrics;
         this.coordinator = coordinator;
         this.context = new RuntimeStageContext(coordinator, stageName, metrics);
@@ -302,6 +306,9 @@ final class StageWorker implements Runnable {
                 throw new ClassCastException(stageName + " received " + item.getClass().getName()
                     + ", expected " + inputTypeName);
             }
+            if (StageMetrics.hotCountersEnabled()) {
+                metrics.recordConsume();
+            }
             try {
                 if (messageMayCarryOwnedHandle) {
                     try (HandleOwnership.Scope ignored = HandleOwnership.scope(item)) {
@@ -322,7 +329,6 @@ final class StageWorker implements Runnable {
                 throw new FusedStageException(stageName, metrics, context, ex);
             }
             if (StageMetrics.hotCountersEnabled()) {
-                metrics.recordConsume();
                 metrics.recordBatch(1, 0L);
             }
         }
@@ -337,6 +343,25 @@ final class StageWorker implements Runnable {
 
     void markInlineFused() {
         this.inlineFused = true;
+    }
+
+    void startInlineLifecycle() {
+        metrics.markStarted();
+        workerState(WorkerState.RUNNING);
+        startFusedSink();
+        startFusedStage();
+        startFusedRouter();
+    }
+
+    void stopInlineLifecycle() {
+        closeOutputs();
+        active = false;
+        stopFusedStage();
+        stopFusedSink();
+        stopFusedRouter();
+        workerState(coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED);
+        metrics.markStopped();
+        coordinator.workerStopped();
     }
 
     void interrupt() {
@@ -394,6 +419,7 @@ final class StageWorker implements Runnable {
             workerState(WorkerState.RUNNING);
             startFusedSink();
             startFusedStage();
+            startFusedRouter();
 
             if (inlineFused) {
                 while (!coordinator.isAbortRequested()
@@ -489,6 +515,7 @@ final class StageWorker implements Runnable {
             active = false;
             stopFusedStage();
             stopFusedSink();
+            stopFusedRouter();
             workerState(coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : terminalState);
             metrics.markStopped();
             coordinator.workerStopped();
@@ -582,6 +609,25 @@ final class StageWorker implements Runnable {
             : coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED;
         stage.metrics().workerState(state);
         stage.metrics().markStopped();
+    }
+
+    private void startFusedRouter() {
+        if (fusedRouter == null) {
+            return;
+        }
+        fusedRouter.metrics().markStarted();
+        fusedRouter.metrics().workerState(WorkerState.RUNNING);
+    }
+
+    private void stopFusedRouter() {
+        if (fusedRouter == null) {
+            return;
+        }
+        final WorkerState state = fusedRouter.poisoned()
+            ? WorkerState.POISONED
+            : coordinator.state() == GraphState.FAILED ? WorkerState.FAILED : WorkerState.STOPPED;
+        fusedRouter.metrics().workerState(state);
+        fusedRouter.metrics().markStopped();
     }
 
     private int receive() {
@@ -1121,11 +1167,12 @@ final class StageWorker implements Runnable {
             );
         }
         final Object outputItem = joinCombiner.apply(reusableJoinGroup);
+        final Output<Object> localOutput = output;
         if (!messageMayCarryOwnedHandle) {
-            outputSenders[0].emit(outputItem);
+            localOutput.push(outputItem);
         } else {
             try (HandleOwnership.Scope ignored = HandleOwnership.scope(state.values, state.values.length)) {
-                outputSenders[0].emit(outputItem);
+                localOutput.push(outputItem);
             }
         }
         if (hotMetricsEnabled) {
@@ -1231,6 +1278,10 @@ final class StageWorker implements Runnable {
         final FusedSink sink = fusedSink;
         if (sink != null && sink.name().equals(failure.stageName())) {
             sink.markPoisoned();
+        }
+        final FusedRouter router = fusedRouter;
+        if (router != null && router.name().equals(failure.stageName())) {
+            router.markPoisoned();
         }
         final FusedSink terminalSink = stage == null ? null : stage.terminalSink();
         if (terminalSink != null && terminalSink.name().equals(failure.stageName())) {
@@ -1512,6 +1563,298 @@ final class StageWorker implements Runnable {
         }
     }
 
+    static final class FusedRouter {
+        private final String name;
+        private final GraphPlan.NodeKind kind;
+        private final Class<?> inputType;
+        private final String inputTypeName;
+        private final boolean acceptsAnyType;
+        private final DispatchSpec<Object> dispatchSpec;
+        private final BroadcastSpec<Object> broadcastSpec;
+        private final PartitionSpec<Object, ?> partitionSpec;
+        private final EdgeSender[] outputSenders;
+        private final EdgeMetrics[] outputMetrics;
+        private final StageMetrics metrics;
+        private final StageMetrics ownerMetrics;
+        private final EdgeMetrics logicalEdgeMetrics;
+        private final GraphMetrics graphMetrics;
+        private final RuntimeStageContext context;
+        private final boolean broadcastSlabHandles;
+        private final boolean isolateBroadcastBranches;
+        private final Function<Object, Object> broadcastCopier;
+        private final Function<Object, ?> partitionKeyExtractor;
+        private final int[] weightedSchedule;
+        private final long[] partitionLaneCounts;
+        private final long partitionHotKeyThreshold;
+        private final int outputMask;
+        private long routeSequence;
+        private boolean poisoned;
+
+        @SuppressWarnings("unchecked")
+        FusedRouter(
+            final NodeDefinition router,
+            final EdgeSender[] outputSenders,
+            final StageMetrics metrics,
+            final StageMetrics ownerMetrics,
+            final EdgeMetrics logicalEdgeMetrics,
+            final GraphMetrics graphMetrics,
+            final RuntimeCoordinator coordinator
+        ) {
+            this.name = router.name();
+            this.kind = router.kind();
+            this.inputType = router.inputType();
+            this.inputTypeName = inputType.getName();
+            this.acceptsAnyType = inputType == Object.class;
+            this.dispatchSpec = (DispatchSpec<Object>) router.dispatchSpec();
+            this.broadcastSpec = (BroadcastSpec<Object>) router.broadcastSpec();
+            this.partitionSpec = (PartitionSpec<Object, ?>) router.partitionSpec();
+            this.outputSenders = outputSenders.clone();
+            this.outputMetrics = outputMetrics(outputSenders);
+            this.metrics = metrics;
+            this.ownerMetrics = ownerMetrics;
+            this.logicalEdgeMetrics = logicalEdgeMetrics;
+            this.graphMetrics = graphMetrics;
+            this.context = new RuntimeStageContext(coordinator, name, metrics);
+            this.broadcastSlabHandles = broadcastSpec != null
+                && broadcastSpec.kind() == BroadcastSpec.BroadcastKind.SLAB_HANDLE;
+            this.isolateBroadcastBranches = broadcastSpec != null && broadcastSpec.isolateSlowBranches();
+            this.broadcastCopier = broadcastSpec == null ? null : (Function<Object, Object>) broadcastSpec.copier();
+            this.partitionKeyExtractor = partitionSpec == null
+                ? null
+                : (Function<Object, ?>) partitionSpec.keyExtractor();
+            this.weightedSchedule = dispatchSpec == null
+                ? new int[0]
+                : weightedSchedule(dispatchSpec, outputSenders.length);
+            this.partitionLaneCounts = partitionSpec == null ? new long[0] : new long[outputSenders.length];
+            this.partitionHotKeyThreshold = partitionSpec == null ? 0L : partitionSpec.hotKeyThreshold();
+            this.outputMask = powerOfTwoMask(outputSenders.length);
+        }
+
+        String name() {
+            return name;
+        }
+
+        StageMetrics metrics() {
+            return metrics;
+        }
+
+        void markPoisoned() {
+            poisoned = true;
+        }
+
+        boolean poisoned() {
+            return poisoned;
+        }
+    }
+
+    private final class DirectRouterOutput implements Output<Object> {
+        private final FusedRouter router;
+        private final boolean retainForScope;
+
+        private DirectRouterOutput(final FusedRouter router) {
+            this.router = router;
+            this.retainForScope = mayCarryOwnedHandle(router.inputType);
+        }
+
+        @Override
+        public void push(final Object item) {
+            emit(item);
+        }
+
+        @Override
+        public boolean push(final Object item, final Duration timeout) {
+            emit(item);
+            return true;
+        }
+
+        @Override
+        public boolean tryPush(final Object item) {
+            emit(item);
+            return true;
+        }
+
+        private void emit(final Object item) {
+            if (item == null) {
+                throw new NullPointerException(router.name + " cannot consume null");
+            }
+            final Object outbound = retainForScope ? HandleOwnership.prepareForEnqueue(item) : item;
+            if (LATTICE_VALIDATE_FUSED) {
+                validate(outbound);
+            }
+            recordLogicalTransfer(router.ownerMetrics, router.logicalEdgeMetrics, router.graphMetrics, router.metrics);
+
+            final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
+            final long started = timeBatchesLocal ? System.nanoTime() : 0L;
+            try {
+                if (retainForScope) {
+                    try (HandleOwnership.Scope ignored = HandleOwnership.scope(outbound)) {
+                        route(outbound);
+                    }
+                } else {
+                    route(outbound);
+                }
+                final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
+                if (StageMetrics.hotCountersEnabled()) {
+                    router.metrics.recordBatch(1, serviceNanos);
+                }
+                if (JfrEvents.enabled()) {
+                    JfrEvents.batchProcessed(graphName, router.name, 1, serviceNanos);
+                }
+            } catch (final Throwable ex) {
+                throw new FusedStageException(router.name, router.metrics, router.context, ex);
+            } finally {
+                if (retainForScope) {
+                    releaseIfHandle(outbound);
+                }
+            }
+        }
+
+        private void route(final Object item) {
+            switch (router.kind) {
+                case DISPATCH -> routeDispatch(item);
+                case BROADCAST -> routeBroadcast(item);
+                case PARTITION -> routePartition(item);
+                default -> throw new IllegalStateException("not a router: " + router.kind);
+            }
+        }
+
+        private void routeDispatch(final Object item) {
+            final int branch = dispatchBranch(item);
+            if (hotMetricsEnabled) {
+                router.metrics.recordRoutingDecision();
+            }
+            if (edgeHotMetricsEnabled) {
+                router.outputMetrics[branch].recordLaneSelection();
+            }
+            router.outputSenders[branch].emit(item);
+        }
+
+        private int dispatchBranch(final Object item) {
+            return switch (router.dispatchSpec.kind()) {
+                case ROUND_ROBIN -> {
+                    final long sequence = router.routeSequence++;
+                    yield router.outputMask >= 0
+                        ? (int) sequence & router.outputMask
+                        : (int) (sequence % router.outputSenders.length);
+                }
+                case KEYED -> {
+                    final Object key = router.dispatchSpec.keyExtractor().apply(item);
+                    yield branchForKey(key);
+                }
+                case WEIGHTED -> router.weightedSchedule[(int) (router.routeSequence++ % router.weightedSchedule.length)];
+            };
+        }
+
+        private void routeBroadcast(final Object item) {
+            if (router.broadcastSlabHandles) {
+                broadcastHandle(item);
+            } else {
+                broadcastCopy(item);
+            }
+            if (hotMetricsEnabled) {
+                router.metrics.recordRoutingDecision();
+            }
+        }
+
+        private void broadcastCopy(final Object item) {
+            final EdgeSender[] senders = router.outputSenders;
+            final EdgeMetrics[] metricsByBranch = router.outputMetrics;
+            final Function<Object, Object> copier = router.broadcastCopier;
+            final boolean isolate = router.isolateBroadcastBranches;
+            for (int branch = 0; branch < senders.length; branch++) {
+                final Object branchItem = copier == null ? item : copier.apply(item);
+                if (isolate) {
+                    if (!senders[branch].tryEmit(branchItem)) {
+                        if (hotMetricsEnabled) {
+                            router.metrics.recordBranchIsolationAction();
+                        }
+                        if (edgeHotMetricsEnabled) {
+                            metricsByBranch[branch].recordBranchIsolationAction();
+                        }
+                        releaseIfHandle(branchItem);
+                    }
+                } else {
+                    senders[branch].emit(branchItem);
+                }
+            }
+        }
+
+        private void broadcastHandle(final Object item) {
+            if (!(item instanceof SlabHandle<?> handle)) {
+                throw new IllegalArgumentException("slab-handle broadcast requires SlabHandle payloads");
+            }
+            final EdgeSender[] senders = router.outputSenders;
+            final EdgeMetrics[] metricsByBranch = router.outputMetrics;
+            final boolean isolate = router.isolateBroadcastBranches;
+            for (int branch = 0; branch < senders.length; branch++) {
+                final SlabHandle<?> branchHandle = handle.retain();
+                if (hotMetricsEnabled) {
+                    router.metrics.recordRetainedHandle();
+                }
+                if (isolate) {
+                    if (!senders[branch].tryEmit(branchHandle)) {
+                        if (hotMetricsEnabled) {
+                            router.metrics.recordBranchIsolationAction();
+                        }
+                        if (edgeHotMetricsEnabled) {
+                            metricsByBranch[branch].recordBranchIsolationAction();
+                        }
+                        branchHandle.release();
+                        if (hotMetricsEnabled) {
+                            router.metrics.recordReleasedHandle();
+                        }
+                    }
+                } else {
+                    boolean enqueued = false;
+                    try {
+                        senders[branch].emit(branchHandle);
+                        enqueued = true;
+                    } finally {
+                        if (!enqueued) {
+                            branchHandle.release();
+                            if (hotMetricsEnabled) {
+                                router.metrics.recordReleasedHandle();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void routePartition(final Object item) {
+            final Object key = router.partitionKeyExtractor.apply(item);
+            final int lane = branchForKey(key);
+            if (hotMetricsEnabled) {
+                router.metrics.recordRoutingDecision();
+            }
+            if (edgeHotMetricsEnabled) {
+                router.outputMetrics[lane].recordLaneSelection();
+            }
+            if (router.partitionHotKeyThreshold > 0L) {
+                final long laneCount = ++router.partitionLaneCounts[lane];
+                if (laneCount == router.partitionHotKeyThreshold && edgeHotMetricsEnabled) {
+                    router.outputMetrics[lane].recordHotKeySignal();
+                }
+            }
+            router.outputSenders[lane].emit(item);
+        }
+
+        private int branchForKey(final Object key) {
+            final int hash = spread(key == null ? 0 : key.hashCode());
+            if (router.outputMask >= 0) {
+                return hash & router.outputMask;
+            }
+            return floorMod(hash, router.outputSenders.length);
+        }
+
+        private void validate(final Object item) {
+            if (!router.acceptsAnyType && item.getClass() != router.inputType && !router.inputType.isInstance(item)) {
+                throw new ClassCastException(router.name + " received " + item.getClass().getName()
+                    + ", expected " + router.inputTypeName);
+            }
+        }
+    }
+
     private final class DirectSinkOutput implements Output<Object> {
         private final FusedSink sink;
         private final boolean retainForScope;
@@ -1691,6 +2034,8 @@ final class StageWorker implements Runnable {
         }
 
         private void emitStageBenign(final FusedStage stage, final Output<Object> next, final Object item) {
+            final boolean timeBatchesLocal = timeBatches;
+            final long started = timeBatchesLocal ? System.nanoTime() : 0L;
             try {
                 if (item == null) {
                     throw new NullPointerException(stage.name + " cannot consume null");
@@ -1701,12 +2046,13 @@ final class StageWorker implements Runnable {
                 recordLogicalTransfer(stage.ownerMetrics, stage.logicalEdgeMetrics, stage.graphMetrics, stage.metrics);
                 stage.logic.onMessage(item, next, stage.context);
                 if (StageMetrics.hotCountersEnabled()) {
-                    final boolean timeBatchesLocal = StageMetrics.histogramsEnabled() || JfrEvents.enabled();
-                    final long serviceNanos = timeBatchesLocal ? 0L : 0L; // service time not measured on benign path
+                    final long serviceNanos = timeBatchesLocal ? System.nanoTime() - started : 0L;
                     stage.metrics.recordBatch(1, serviceNanos);
                     if (JfrEvents.enabled()) {
                         JfrEvents.batchProcessed(graphName, stage.name, 1, serviceNanos);
                     }
+                } else if (JfrEvents.enabled()) {
+                    JfrEvents.batchProcessed(graphName, stage.name, 1, System.nanoTime() - started);
                 }
             } catch (final FusedStageException ex) {
                 throw ex;
