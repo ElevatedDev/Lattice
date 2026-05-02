@@ -44,6 +44,7 @@ material is available through the root
 | Page | Purpose |
 | --- | --- |
 | [Performance Tuning](https://github.com/ElevatedDev/Lattice/blob/main/PERFORMANCE_TUNING.md) | Tuning guidance and benchmark methodology. |
+| [Latency Profile](latency.md) | Isolated end-to-end latency paths, p99 view, profile definitions, and caveats. |
 | [Benchmark Results](benchmark-results/README.md) | Checked-in benchmark snapshots. |
 | [Benchmark Devices](devices.md) | Device-specific benchmark snapshots and cross-device caveats. |
 | [Disruptor Comparison](disruptor-comparison.md) | Methodology and honest framing against LMAX Disruptor. |
@@ -55,7 +56,8 @@ material is available through the root
 | --- | --- |
 | [Three-stage publish throughput](assets/perf-pipeline.svg) | Throughput bars with JMH error bars. |
 | [Lattice vs Disruptor ratios](assets/disruptor-comparison.svg) | Ratio view for the comparable Disruptor rows. |
-| [Optimal-path latency percentiles](assets/latency-percentiles.svg) | JMH sample-time latency curve for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| [Isolated end-to-end latency percentiles](assets/latency-percentiles.svg) | JMH sample-time latency curve for the isolated Lattice and Disruptor completed paths. |
+| [Isolated end-to-end p99 latency](assets/latency-p99.svg) | P99-only view for isolated end-to-end latency paths with p99 range whiskers. |
 | [End-to-end throughput matrix](assets/end-to-end-throughput.svg) | Completed-operation throughput across source/sink, pipeline, fanout, and dependency shapes. |
 | [Optimal path allocation and GC](assets/optimal-path-gc.svg) | JMH GC-profiler allocation and GC-count summary for the optimal path. |
 | [Runtime guarantee map](assets/guarantees-map.svg) | Summary of the runtime guarantees and non-goals. |

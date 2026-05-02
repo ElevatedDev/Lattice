@@ -14,7 +14,8 @@ profile, JVM flags, and exact include patterns.
 | --- | --- |
 | Three-stage throughput | `../../docs/assets/perf-pipeline.svg` |
 | Lattice vs Disruptor ratios | `../../docs/assets/disruptor-comparison.svg` |
-| Optimal-path latency percentiles | `../../docs/assets/latency-percentiles.svg` |
+| Isolated end-to-end latency percentiles | `../../docs/assets/latency-percentiles.svg` |
+| Isolated end-to-end p99 latency | `../../docs/assets/latency-p99.svg` |
 | End-to-end throughput matrix | `../../docs/assets/end-to-end-throughput.svg` |
 | Optimal path allocation and GC | `../../docs/assets/optimal-path-gc.svg` |
 
@@ -26,6 +27,7 @@ profile, JVM flags, and exact include patterns.
 | `end-to-end-scoped-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure | Current completion-gated source/sink, pipeline, broadcast, and dependency rows. |
 | `optimal-path-completed-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Current completion-gated optimal path headline row. |
 | `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measure, sample-time mode | Current JMH latency percentiles for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| `latency-isolated-*-2026-05-02.json` | 3 forks, 5x3s warmup, 5x3s measure, sample-time mode | Individually isolated completed-operation latency rows for Lattice source-inline elided, Lattice physical placement, and matching Disruptor controls. |
 | `optimal-path-gc-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measure, `-prof gc` | Current optimal-path allocation and GC profiler rows. |
 | `three-stage-vs-disruptor.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measure | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
 | `three-stage-isolated-physical.json` / `.log` | 2 forks, 3x3s warmup, 5x3s measure | Isolated Lattice physical three-stage vs Disruptor physical three-handler publish throughput. |
@@ -80,17 +82,18 @@ Rows with very wide error bars retain their JMH error bars in the table. Do
 not rank close results without checking the raw JSON confidence intervals and
 matching topology semantics.
 
-## Latency Excerpts
+## Isolated End-To-End Latency Excerpts
 
-Rows from `optimal-path-latency-2026-05-02.json` in JMH sample-time mode.
+Rows from `latency-isolated-*-2026-05-02.json` in JMH sample-time mode. Each
+row was run in its own JMH invocation.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
-| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
-| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
-| Lattice source-inline elided | 30 | 39 | 54 | 283 |
-| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
+| Lattice source-inline elided | 30 | 39 | 51 | 295 |
+| Disruptor manual fused | 231 | 291 | 393 | 9,531 |
+| Lattice physical strict topology | 775 | 874 | 1,434 | 21,152 |
+| Disruptor physical | 617 | 728 | 3,632 | 30,240 |
+| Lattice physical pinned CPU | 774 | 868 | 1,620 | 24,466 |
 
 ## Allocation And GC
 
@@ -109,6 +112,6 @@ Rows from `optimal-path-gc-2026-05-02.json`.
   `OptimalPathBenchmark` when completed-operation throughput matters.
 - The completed-path benchmark avoids comparing synchronous inline completion
   with asynchronous enqueue-only rates.
-- Native placement is used only by `latticePinnedFusedCompleted` in the
-  optimal-path latency artifact. The throughput and GC rows remain portable
-  rows without native placement.
+- Native placement is used only by the Lattice strict-topology and explicit
+  CPU-pinned rows in the isolated latency artifacts. The throughput and GC rows
+  remain portable rows without native placement.

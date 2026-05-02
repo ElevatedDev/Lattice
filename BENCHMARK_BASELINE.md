@@ -19,7 +19,7 @@ the raw JMH JSON and stdout logs with any quoted number.
 | Gradle | 8.8 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Loaded only for `latticePinnedFusedCompleted` in the latency artifact |
+| Native backend | Loaded for Lattice strict-topology and explicit CPU-pinned latency rows |
 
 Common JVM flags:
 
@@ -44,7 +44,8 @@ the older i7 publication baseline.
 | Figure | Description |
 | --- | --- |
 | ![Three-stage publish throughput](docs/assets/perf-pipeline.svg) | Scoped headline publish rows plus the completion-gated optimal path with JMH error bars. |
-| ![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| ![Isolated end-to-end latency percentiles](docs/assets/latency-percentiles.svg) | JMH sample-time percentile curve for the isolated end-to-end Lattice and Disruptor paths. |
+| ![Isolated end-to-end p99 latency](docs/assets/latency-p99.svg) | P99-only view for isolated end-to-end latency paths with per-iteration p99 range whiskers. |
 | ![Lattice vs Disruptor ratios](docs/assets/disruptor-comparison.svg) | Ratio view for the scoped headline rows. |
 | ![End-to-end throughput matrix](docs/assets/end-to-end-throughput.svg) | Completion-gated source/sink, pipeline, broadcast, and dependency shapes. |
 | ![Optimal path allocation and GC](docs/assets/optimal-path-gc.svg) | GC-profiler normalized allocation and GC count for the optimal path. |
@@ -57,6 +58,7 @@ the older i7 publication baseline.
 | [`end-to-end-scoped-2026-05-02.json`](benchmarks/baseline/end-to-end-scoped-2026-05-02.json) | Completion-gated source/sink, pipeline, broadcast, and dependency shapes against matching Disruptor rows. |
 | [`optimal-path-completed-2026-05-02.json`](benchmarks/baseline/optimal-path-completed-2026-05-02.json) | Completion-gated optimal path with the longer 3-fork profile. |
 | [`optimal-path-latency-2026-05-02.json`](benchmarks/baseline/optimal-path-latency-2026-05-02.json) | JMH sample-time latency percentiles for the optimal-path variants. |
+| [`latency-isolated-*-2026-05-02.json`](benchmarks/baseline/) | JMH sample-time latency percentiles for individually isolated end-to-end Lattice and Disruptor paths. |
 | [`optimal-path-gc-2026-05-02.json`](benchmarks/baseline/optimal-path-gc-2026-05-02.json) | JMH GC-profiler pass for optimal-path allocation and GC count. |
 | [`three-stage-vs-disruptor.json`](benchmarks/baseline/three-stage-vs-disruptor.json) | Broad three-stage Lattice physical/inline-fused vs Disruptor physical/manual-fused matrix retained for audit history. |
 | [`three-stage-isolated-physical.json`](benchmarks/baseline/three-stage-isolated-physical.json) | Isolated semi-smoke physical three-stage Lattice vs Disruptor publish throughput. |
@@ -112,16 +114,17 @@ intervals and the matching topology semantics.
 
 ## Latency
 
-Latency rows are from JMH sample-time mode over the same optimal-path workload:
+Latency rows are from JMH sample-time mode over the same completed workload:
 parse, enrich, risk, serialize, then publish completion for the same sequence.
+The full profile notes are in [`docs/latency.md`](docs/latency.md).
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
-| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
-| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
-| Lattice source-inline elided | 30 | 39 | 54 | 283 |
-| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
+| Lattice source-inline elided | 30 | 39 | 51 | 295 |
+| Disruptor manual fused | 231 | 291 | 393 | 9,531 |
+| Lattice physical strict topology | 775 | 874 | 1,434 | 21,152 |
+| Disruptor physical | 617 | 728 | 3,632 | 30,240 |
+| Lattice physical pinned CPU | 774 | 868 | 1,620 | 24,466 |
 
 ## Allocation And GC
 
@@ -152,7 +155,7 @@ Use [`docs/linux-validation.md`](docs/linux-validation.md) to reproduce the
 same methodology on another Linux host before claiming results for that
 hardware profile.
 
-The native-pinned latency row additionally requires:
+The native placement latency rows additionally require:
 
 ```bash
 ./gradlew nativeBuildRelease

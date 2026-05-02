@@ -185,8 +185,10 @@ The checked-in benchmark material is the current public baseline. Start with
 the release snapshot index, then cite the underlying host, JVM flags, benchmark
 class, and JSON artifact for any number you quote. The 2026-05-02 refresh
 includes scoped publish-throughput rows, completion-gated end-to-end rows,
-an optimal-path sample-time latency pass with physical, fused, native-pinned,
-and source-inline variants, and a GC-profiler pass for the optimal path.
+isolated end-to-end p99 latency rows for Lattice source-inline elision,
+Lattice physical placement, and matching Disruptor controls, plus a GC-profiler
+pass for the optimal path. Full isolated percentile curves live in the latency
+profile.
 
 The headline comparison is scoped deliberately:
 
@@ -203,7 +205,11 @@ The headline comparison is scoped deliberately:
 
 ![Three-stage publish throughput](docs/assets/perf-pipeline.svg)
 
-![Optimal-path latency percentiles](docs/assets/latency-percentiles.svg)
+![Isolated end-to-end p99 latency](docs/assets/latency-p99.svg)
+
+In isolated p99 runs, Lattice source-inline elided measured 51 ns versus
+393 ns for Disruptor manual fused; Lattice physical strict topology measured
+1.43 us versus 3.63 us for Disruptor physical.
 
 | Workload | Lattice | Disruptor | Ratio |
 | --- | ---: | ---: | ---: |
@@ -214,6 +220,7 @@ The headline comparison is scoped deliberately:
 
 - [Benchmark Results](docs/benchmark-results/README.md)
 - [Benchmark Baseline](BENCHMARK_BASELINE.md)
+- [Latency Profile](docs/latency.md)
 - [Benchmark Devices](docs/devices.md)
 - [Disruptor Comparison](docs/disruptor-comparison.md)
 - [Linux Validation Notes](docs/linux-validation.md)

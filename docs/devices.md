@@ -8,7 +8,7 @@ snapshot, then use cross-device rows only as capacity context.
 
 | Snapshot | Device | OS And Runtime | Native Placement | Artifact Notes |
 | --- | --- | --- | --- | --- |
-| [2026-05-02 per-graph refresh](benchmark-results/2026-05-02-per-graph-refresh/README.md) | Intel Core i9-14900HX, 16 cores / 32 threads, 1 NUMA node | Ubuntu LTS userspace under WSL2 Linux `6.6.87.2-microsoft-standard-WSL2`, OpenJDK 21.0.10 | Native library loaded only for `latticePinnedFusedCompleted` latency row | Current public figures and raw `*-2026-05-02` JSON/log artifacts. |
+| [2026-05-02 per-graph refresh](benchmark-results/2026-05-02-per-graph-refresh/README.md) | Intel Core i9-14900HX, 16 cores / 32 threads, 1 NUMA node | Ubuntu LTS userspace under WSL2 Linux `6.6.87.2-microsoft-standard-WSL2`, OpenJDK 21.0.10 | Native library loaded for Lattice strict-topology and explicit CPU-pinned latency rows | Current public figures and raw `*-2026-05-02` JSON/log artifacts. |
 | [2026-04-29 v1.0.0 baseline](benchmark-results/v1.0.0-baseline/README.md) | Intel i7-7700 @ 3.60 GHz, 4 cores / 8 threads, 1 NUMA node | Ubuntu Linux, OpenJDK 21.0.10 | Not loaded; placement rows use `pinning=false` | Historical publication baseline retained for audit history. |
 
 Both snapshots use JMH 1.36, Java 21, `-Xms2g -Xmx2g`,
@@ -41,16 +41,16 @@ of the emitted sequence.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice physical path | 762 ns | 852 ns | 1,846 ns | 23,360 ns |
-| Lattice fused owner worker | 291 ns | 331 ns | 739 ns | 14,308 ns |
-| Lattice native-pinned fused | 272 ns | 319 ns | 693 ns | 12,194 ns |
-| Lattice source-inline elided | 30 ns | 39 ns | 54 ns | 283 ns |
-| Disruptor manual fused | 233 ns | 296 ns | 421 ns | 10,016 ns |
+| Lattice source-inline elided | 30 ns | 39 ns | 51 ns | 295 ns |
+| Disruptor manual fused | 231 ns | 291 ns | 393 ns | 9,531 ns |
+| Lattice physical strict topology | 775 ns | 874 ns | 1,434 ns | 21,152 ns |
+| Disruptor physical | 617 ns | 728 ns | 3,632 ns | 30,240 ns |
+| Lattice physical pinned CPU | 774 ns | 868 ns | 1,620 ns | 24,466 ns |
 
-The native-pinned row uses CPU `0` through `PinPolicy.cpu(0)`,
-`GraphPlacementSpec.strict(true)`, and the Linux native topology library. It
-preserves the physical source boundary and pins the fused owner worker rather
-than running the chain on an arbitrary producer thread.
+The native placement rows use explicit CPU pinning or
+`GraphPlacementSpec.topologyAware(true).strict(true).firstTouch(true)` with the
+Linux native topology library. Each latency row is from an isolated JMH
+invocation.
 
 ## Reading The Page
 

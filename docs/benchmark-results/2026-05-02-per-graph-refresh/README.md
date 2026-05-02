@@ -16,7 +16,7 @@ older i7 publication baseline.
 | JDK | OpenJDK 21.0.10+7-Ubuntu-124.04 |
 | JMH | 1.36 |
 | Disruptor | 4.0.0 on the JMH classpath only |
-| Native backend | Loaded only for `latticePinnedFusedCompleted` in the latency artifact |
+| Native backend | Loaded for Lattice strict-topology and explicit CPU-pinned latency rows |
 | JVM flags | `-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC` |
 
 ## Artifacts
@@ -29,14 +29,16 @@ Raw JMH JSON and stdout logs are checked in under
 | `three-stage-scoped-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measurement | Three-stage publish rows: physical, inline/manual fused, and equal-call-site reference. |
 | `end-to-end-scoped-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measurement | Completed-operation source/sink, pipeline, broadcast, and dependency shapes. |
 | `optimal-path-completed-2026-05-02.json` / `.log` | 3 forks, 5x5s warmup, 8x5s measurement | Completion-gated optimal path used for the README headline row. |
-| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measurement, JMH sample-time mode | JMH latency percentiles for Lattice physical, fused, native-pinned fused, source-inline, and Disruptor manual-fused optimal paths. |
+| `optimal-path-latency-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 5x3s measurement, JMH sample-time mode | Original optimal-path latency subset retained for audit history. |
+| `latency-isolated-*-2026-05-02.json` | 3 forks, 5x3s warmup, 5x3s measurement, JMH sample-time mode | Individually isolated end-to-end Lattice and Disruptor latency paths. |
 | `optimal-path-gc-2026-05-02.json` / `.log` | 2 forks, 5x3s warmup, 7x3s measurement, `-prof gc` | Allocation rate, normalized allocation, and GC count for the optimal path. |
 
 ## Figures
 
 - [Headline throughput](../../assets/perf-pipeline.svg)
 - [Headline ratios](../../assets/disruptor-comparison.svg)
-- [Optimal-path latency percentiles](../../assets/latency-percentiles.svg)
+- [Isolated end-to-end latency percentiles](../../assets/latency-percentiles.svg)
+- [Isolated end-to-end p99 latency](../../assets/latency-p99.svg)
 - [End-to-end throughput matrix](../../assets/end-to-end-throughput.svg)
 - [Optimal path allocation and GC](../../assets/optimal-path-gc.svg)
 
@@ -70,15 +72,16 @@ host, while the inline-fused static pipeline is the Lattice fast path.
 ## Optimal-Path Latency
 
 JMH sample-time rows report completed-operation latency in `ns/op` for the same
-parse/enrich/risk/serialize optimal-path workload.
+parse/enrich/risk/serialize workload. See
+[`latency.md`](../../latency.md) for profile definitions and interpretation.
 
 | Variant | p50 | p90 | p99 | p99.9 |
 | --- | ---: | ---: | ---: | ---: |
-| Lattice physical path | 762 | 852 | 1,846 | 23,360 |
-| Lattice fused owner worker | 291 | 331 | 739 | 14,308 |
-| Lattice native-pinned fused | 272 | 319 | 693 | 12,194 |
-| Lattice source-inline elided | 30 | 39 | 54 | 283 |
-| Disruptor manual fused | 233 | 296 | 421 | 10,016 |
+| Lattice source-inline elided | 30 | 39 | 51 | 295 |
+| Disruptor manual fused | 231 | 291 | 393 | 9,531 |
+| Lattice physical strict topology | 775 | 874 | 1,434 | 21,152 |
+| Disruptor physical | 617 | 728 | 3,632 | 30,240 |
+| Lattice physical pinned CPU | 774 | 868 | 1,620 | 24,466 |
 
 The p99.9 values are more sensitive to sampling length and host noise than the
 p50/p99 values. Treat them as a checked-in run artifact, not as a platform
