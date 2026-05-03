@@ -3,6 +3,7 @@ package com.lattice;
 import com.lattice.edge.BackpressureException;
 import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
+import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
 import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.StaticGraph;
@@ -13,6 +14,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
@@ -118,6 +123,50 @@ class RuntimeFailureAndBackpressureTest {
         assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
         assertEquals(GraphState.STOPPED, graph.state());
         assertEquals(List.of(1, 2, 3), List.copyOf(consumed));
+    }
+
+    @Test
+    void abortWakesProducerBlockedOnFullIngressEdge() throws Exception {
+        final CountDownLatch sinkEntered = new CountDownLatch(1);
+        final CountDownLatch releaseSink = new CountDownLatch(1);
+        final StaticGraph graph = graph("abort-blocked-producer")
+            .source("ingress", Integer.class)
+            .sink("egress", Integer.class, ignored -> {
+                sinkEntered.countDown();
+                try {
+                    releaseSink.await(30, TimeUnit.SECONDS);
+                } catch (final InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+            }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(2).overflow(OverflowPolicy.block()))
+            .build();
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        graph.start();
+        final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+        ingress.emit(1);
+        assertTrue(sinkEntered.await(5, TimeUnit.SECONDS));
+        ingress.emit(2);
+        ingress.emit(3);
+
+        final Future<?> blockedEmit = executor.submit(() -> {
+            ingress.emit(4);
+            return null;
+        });
+        assertEventually(() -> graph.metrics().stage("ingress").blockedOutputs() > 0, Duration.ofSeconds(5));
+
+        graph.abort();
+        releaseSink.countDown();
+
+        final ExecutionException failure = assertThrows(ExecutionException.class,
+            () -> blockedEmit.get(5, TimeUnit.SECONDS));
+        assertTrue(failure.getCause() instanceof GraphRuntimeException);
+        assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+        assertEquals(GraphState.STOPPED, graph.state());
+
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
     }
 
     private static void assertEventually(final java.util.function.BooleanSupplier condition, final Duration timeout)

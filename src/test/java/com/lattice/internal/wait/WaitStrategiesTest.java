@@ -5,6 +5,7 @@ import com.lattice.wait.WaitSpec;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class WaitStrategiesTest {
@@ -19,6 +20,17 @@ class WaitStrategiesTest {
         strategy.idle(0, null);
 
         assertEquals(2, metrics.spins);
+        assertEquals(0, metrics.yields);
+        assertEquals(0, metrics.parks);
+    }
+
+    @Test
+    void fromBusySpinSpecUsesBusySpinSemantics() {
+        final RecordingWaitMetrics metrics = new RecordingWaitMetrics();
+        final WaitStrategy strategy = WaitStrategies.from(WaitSpec.busySpin());
+
+        assertEquals(1, strategy.idle(0, metrics));
+        assertEquals(1, metrics.spins);
         assertEquals(0, metrics.yields);
         assertEquals(0, metrics.parks);
     }
@@ -54,6 +66,15 @@ class WaitStrategiesTest {
     }
 
     @Test
+    void phasedStrategyAcceptsNullMetricsInEveryPhase() {
+        final WaitStrategy strategy = WaitStrategies.from(WaitSpec.phased(1, 1, Duration.ZERO));
+
+        assertEquals(1, assertDoesNotThrow(() -> strategy.idle(0, null)));
+        assertEquals(2, assertDoesNotThrow(() -> strategy.idle(1, null)));
+        assertEquals(3, assertDoesNotThrow(() -> strategy.idle(2, null)));
+    }
+
+    @Test
     void blockingStrategyAlwaysParksAndWrapsToZero() {
         final RecordingWaitMetrics metrics = new RecordingWaitMetrics();
         final WaitStrategy strategy = WaitStrategies.from(WaitSpec.blocking());
@@ -64,6 +85,13 @@ class WaitStrategiesTest {
         assertEquals(0, metrics.spins);
         assertEquals(0, metrics.yields);
         assertEquals(2, metrics.parks);
+    }
+
+    @Test
+    void blockingStrategyAcceptsNullMetrics() {
+        final WaitStrategy strategy = WaitStrategies.from(WaitSpec.blocking());
+
+        assertEquals(1, assertDoesNotThrow(() -> strategy.idle(0, null)));
     }
 
     private static final class RecordingWaitMetrics implements WaitMetrics {
