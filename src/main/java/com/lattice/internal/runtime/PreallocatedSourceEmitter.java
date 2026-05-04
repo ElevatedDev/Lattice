@@ -6,13 +6,15 @@ import java.time.Duration;
 import java.util.Objects;
 
 final class PreallocatedSourceEmitter<T> implements PreallocatedEmitter<T> {
+    private static final Object CLOSED = new Object();
+
     private final SourceEmitter<T> source;
     private final Object[] pool;
     private final int mask;
     private final int reuseBound;
     private long nextSequence;
     private boolean claimed;
-    private T claimedItem;
+    private Object claimedItem;
 
     PreallocatedSourceEmitter(
         final SourceEmitter<T> source,
@@ -34,7 +36,7 @@ final class PreallocatedSourceEmitter<T> implements PreallocatedEmitter<T> {
     @SuppressWarnings("unchecked")
     public T claim() {
         if (claimed) {
-            throw new GraphRuntimeException("source " + source.name() + " already has an outstanding preallocated item");
+            throw claimUnavailable();
         }
         final T item = (T) pool[(int) nextSequence & mask];
         nextSequence++;
@@ -96,11 +98,14 @@ final class PreallocatedSourceEmitter<T> implements PreallocatedEmitter<T> {
 
     @Override
     public void close() {
+        claimedItem = CLOSED;
+        claimed = true;
         source.close();
     }
 
     private void ensureClaimed(final T item) {
-        if (!claimed || item != claimedItem) {
+        final Object current = claimedItem;
+        if (!claimed || item != current) {
             throw new GraphRuntimeException("item was not claimed from preallocated source " + source.name());
         }
     }
@@ -108,5 +113,13 @@ final class PreallocatedSourceEmitter<T> implements PreallocatedEmitter<T> {
     private void clearClaim() {
         claimedItem = null;
         claimed = false;
+    }
+
+    private GraphRuntimeException claimUnavailable() {
+        if (claimedItem == CLOSED) {
+            return new GraphRuntimeException("source is closed: " + source.name());
+        }
+        return new GraphRuntimeException("source " + source.name()
+                + " already has an outstanding preallocated item");
     }
 }

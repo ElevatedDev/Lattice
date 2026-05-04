@@ -36,6 +36,70 @@ class GraphValidationTest {
     }
 
     @Test
+    void rejectsMissingEdgesUnknownEndpointsAndIllegalEndpointDirections() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("no-edges")
+            .source("ingress", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("unknown-source")
+            .source("ingress", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("missing", "egress", EdgeSpec.mpscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("self-edge")
+            .source("ingress", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "ingress", EdgeSpec.mpscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("source-incoming")
+            .source("left", Order.class)
+            .source("right", Order.class)
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("left", "right", EdgeSpec.mpscRing(8))
+            .edge("right", "egress", EdgeSpec.mpscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("sink-outgoing")
+            .source("ingress", Order.class)
+            .stage("stage", Order.class, Order.class, (order, out, ctx) -> out.push(order), StageSpec.singleThreaded())
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(8))
+            .edge("egress", "stage", EdgeSpec.spscRing(8))
+            .build());
+    }
+
+    @Test
+    void rejectsDanglingStagesCyclesAndIllegalWorkerOwnedMpscEdges() {
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("dangling-stage")
+            .source("ingress", Order.class)
+            .stage("validate", Order.class, Order.class, (order, out, ctx) -> out.push(order), StageSpec.singleThreaded())
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "validate", EdgeSpec.mpscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("cycle")
+            .source("ingress", Order.class)
+            .stage("a", Order.class, Order.class, (order, out, ctx) -> out.push(order), StageSpec.singleThreaded())
+            .stage("b", Order.class, Order.class, (order, out, ctx) -> out.push(order), StageSpec.singleThreaded())
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "egress", EdgeSpec.mpscRing(8))
+            .edge("a", "b", EdgeSpec.spscRing(8))
+            .edge("b", "a", EdgeSpec.spscRing(8))
+            .build());
+
+        assertThrows(GraphBuildException.class, () -> StaticGraph.builder("worker-mpsc")
+            .source("ingress", Order.class)
+            .stage("validate", Order.class, Order.class, (order, out, ctx) -> out.push(order), StageSpec.singleThreaded())
+            .sink("egress", Order.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("ingress", "validate", EdgeSpec.mpscRing(8))
+            .edge("validate", "egress", EdgeSpec.mpscRing(8))
+            .build());
+    }
+
+    @Test
     void rejectsTypeMismatch() {
         assertThrows(GraphBuildException.class, () -> StaticGraph.builder("bad")
             .source("ingress", Order.class)

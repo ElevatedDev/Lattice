@@ -14,7 +14,9 @@ import com.lattice.slab.SlabHandle;
 import com.lattice.slab.SlabPool;
 import com.lattice.stage.BatchPolicy;
 import com.lattice.stage.Emitter;
+import com.lattice.stage.Output;
 import com.lattice.stage.StageExceptionAction;
+import com.lattice.stage.StageLogic;
 import com.lattice.stage.StageSpec;
 import java.time.Duration;
 import java.util.List;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StageFusionTest {
@@ -375,6 +378,64 @@ class StageFusionTest {
             assertEquals(List.of("egress"), failedStages);
             assertEquals(0, graph.metrics().stage("validate").stageExceptions());
             assertEquals(1, graph.metrics().stage("egress").stageExceptions());
+    }
+
+    @Test
+    void fusedTypeValidationAttributesMisroutedPayloadToReceivingStage() throws Exception {
+            final List<String> failedStages = new CopyOnWriteArrayList<>();
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            final StageLogic<Integer, Integer> badProducer = (StageLogic) (value, out, ctx) ->
+                ((Output) out).push("not-an-integer");
+            final StaticGraph graph = StaticGraph.builder("fusion-type-validation")
+                .metrics(TEST_METRICS)
+                .fusion(FusionSpec.defaults().validateTypes(true))
+                .exceptionHandler((graphName, stageName, failure, context) -> {
+                    failedStages.add(stageName);
+                    return StageExceptionAction.FAIL_GRAPH;
+                })
+                .source("ingress", Integer.class)
+                .stage("normalize", Integer.class, Integer.class, badProducer, StageSpec.singleThreaded())
+                .stage("validate", Integer.class, Integer.class, (value, out, ctx) -> out.push(value),
+                    StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+                .edge("ingress", "normalize", EdgeSpec.mpscRing(32))
+                .edge("normalize", "validate", EdgeSpec.spscRing(32))
+                .edge("validate", "egress", EdgeSpec.spscRing(32))
+                .build();
+
+            graph.start();
+            graph.emitter("ingress", Integer.class).emit(1);
+            graph.emitter("ingress", Integer.class).close();
+
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(GraphState.FAILED, graph.state());
+            assertEquals(List.of("validate"), failedStages);
+            assertEquals(0, graph.metrics().stage("normalize").stageExceptions());
+            assertEquals(1, graph.metrics().stage("validate").stageExceptions());
+            assertTrue(graph.failure().orElseThrow().getCause() instanceof ClassCastException);
+    }
+
+    @Test
+    void elidedInlineSourceFailureThrowsFromEmitAndFailsGraph() throws Exception {
+            final StaticGraph graph = inlineElidedGraph("inline-elided-failure")
+                .source("ingress", Integer.class, SourceMode.SINGLE_PRODUCER)
+                .stage("explode", Integer.class, Integer.class, (value, out, ctx) -> {
+                    throw new IllegalStateException("boom");
+                }, StageSpec.singleThreaded())
+                .sink("egress", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+                .edge("ingress", "explode", EdgeSpec.spscRing(8))
+                .edge("explode", "egress", EdgeSpec.spscRing(8))
+                .build();
+
+            graph.start();
+            final Emitter<Integer> ingress = graph.emitter("ingress", Integer.class);
+
+            assertThrows(com.lattice.graph.GraphRuntimeException.class, () -> ingress.emit(1));
+            assertEquals(GraphState.FAILED, graph.state());
+            assertTrue(ingress.isClosed());
+            assertTrue(graph.awaitTermination(Duration.ofSeconds(5)));
+            assertEquals(1, graph.metrics().stage("explode").stageExceptions());
+            assertTrue(graph.failure().orElseThrow().getMessage().contains("stage failed: explode"));
     }
 
     @Test

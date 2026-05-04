@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NativeTopologySnapshotTest {
@@ -22,6 +23,31 @@ class NativeTopologySnapshotTest {
         assertEquals(0, probe.capabilityCalls);
         assertEquals(0, probe.maxCalls);
         assertEquals(0, probe.allowedCalls);
+    }
+
+    @Test
+    void loadedSnapshotWithUnavailableCapabilitiesPreservesFailureContext() {
+        final RecordingProbe nullCapabilities = RecordingProbe.loadedWithoutCapabilities();
+
+        final NativeTopologySnapshot snapshot = NativeTopologySnapshot.capture(nullCapabilities);
+
+        assertTrue(snapshot.loaded());
+        assertFalse(snapshot.hasCapabilities());
+        assertTrue(snapshot.failure() instanceof NativeTopologyException);
+        assertTrue(snapshot.failureMessage().contains("capabilities are unavailable"));
+        assertThrows(NativeTopologyUnavailableException.class, snapshot::capabilities);
+        assertEquals(-1, snapshot.maxCpuCount());
+        assertEquals(-1, snapshot.configuredCpuCount());
+        assertEquals(-1, snapshot.onlineCpuCount());
+        assertEquals(0, snapshot.cpuTopology().allowedCpuCount());
+        assertEquals(1, nullCapabilities.capabilityCalls);
+
+        final RecordingProbe throwingCapabilities = RecordingProbe.throwingCapabilities("boom");
+        final NativeTopologySnapshot throwingSnapshot = NativeTopologySnapshot.capture(throwingCapabilities);
+        assertTrue(throwingSnapshot.loaded());
+        assertFalse(throwingSnapshot.hasCapabilities());
+        assertEquals("boom", throwingSnapshot.failureMessage());
+        assertThrows(NativeTopologyUnavailableException.class, throwingSnapshot::capabilities);
     }
 
     @Test
@@ -75,6 +101,13 @@ class NativeTopologySnapshotTest {
         assertEquals(1, snapshot.cachedNumaNodeOfCpu(5));
         assertTrue(second.hasNumaMetadata());
         assertEquals(6, first.counts().scanLimit());
+        assertFalse(first.isCpuAllowed(-1));
+        assertFalse(first.isCpuAllowed(99));
+        assertEquals(-1, first.numaNodeOfCpu(-1));
+        assertEquals(-1, first.numaNodeOfCpu(99));
+        final BitSet returned = first.allowedCpus();
+        returned.set(7);
+        assertFalse(first.allowedCpus().get(7));
         assertEquals(1, probe.maxCalls);
         assertEquals(1, probe.configuredCalls);
         assertEquals(1, probe.onlineCalls);
@@ -118,6 +151,7 @@ class NativeTopologySnapshotTest {
         private int onlineCalls;
         private int allowedCalls;
         private int numaCalls;
+        private RuntimeException capabilityFailure;
 
         private RecordingProbe(
             final boolean loaded,
@@ -141,6 +175,16 @@ class NativeTopologySnapshotTest {
 
         static RecordingProbe unloaded(final String loadFailureMessage) {
             return new RecordingProbe(false, loadFailureMessage, null, -1, -1, -1, new BitSet(), new int[0]);
+        }
+
+        static RecordingProbe loadedWithoutCapabilities() {
+            return new RecordingProbe(true, "", null, -1, -1, -1, new BitSet(), new int[0]);
+        }
+
+        static RecordingProbe throwingCapabilities(final String message) {
+            final RecordingProbe probe = new RecordingProbe(true, "", null, -1, -1, -1, new BitSet(), new int[0]);
+            probe.capabilityFailure = new NativeTopologyException(message);
+            return probe;
         }
 
         static RecordingProbe loaded(
@@ -176,6 +220,9 @@ class NativeTopologySnapshotTest {
         @Override
         public NativeCapabilities capabilities() {
             capabilityCalls++;
+            if (capabilityFailure != null) {
+                throw capabilityFailure;
+            }
             return capabilities;
         }
 
