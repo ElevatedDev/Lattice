@@ -38,6 +38,14 @@ public interface StaticGraph extends AutoCloseable {
     GraphPlan plan();
 
     /**
+     * Returns the immutable build-time report explaining physical runtime
+     * decisions for this graph.
+     */
+    default GraphCompilationReport compilationReport() {
+        return GraphCompilationReport.logicalOnly(plan());
+    }
+
+    /**
      * Returns live graph, stage, and edge metrics.
      */
     GraphMetrics metrics();

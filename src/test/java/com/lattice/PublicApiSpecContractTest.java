@@ -4,6 +4,7 @@ import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.DiagnosticsSpec;
 import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphCompilationReport;
 import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.MetricsSpec;
 import com.lattice.graph.PreallocationSpec;
@@ -224,6 +225,34 @@ class PublicApiSpecContractTest {
         final DiagnosticsSpec diagnostics = DiagnosticsSpec.off().jfr(true);
         assertFalse(DiagnosticsSpec.off().jfr());
         assertTrue(diagnostics.jfr());
+    }
+
+    @Test
+    void compilationReportRowsExposeStableDecisionVocabulary() {
+        final GraphCompilationReport.Controls controls =
+            new GraphCompilationReport.Controls(true, false, false, false, false);
+        final GraphCompilationReport.Fallback fallback = new GraphCompilationReport.Fallback(
+            GraphCompilationReport.SubjectKind.EDGE,
+            "a->b",
+            GraphCompilationReport.Reason.NON_FUSIBLE_EDGE_OVERFLOW,
+            null
+        );
+        final GraphCompilationReport report = new GraphCompilationReport(
+            "report",
+            controls,
+            java.util.List.of(),
+            java.util.List.of(),
+            java.util.List.of(),
+            java.util.List.of(),
+            java.util.List.of(fallback)
+        );
+
+        assertTrue(report.controls().fusionEnabled());
+        assertEquals("fusion.non_fusible_edge.overflow", fallback.reasonCode());
+        assertEquals(GraphCompilationReport.Reason.NON_FUSIBLE_EDGE_OVERFLOW,
+            GraphCompilationReport.Reason.fromCode(fallback.reasonCode()).orElseThrow());
+        assertThrows(UnsupportedOperationException.class,
+            () -> report.fallbacks().add(fallback));
     }
 
     @Test

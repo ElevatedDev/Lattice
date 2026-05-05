@@ -2,6 +2,7 @@ package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
 import com.lattice.graph.GraphBuildException;
+import com.lattice.graph.GraphCompilationReport;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.GraphRuntimeException;
 import com.lattice.graph.GraphState;
@@ -50,6 +51,7 @@ public final class DefaultStaticGraph implements StaticGraph {
     private final Map<String, StageWorker> inlineWorkersByName = new LinkedHashMap<>();
     private final List<InlineLifecycleParticipant> inlineLifecycles = new ArrayList<>();
     private final PhysicalPlan runtimePlan;
+    private final GraphCompilationReport compilationReport;
     private final Map<String, PinPolicy> topologyAwarePins;
     private MessageEdge[] edgeArray = NO_EDGES;
     private SourceEmitter<?>[] sourceEmitterArray = NO_EMITTERS;
@@ -63,6 +65,8 @@ public final class DefaultStaticGraph implements StaticGraph {
     public DefaultStaticGraph(final CompiledGraph compiled) {
         this.compiled = compiled;
         this.runtimePlan = PhysicalPlanner.plan(compiled);
+        this.topologyAwarePins = TopologyAwarePlacement.plan(compiled, runtimePlan.workerOrder());
+        this.compilationReport = GraphCompilationReports.from(compiled, runtimePlan, topologyAwarePins);
         final MetricsSpec metricsSpec = compiled.runtimeConfig().metrics();
         final Map<String, StageMetrics> stageMetrics = new LinkedHashMap<>();
         for (final GraphPlan.Node node : compiled.plan().nodes()) {
@@ -80,7 +84,6 @@ public final class DefaultStaticGraph implements StaticGraph {
             ));
         }
 
-        this.topologyAwarePins = TopologyAwarePlacement.plan(compiled, runtimePlan.workerOrder());
         this.metrics = new GraphMetrics(compiled.plan().name(), stageMetrics, edgeMetrics, metricsSpec);
         this.termination = new CountDownLatch(runtimePlan.lifecycleParticipantCount());
         this.coordinator = new RuntimeCoordinator(
@@ -114,6 +117,11 @@ public final class DefaultStaticGraph implements StaticGraph {
     @Override
     public GraphPlan plan() {
         return compiled.plan();
+    }
+
+    @Override
+    public GraphCompilationReport compilationReport() {
+        return compilationReport;
     }
 
     @Override

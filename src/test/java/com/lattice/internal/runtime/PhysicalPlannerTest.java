@@ -4,6 +4,7 @@ import com.lattice.edge.EdgeSpec;
 import com.lattice.edge.OverflowPolicy;
 import com.lattice.graph.DiagnosticsSpec;
 import com.lattice.graph.FusionSpec;
+import com.lattice.graph.GraphCompilationReport;
 import com.lattice.graph.GraphPlacementSpec;
 import com.lattice.graph.GraphPlan;
 import com.lattice.graph.MetricsSpec;
@@ -61,7 +62,8 @@ class PhysicalPlannerTest {
     void linearStageChainPlansFusedStageSinkAndInlineSource() {
         enableFusion();
 
-        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageStageSink("inline-chain", false));
+        final CompiledGraph compiled = sourceStageStageSink("inline-chain", false);
+        final PhysicalPlan plan = PhysicalPlanner.plan(compiled);
 
         assertEquals(List.of("a"), plan.workerOrder());
         assertTrue(plan.fusedSinks().isEmpty());
@@ -86,11 +88,38 @@ class PhysicalPlannerTest {
         assertEquals(EdgeUseKind.ELIDED_FUSED_STAGE, plan.edgeDecision("a->b").useKind());
         assertEquals(EdgeUseKind.ELIDED_FUSED_SINK, plan.edgeDecision("b->sink").useKind());
         assertEquals(List.of("source->a"), new ArrayList<>(plan.senderDecisions().keySet()));
+
+        final GraphCompilationReport report = GraphCompilationReports.from(compiled, plan);
+        assertEquals(GraphCompilationReport.WorkerDecisionKind.RUNNABLE,
+                report.worker("a").orElseThrow().decision());
+        assertEquals(GraphCompilationReport.WorkerDecisionKind.FUSED_INTO_STAGE,
+                report.worker("b").orElseThrow().decision());
+        assertEquals(GraphCompilationReport.EdgeUseKind.ELIDED_FUSED_STAGE,
+                report.edge("a", "b").orElseThrow().use());
+        assertEquals(GraphCompilationReport.MergeKind.STAGE_CHAIN,
+                report.mergesForOwner("a").stream()
+                        .filter(merge -> merge.kind() == GraphCompilationReport.MergeKind.STAGE_CHAIN)
+                        .findFirst()
+                        .orElseThrow()
+                        .kind());
+        assertTrue(report.senders().stream()
+                .anyMatch(sender -> sender.edgeKey().equals("a->b")
+                        && sender.kind() == GraphCompilationReport.SenderKind.DIRECT_STAGE));
+        assertTrue(report.senders().stream()
+                .anyMatch(sender -> sender.edgeKey().equals("b->sink")
+                        && sender.kind() == GraphCompilationReport.SenderKind.DIRECT_SINK));
+
+        final GraphCompilationReport topologyAwareReport =
+                GraphCompilationReports.from(compiled, plan, Map.of("a", PinPolicy.cpu(7)));
+        assertEquals(PinPolicy.PinKind.CPU,
+                topologyAwareReport.worker("a").orElseThrow().effectivePinPolicy().kind());
+        assertEquals(7, topologyAwareReport.worker("b").orElseThrow().effectivePinPolicy().cpuId());
     }
 
     @Test
     void inlineSourcePhysicalElisionRemovesOwnerWorkerAndSourceSenderWhenOptedIn() {
-        final PhysicalPlan plan = PhysicalPlanner.plan(sourceStageStageSink("inline-chain-elided", false, inlineElisionRuntime()));
+        final CompiledGraph compiled = sourceStageStageSink("inline-chain-elided", false, inlineElisionRuntime());
+        final PhysicalPlan plan = PhysicalPlanner.plan(compiled);
 
         assertTrue(plan.workerOrder().isEmpty());
         assertEquals(1, plan.lifecycleParticipantCount());
@@ -100,6 +129,17 @@ class PhysicalPlannerTest {
         assertEquals(EdgeUseKind.ELIDED_FUSED_STAGE, plan.edgeDecision("a->b").useKind());
         assertEquals(EdgeUseKind.ELIDED_FUSED_SINK, plan.edgeDecision("b->sink").useKind());
         assertTrue(plan.senderDecisions().isEmpty());
+
+        final GraphCompilationReport report = GraphCompilationReports.from(compiled, plan);
+        assertEquals(GraphCompilationReport.WorkerDecisionKind.INLINE_SOURCE_CHAIN,
+                report.worker("a").orElseThrow().decision());
+        assertEquals(GraphCompilationReport.EdgeUseKind.ELIDED_INLINE_SOURCE,
+                report.edge("source", "a").orElseThrow().use());
+        assertTrue(report.mergesForOwner("a").stream()
+                .anyMatch(merge -> merge.kind() == GraphCompilationReport.MergeKind.INLINE_SOURCE_CHAIN));
+        assertTrue(report.senders().stream()
+                .anyMatch(sender -> sender.edgeKey().equals("source->a")
+                        && sender.kind() == GraphCompilationReport.SenderKind.INLINE_ENTRY));
     }
 
     @Test
@@ -203,6 +243,36 @@ class PhysicalPlannerTest {
         assertTrue(plan.inlineSourceBindings().isEmpty());
         assertEquals(List.of(new PlanningFallback("source->a", FallbackReason.NON_FUSIBLE_EDGE)),
                 plan.fallbackReasons());
+
+        final GraphCompilationReport report = GraphCompilationReports.from(compiled, plan);
+        assertEquals(GraphCompilationReport.Reason.NON_FUSIBLE_EDGE,
+                report.fallbacksFor("source->a").get(0).reason());
+    }
+
+    @Test
+    void nonFusibleStageChainEdgeRecordsSpecificReportFallback() {
+        enableFusion();
+
+        final CompiledGraph compiled = compiled(
+                "non-fusible-stage-chain-edge",
+                false,
+                List.of(source("source"), stage("a"), stage("b"), sink("sink")),
+                List.of(
+                        sourceEdge("source", "a", EdgeSpec.spscRing(16)),
+                        workerEdge("a", "b", EdgeSpec.spscRing(16).overflow(OverflowPolicy.failFast())),
+                        workerEdge("b", "sink", EdgeSpec.spscRing(16))
+                )
+        );
+
+        final PhysicalPlan plan = PhysicalPlanner.plan(compiled);
+        final GraphCompilationReport report = GraphCompilationReports.from(compiled, plan);
+
+        assertTrue(hasFallback(plan, FallbackReason.NON_FUSIBLE_EDGE_OVERFLOW),
+                () -> "stage-chain edge fallback should be visible: " + plan.fallbackReasons());
+        assertEquals(GraphCompilationReport.Reason.NON_FUSIBLE_EDGE_OVERFLOW,
+                report.fallbacksFor("a->b").get(0).reason());
+        assertEquals(GraphCompilationReport.EdgeUseKind.NORMAL,
+                report.edge("a", "b").orElseThrow().use());
     }
 
     @Test

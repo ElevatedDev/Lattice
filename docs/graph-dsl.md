@@ -74,6 +74,7 @@ and JFR are off.
 
 ```java
 StaticGraph g = builder.build(); // validates and compiles
+String report = g.compilationReport().toSummaryString();
 g.start();                       // workers come up, placement applied
 g.emitter("ingress", Order.class).emit(...);
 g.close();                       // close all sources, drain accepted items
@@ -83,3 +84,28 @@ g.abort();                       // fail-fast; no drain promise
 
 `build()` may throw `GraphBuildException`; runtime failures surface as
 `GraphRuntimeException`. See [Failure Modes](failure-modes.md).
+
+## Compilation Report
+
+`StaticGraph#compilationReport()` is a build-time diagnostic snapshot. Use it
+after `build()` and before or after `start()` to inspect how the logical graph
+was lowered into workers, edges, senders, and fusion decisions.
+
+```java
+GraphCompilationReport report = graph.compilationReport();
+
+report.edge("parse", "risk")
+    .flatMap(GraphCompilationReport.Edge::reason)
+    .map(GraphCompilationReport.Reason::code)
+    .ifPresent(System.out::println);
+
+System.out.println(report.toSummaryString());
+```
+
+The structured rows are the API contract. `toSummaryString()` is for humans:
+
+```text
+fallbacks:
+  fusion.non_fusible_edge.overflow edge=parse->risk: Stage-chain fusion requires BLOCK overflow.
+  fusion.requires_worker_placement node=risk: Source-inline fusion cannot move placed stage logic onto the producer thread.
+```

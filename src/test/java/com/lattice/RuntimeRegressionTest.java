@@ -118,10 +118,14 @@ class RuntimeRegressionTest {
     @Test
     void poisonReleasesQueuedSlabHandlePayloads() throws Exception {
         final SlabPool<String> pool = new SlabPool<>("poison-release", 2);
+        final CountDownLatch stageEntered = new CountDownLatch(1);
+        final CountDownLatch releaseStage = new CountDownLatch(1);
         final StaticGraph graph = graph("poison-release")
             .exceptionHandler((graphName, stageName, failure, context) -> StageExceptionAction.POISON_STAGE)
             .source("ingress", SlabHandle.class)
             .stage("explode", SlabHandle.class, SlabHandle.class, (handle, out, ctx) -> {
+                stageEntered.countDown();
+                await(releaseStage);
                 throw new IllegalStateException("poison");
             }, StageSpec.singleThreaded())
             .sink("egress", SlabHandle.class, ignored -> { }, StageSpec.singleThreaded())
@@ -130,8 +134,13 @@ class RuntimeRegressionTest {
             .build();
 
         graph.start();
-        graph.emitter("ingress", SlabHandle.class).emit(pool.acquire("active"));
-        graph.emitter("ingress", SlabHandle.class).emit(pool.acquire("queued"));
+        try {
+            graph.emitter("ingress", SlabHandle.class).emit(pool.acquire("active"));
+            assertTrue(stageEntered.await(5, TimeUnit.SECONDS));
+            graph.emitter("ingress", SlabHandle.class).emit(pool.acquire("queued"));
+        } finally {
+            releaseStage.countDown();
+        }
 
         assertEventually(() -> graph.state() == GraphState.STOPPED, Duration.ofSeconds(5));
         assertEquals(0, pool.leakedCount());

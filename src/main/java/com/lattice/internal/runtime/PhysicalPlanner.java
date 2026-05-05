@@ -558,6 +558,7 @@ final class PhysicalPlanner {
 
             final EdgeDefinition edge = normalOutgoing.get(0);
             if (!fusibleEdge(edge.spec())) {
+                fallbackReasons.add(new PlanningFallback(edge.key(), nonFusibleEdgeReason(edge.spec())));
                 break;
             }
 
@@ -569,6 +570,9 @@ final class PhysicalPlanner {
                 downstreamOutgoing.addAll(compiled.outgoingBySource().getOrDefault(downstream.name(), List.of()));
                 currentName = downstream.name();
                 continue;
+            }
+            if (fusibleStage(downstream) && downstream.spec().pinPolicy().kind() != PinPolicy.PinKind.NONE) {
+                fallbackReasons.add(new PlanningFallback(downstream.name(), FallbackReason.REQUIRES_WORKER_PLACEMENT));
             }
 
             if (downstream != null && downstream.kind() == GraphPlan.NodeKind.SINK && !stageNames.isEmpty()) {
@@ -614,6 +618,22 @@ final class PhysicalPlanner {
                 && spec.overflowPolicy().kind() == OverflowPolicy.OverflowKind.BLOCK
                 && spec.memoryMode().kind() == MemoryMode.MemoryKind.ON_HEAP_SLOTS
                 && spec.batchPolicy().kind() == BatchPolicy.BatchKind.DISABLED;
+    }
+
+    private static FallbackReason nonFusibleEdgeReason(final EdgeSpec spec) {
+        if (spec.kind() != EdgeSpec.EdgeKind.SPSC_RING) {
+            return FallbackReason.NON_FUSIBLE_EDGE_KIND;
+        }
+        if (spec.overflowPolicy().kind() != OverflowPolicy.OverflowKind.BLOCK) {
+            return FallbackReason.NON_FUSIBLE_EDGE_OVERFLOW;
+        }
+        if (spec.memoryMode().kind() != MemoryMode.MemoryKind.ON_HEAP_SLOTS) {
+            return FallbackReason.NON_FUSIBLE_EDGE_MEMORY;
+        }
+        if (spec.batchPolicy().kind() != BatchPolicy.BatchKind.DISABLED) {
+            return FallbackReason.NON_FUSIBLE_EDGE_BATCH;
+        }
+        return FallbackReason.NON_FUSIBLE_EDGE;
     }
 
     private static Map<String, InlineSourceBinding> inlineFusedWorkerToSource(

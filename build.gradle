@@ -60,6 +60,7 @@ def exampleMainClasses = [
     runFusedLinearPipelineExample: 'FusedLinearPipelineExample',
     runRoutingJoinExample: 'RoutingJoinExample',
     runMetricsDiagnosticsExample: 'MetricsDiagnosticsExample',
+    runCompilationReportExample: 'CompilationReportExample',
     runBenchmarkStyleFastPathExample: 'BenchmarkStyleFastPathExample',
     runOrdersPipelineExample: 'OrdersPipelineExample'
 ]

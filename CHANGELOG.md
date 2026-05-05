@@ -61,6 +61,12 @@ state is pre-1.0.
 
 ### Added
 
+- `StaticGraph#compilationReport()` and public
+  `GraphCompilationReport` rows for build-time worker, edge, sender, merge,
+  and fallback decisions. Reports include stable reason codes such as
+  `source.specialized_to_spsc`, `fusion.non_fusible_edge.overflow`, and
+  `source_inline.multi_producer_source`, plus a human-readable
+  `toSummaryString()` for support output.
 - Per-graph runtime configuration on `StaticGraph.Builder`:
   `fusion(FusionSpec)`, `metrics(MetricsSpec)`,
   `placement(GraphPlacementSpec)`, and `diagnostics(DiagnosticsSpec)`.
