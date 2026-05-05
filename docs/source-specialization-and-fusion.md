@@ -91,3 +91,24 @@ Implementation notes:
 
 In all these cases the physical edges remain and ordering, ownership, and
 backpressure work as documented in [Edge Semantics](edge-semantics.md).
+
+`graph.compilationReport()` records both positive merge decisions and
+reason-coded fallbacks. That keeps "why did this not fuse?" answerable without
+inferring from metrics or reading internals.
+
+```text
+edges:
+  parse->risk declared=SPSC_RING effective=SPSC_RING use=NORMAL owner=parse
+merges:
+  STAGE_TO_SINK owner=risk merged=[egress] elided=[risk->egress] terminal=egress
+fallbacks:
+  fusion.non_fusible_edge.overflow edge=parse->risk: Stage-chain fusion requires BLOCK overflow.
+```
+
+For source specialization, the same report shows the declared edge and the
+effective runtime edge:
+
+```text
+ingress->parse declared=MPSC_RING effective=SPSC_RING use=NORMAL owner=parse
+  source.specialized_to_spsc: Source ingress specialized because ingress is SINGLE_PRODUCER.
+```

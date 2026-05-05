@@ -1,6 +1,7 @@
 package com.lattice.internal.runtime;
 
 import com.lattice.edge.EdgeSpec;
+import com.lattice.graph.GraphCompilationReport;
 import com.lattice.graph.GraphState;
 import com.lattice.graph.StaticGraph;
 import com.lattice.stage.StageSpec;
@@ -22,6 +23,12 @@ class DefaultStaticGraphTest {
 
         assertInstanceOf(DefaultStaticGraph.class, graph);
         assertEquals("default-runtime", graph.plan().name());
+        final GraphCompilationReport report = graph.compilationReport();
+        assertEquals("default-runtime", report.graphName());
+        assertEquals(GraphCompilationReport.EdgeUseKind.NORMAL,
+            report.edge("source", "sink").orElseThrow().use());
+        assertEquals(GraphCompilationReport.WorkerDecisionKind.RUNNABLE,
+            report.worker("sink").orElseThrow().decision());
         assertEquals("default-runtime", graph.metrics().graphName());
         assertEquals(GraphState.NEW, graph.state());
 

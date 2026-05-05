@@ -141,6 +141,9 @@ worker starts. The compiler validates node names, edge type compatibility,
 source producer contracts, routing shape, join stamps, placement requests, and
 preallocation/fusion eligibility. At runtime the graph executes that fixed plan
 instead of rediscovering topology or dependency structure on every message.
+`StaticGraph#compilationReport()` exposes the resulting worker, edge, sender,
+merge, and fallback decisions so teams can see exactly why a pipeline fused or
+why it stayed physical.
 
 The hot path is intentionally narrow:
 
@@ -158,6 +161,9 @@ The hot path is intentionally narrow:
 - Runtime controls are graph-local: `FusionSpec`, `MetricsSpec`,
   `GraphPlacementSpec`, and `DiagnosticsSpec` replace process-global fusion,
   metrics, placement, and JFR flags.
+- Compilation decisions are graph-local too: `GraphCompilationReport` gives
+  stable reason codes such as `fusion.non_fusible_edge.overflow` and
+  `source_inline.multi_producer_source` for diagnostics and support tooling.
 
 ## Per-Graph Runtime Controls
 

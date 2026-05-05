@@ -10,6 +10,7 @@ Each is `public static void main` and uses only the public API.
 | [FusedLinearPipelineExample](../../src/examples/java/com/lattice/examples/FusedLinearPipelineExample.java) | Linear chain that the compiler fuses into a single owner thread. |
 | [RoutingJoinExample](../../src/examples/java/com/lattice/examples/RoutingJoinExample.java) | Broadcast fan-out plus stamped join with explicit policy. |
 | [MetricsDiagnosticsExample](../../src/examples/java/com/lattice/examples/MetricsDiagnosticsExample.java) | Reading graph / stage / edge / placement metrics at runtime. |
+| [CompilationReportExample](../../src/examples/java/com/lattice/examples/CompilationReportExample.java) | Printing fusion, source specialization, and fallback decisions. |
 | [BenchmarkStyleFastPathExample](../../src/examples/java/com/lattice/examples/BenchmarkStyleFastPathExample.java) | The hot-path discipline used by the JMH suite. |
 | [OrdersPipelineExample](../../src/examples/java/com/lattice/examples/OrdersPipelineExample.java) | Minimal validate -> sink order pipeline with wait, overflow, and memory knobs. |
 
@@ -20,8 +21,8 @@ Each is `public static void main` and uses only the public API.
 ```
 
 Other example tasks follow the same name pattern, for example
-`runFusedLinearPipelineExample`, `runRoutingJoinExample`, and
-`runMetricsDiagnosticsExample`.
+`runFusedLinearPipelineExample`, `runRoutingJoinExample`,
+`runMetricsDiagnosticsExample`, and `runCompilationReportExample`.
 
 The examples deliberately use the same hot-path discipline as the JMH
 benchmarks (no logging, no allocation in stage bodies, hot-counter flags

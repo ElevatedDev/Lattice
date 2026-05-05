@@ -24,6 +24,7 @@ class EdgeDefinitionTest {
         assertEquals("source->sink", edge.key());
         assertEquals(4, edge.declarationOrder());
         assertEquals(2, edge.branchIndex());
+        assertEquals(EdgeSpec.EdgeKind.MPSC_RING, edge.declaredKind());
         assertTrue(edge.redirectOnly());
         assertTrue(edge.sourceIngress());
     }

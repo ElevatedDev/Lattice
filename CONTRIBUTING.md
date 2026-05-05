@@ -61,6 +61,14 @@ stable product contracts:
 - `GraphPlan.Node`
 - `GraphPlan.Edge`
 - `GraphPlan.Placement`
+- `GraphCompilationReport`
+- `GraphCompilationReport.Controls`
+- `GraphCompilationReport.Worker`
+- `GraphCompilationReport.Edge`
+- `GraphCompilationReport.Sender`
+- `GraphCompilationReport.Merge`
+- `GraphCompilationReport.Fallback`
+- `GraphCompilationReport` nested enum vocabularies and reason codes
 - `GraphState`
 - `SourceMode`
 - `PreallocationSpec`

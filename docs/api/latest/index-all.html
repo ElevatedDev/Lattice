@@ -83,6 +83,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Emit when every branch has supplied the same stamp.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#allocationOwner()" class="member-name-link">allocationOwner()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the worker or subsystem that owns allocation for this edge.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#allocationOwner()" class="member-name-link">allocationOwner()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
 <div class="block">Returns the worker or subsystem that owns this edge allocation, when
@@ -159,6 +163,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Read-only view of items delivered to a batch stage callback.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#BATCH_STAGE" class="member-name-link">BATCH_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#BATCH_STAGE" class="member-name-link">BATCH_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#batchesProcessed()" class="member-name-link">batchesProcessed()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
 <div class="block">Returns processed batch count.</div>
@@ -252,6 +260,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a routing stage that publishes to every downstream branch.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#BROADCAST" class="member-name-link">BROADCAST</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#BROADCAST" class="member-name-link">BROADCAST</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">Router that publishes to every downstream edge.</div>
@@ -361,6 +371,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns the coalescing key extractor for <a href="com/lattice/edge/OverflowPolicy.OverflowKind.html#COALESCE"><code>OverflowPolicy.OverflowKind.COALESCE</code></a>,
  or <code>null</code> for other policies.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#code()" class="member-name-link">code()</a> - Method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>
+<div class="block">Returns the stable machine-readable reason code.</div>
+</dd>
 <dt><a href="com/lattice/edge/package-summary.html">com.lattice.edge</a> - package com.lattice.edge</dt>
 <dd>
 <div class="block">Edge configuration and backpressure policies for bounded graph handoffs.</div>
@@ -407,6 +421,11 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the combiner invoked for completed or policy-emitted groups.</div>
 </dd>
+<dt><a href="com/lattice/graph/StaticGraph.html#compilationReport()" class="member-name-link">compilationReport()</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph">StaticGraph</a></dt>
+<dd>
+<div class="block">Returns the immutable build-time report explaining physical runtime
+ decisions for this graph.</div>
+</dd>
 <dt><a href="com/lattice/routing/JoinGroup.html#complete()" class="member-name-link">complete()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></dt>
 <dd>
 <div class="block">Returns whether all expected branches are present.</div>
@@ -425,6 +444,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>configuredCpuCount</code> record component.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#CONFLICTING_EXPLICIT_PINS" class="member-name-link">CONFLICTING_EXPLICIT_PINS</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#consumedCount()" class="member-name-link">consumedCount()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
 <div class="block">Returns items consumed from this edge when hot counters are enabled.</div>
@@ -436,6 +457,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/metrics/StageMetrics.html#consumedCount()" class="member-name-link">consumedCount()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
 <div class="block">Returns messages consumed by this stage when hot counters are enabled.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#controls()" class="member-name-link">controls()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns graph-level controls that influenced compilation.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#%3Cinit%3E(boolean,boolean,boolean,boolean,boolean)" class="member-name-link">Controls(boolean, boolean, boolean, boolean, boolean)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Creates a controls row.</div>
 </dd>
 <dt><a href="com/lattice/routing/BroadcastSpec.html#copier()" class="member-name-link">copier()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/BroadcastSpec.html" title="class in com.lattice.routing">BroadcastSpec</a></dt>
 <dd>
@@ -520,9 +549,27 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the NUMA node currently running this thread.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#CUSTOM_EXCEPTION_HANDLER" class="member-name-link">CUSTOM_EXCEPTION_HANDLER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#customExceptionHandler()" class="member-name-link">customExceptionHandler()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Returns whether a custom stage exception handler was installed.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:D">D</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#decision()" class="member-name-link">decision()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the worker decision.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#declaredKind()" class="member-name-link">declaredKind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the declared edge kind before compiler specialization.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#defaultExplanation()" class="member-name-link">defaultExplanation()</a> - Method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>
+<div class="block">Returns the default human-readable explanation.</div>
+</dd>
 <dt><a href="com/lattice/graph/FusionSpec.html#defaults()" class="member-name-link">defaults()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
 <dd>
 <div class="block">Enables normal downstream fusion and keeps source-inline execution off.</div>
@@ -543,6 +590,24 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/graph/DiagnosticsSpec.html" class="type-name-link" title="class in com.lattice.graph">DiagnosticsSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
 <dd>
 <div class="block">Graph-level diagnostic event controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#DIRECT_ROUTER" class="member-name-link">DIRECT_ROUTER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#DIRECT_ROUTER" class="member-name-link">DIRECT_ROUTER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Message is delivered by direct router invocation.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#DIRECT_SINK" class="member-name-link">DIRECT_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#DIRECT_SINK" class="member-name-link">DIRECT_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Message is delivered by direct sink invocation.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#DIRECT_STAGE" class="member-name-link">DIRECT_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#DIRECT_STAGE" class="member-name-link">DIRECT_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Message is delivered by direct stage invocation inside a fused chain.</div>
 </dd>
 <dt><a href="com/lattice/graph/FusionSpec.html#disabled()" class="member-name-link">disabled()</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
 <dd>
@@ -568,6 +633,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a routing stage that chooses one downstream branch.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#DISPATCH" class="member-name-link">DISPATCH</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#DISPATCH" class="member-name-link">DISPATCH</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">Router that chooses one downstream edge.</div>
@@ -633,6 +700,10 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:E">E</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#edge(java.lang.String,java.lang.String)" class="member-name-link">edge(String, String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Finds an edge decision by source and target names.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#edge(java.lang.String,java.lang.String)" class="member-name-link">edge(String, String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Finds a compiled edge by source and target names.</div>
@@ -645,6 +716,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a directed edge between two nodes.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#%3Cinit%3E(java.lang.String,java.lang.String,com.lattice.edge.EdgeSpec.EdgeKind,com.lattice.edge.EdgeSpec.EdgeKind,com.lattice.graph.GraphCompilationReport.EdgeUseKind,java.lang.String,boolean,boolean,com.lattice.graph.GraphCompilationReport.Reason,java.lang.String)" class="member-name-link">Edge(String, String, EdgeSpec.EdgeKind, EdgeSpec.EdgeKind, GraphCompilationReport.EdgeUseKind, String, boolean, boolean, GraphCompilationReport.Reason, String)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Creates an edge decision row.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#%3Cinit%3E(java.lang.String,java.lang.String,java.lang.Class,com.lattice.edge.EdgeSpec)" class="member-name-link">Edge(String, String, Class&lt;?&gt;, EdgeSpec)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
 <div class="block">Creates normal edge metadata.</div>
@@ -656,6 +731,24 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#%3Cinit%3E(java.lang.String,java.lang.String,java.lang.Class,com.lattice.edge.EdgeSpec,java.lang.String,int,boolean)" class="member-name-link">Edge(String, String, Class&lt;?&gt;, EdgeSpec, String, int, boolean)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
 <div class="block">Creates edge metadata with routing branch information.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#EDGE" class="member-name-link">EDGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#EDGE" class="member-name-link">EDGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Message is published into a physical edge.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#EDGE" class="member-name-link">EDGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Logical edge subject.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#EDGE_WITH_REDIRECT" class="member-name-link">EDGE_WITH_REDIRECT</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Message is published into a physical edge with a redirect edge.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#edgeKey()" class="member-name-link">edgeKey()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the target edge key.</div>
 </dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html" class="type-name-link" title="class in com.lattice.metrics">EdgeMetrics</a> - Class in <a href="com/lattice/metrics/package-summary.html">com.lattice.metrics</a></dt>
 <dd>
@@ -673,6 +766,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates edge metrics with allocation metadata.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#edges()" class="member-name-link">edges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns edge decision rows in declaration order.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#edges()" class="member-name-link">edges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Returns the immutable compiled edge list.</div>
@@ -688,6 +785,26 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/edge/EdgeSpec.EdgeKind.html" class="type-name-link" title="enum class in com.lattice.edge">EdgeSpec.EdgeKind</a> - Enum Class in <a href="com/lattice/edge/package-summary.html">com.lattice.edge</a></dt>
 <dd>
 <div class="block">Edge implementation families supported by the public API.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#effectiveKind()" class="member-name-link">effectiveKind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the effective runtime edge kind.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#effectivePinPolicy()" class="member-name-link">effectivePinPolicy()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the effective pin policy after merge decisions.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#ELIDED_FUSED_ROUTER" class="member-name-link">ELIDED_FUSED_ROUTER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#ELIDED_FUSED_SINK" class="member-name-link">ELIDED_FUSED_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#ELIDED_FUSED_STAGE" class="member-name-link">ELIDED_FUSED_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#ELIDED_INLINE_SOURCE" class="member-name-link">ELIDED_INLINE_SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#elidedEdges()" class="member-name-link">elidedEdges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns edge keys elided by the merge.</div>
 </dd>
 <dt><a href="com/lattice/graph/FusionSpec.html#elideInlineSourcePhysicalPath()" class="member-name-link">elideInlineSourcePhysicalPath()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
 <dd>
@@ -798,6 +915,26 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns requested NUMA node, or <code>-1</code> when not requested.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#explanation()" class="member-name-link">explanation()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns a human-readable explanation, or an empty string.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#explanation()" class="member-name-link">explanation()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Returns the human-readable explanation.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#explanation()" class="member-name-link">explanation()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns a human-readable explanation, or an empty string.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#explanation()" class="member-name-link">explanation()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns a human-readable explanation, or an empty string.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#explanation()" class="member-name-link">explanation()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns a human-readable explanation, or an empty string.</div>
+</dd>
 <dt><a href="com/lattice/routing/JoinSpec.html#extractLongStamp(java.lang.Object)" class="member-name-link">extractLongStamp(Object)</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinSpec.html" title="class in com.lattice.routing">JoinSpec</a></dt>
 <dd>
 <div class="block">Extracts this item's primitive long stamp.</div>
@@ -866,6 +1003,20 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="com/lattice/nativeaccess/NativeTopologySnapshot.html#failureMessage()" class="member-name-link">failureMessage()</a> - Method in class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeTopologySnapshot.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#%3Cinit%3E(com.lattice.graph.GraphCompilationReport.SubjectKind,java.lang.String,com.lattice.graph.GraphCompilationReport.Reason,java.lang.String)" class="member-name-link">Fallback(GraphCompilationReport.SubjectKind, String, GraphCompilationReport.Reason, String)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Creates a fallback row.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#fallbacks()" class="member-name-link">fallbacks()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns fallback decisions for candidates that did not merge.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#fallbacksFor(java.lang.String)" class="member-name-link">fallbacksFor(String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns fallback decisions for the given subject.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#FAN_OUT_SOURCE" class="member-name-link">FAN_OUT_SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlacementSpec.html#firstTouch()" class="member-name-link">firstTouch()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></dt>
 <dd>
 <div class="block">Returns whether workers should first-touch owned edge storage.</div>
@@ -905,6 +1056,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Uses caller-provided objects as the source pool.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#from()" class="member-name-link">from()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the source node name.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#from()" class="member-name-link">from()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
 <div class="block">Returns the source node name.</div>
@@ -917,6 +1072,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates placement metadata from a public pin policy.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#fromCode(java.lang.String)" class="member-name-link">fromCode(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>
+<div class="block">Finds a reason by stable code.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#FUSED_INTO_SINK" class="member-name-link">FUSED_INTO_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#FUSED_INTO_STAGE" class="member-name-link">FUSED_INTO_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/MetricsSpec.html#fusedLogicalEdgeCounters()" class="member-name-link">fusedLogicalEdgeCounters()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></dt>
 <dd>
 <div class="block">Returns whether logical counters for fused/elided edges are enabled.</div>
@@ -926,9 +1089,19 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a copy with logical counters for fused/elided edges enabled or
  disabled.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#fusedOwner()" class="member-name-link">fusedOwner()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the worker this node was fused into, or an empty string.</div>
+</dd>
 <dt><a href="com/lattice/graph/StaticGraph.Builder.html#fusion(com.lattice.graph.FusionSpec)" class="member-name-link">fusion(FusionSpec)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
 <dd>
 <div class="block">Sets graph-level fusion controls.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#FUSION_DISABLED" class="member-name-link">FUSION_DISABLED</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#fusionEnabled()" class="member-name-link">fusionEnabled()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Returns whether downstream fusion was enabled.</div>
 </dd>
 <dt><a href="com/lattice/graph/FusionSpec.html" class="type-name-link" title="class in com.lattice.graph">FusionSpec</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
 <dd>
@@ -941,6 +1114,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the item at <code>index</code>.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#GRAPH" class="member-name-link">GRAPH</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Whole-graph subject.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphBuildException.html" class="type-name-link" title="class in com.lattice.graph">GraphBuildException</a> - Exception Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
 <dd>
 <div class="block">Thrown when a graph plan cannot be compiled or validated.</div>
@@ -948,6 +1125,71 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/graph/GraphBuildException.html#%3Cinit%3E(java.lang.String)" class="member-name-link">GraphBuildException(String)</a> - Constructor for exception class com.lattice.graph.<a href="com/lattice/graph/GraphBuildException.html" title="class in com.lattice.graph">GraphBuildException</a></dt>
 <dd>
 <div class="block">Creates a build exception with a validation message.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Immutable build-time report explaining physical runtime decisions for a
+ compiled graph.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#%3Cinit%3E(java.lang.String,com.lattice.graph.GraphCompilationReport.Controls,java.util.List,java.util.List,java.util.List,java.util.List,java.util.List)" class="member-name-link">GraphCompilationReport(String, GraphCompilationReport.Controls, List&lt;GraphCompilationReport.Worker&gt;, List&lt;GraphCompilationReport.Edge&gt;, List&lt;GraphCompilationReport.Sender&gt;, List&lt;GraphCompilationReport.Merge&gt;, List&lt;GraphCompilationReport.Fallback&gt;)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Creates a compilation report from immutable row snapshots.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Controls</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Graph-level controls that influenced compilation.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Edge</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Decision row for one logical edge.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Runtime edge-use categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Explanation for a merge candidate or optimization that did not apply.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Merge</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Positive merge decision.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Positive merge categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Executable operator categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Output strategy categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Curated compilation decision reasons.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Sender</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Decision row for one runtime sender.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Runtime sender categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Fallback subject categories.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html" class="type-name-link" title="class in com.lattice.graph">GraphCompilationReport.Worker</a> - Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Decision row for one logical worker-capable node.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" class="type-name-link" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a> - Enum Class in <a href="com/lattice/graph/package-summary.html">com.lattice.graph</a></dt>
+<dd>
+<div class="block">Worker decision categories.</div>
 </dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.html" class="type-name-link" title="class in com.lattice.metrics">GraphMetrics</a> - Class in <a href="com/lattice/metrics/package-summary.html">com.lattice.metrics</a></dt>
 <dd>
@@ -964,6 +1206,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" class="type-name-link" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a> - Record Class in <a href="com/lattice/metrics/package-summary.html">com.lattice.metrics</a></dt>
 <dd>
 <div class="block">Stage placement row used by <a href="com/lattice/metrics/GraphMetrics.html#placementReport()"><code>GraphMetrics.placementReport()</code></a>.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#graphName()" class="member-name-link">graphName()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns the graph name.</div>
 </dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.html#graphName()" class="member-name-link">graphName()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></dt>
 <dd>
@@ -1028,8 +1274,14 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:H">H</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#HANDLE_CAPABLE_PAYLOAD" class="member-name-link">HANDLE_CAPABLE_PAYLOAD</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/nativeaccess/NativeTopologySnapshot.html#hasCapabilities()" class="member-name-link">hasCapabilities()</a> - Method in class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeTopologySnapshot.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#hasFallbacks()" class="member-name-link">hasFallbacks()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns whether the compiler recorded any fallback explanations.</div>
+</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
@@ -1045,6 +1297,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/routing/Stamped.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.lattice.routing.<a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing">Stamped</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#hasMerges()" class="member-name-link">hasMerges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns whether the compiler applied at least one merge.</div>
 </dd>
 <dt><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuTopology.html#hasNumaMetadata()" class="member-name-link">hasNumaMetadata()</a> - Method in class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuTopology.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuTopology</a></dt>
 <dd>&nbsp;</dd>
@@ -1124,6 +1380,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns whether this worker inherits the process CPU set.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#INLINE_ENTRY" class="member-name-link">INLINE_ENTRY</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Source emit may enter a fused chain inline on the producer thread.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#INLINE_SOURCE_CHAIN" class="member-name-link">INLINE_SOURCE_CHAIN</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#INLINE_SOURCE_CHAIN" class="member-name-link">INLINE_SOURCE_CHAIN</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#inlineSourcePhysicalElisionEnabled()" class="member-name-link">inlineSourcePhysicalElisionEnabled()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Returns whether source-inline physical elision was enabled.</div>
+</dd>
 <dt><a href="com/lattice/graph/FusionSpec.html#inlineSources()" class="member-name-link">inlineSources()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/FusionSpec.html" title="class in com.lattice.graph">FusionSpec</a></dt>
 <dd>
 <div class="block">Returns whether source-inline execution is allowed.</div>
@@ -1182,10 +1450,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a join stage that correlates inputs by stamp.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#JOIN" class="member-name-link">JOIN</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#JOIN" class="member-name-link">JOIN</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">Correlating stage that combines stamped branches.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#JOIN_TO_SINK" class="member-name-link">JOIN_TO_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/routing/JoinGroup.html" class="type-name-link" title="class in com.lattice.routing">JoinGroup</a> - Class in <a href="com/lattice/routing/package-summary.html">com.lattice.routing</a></dt>
 <dd>
 <div class="block">Values delivered to a join combiner for one stamp.</div>
@@ -1209,6 +1481,10 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:K">K</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#key()" class="member-name-link">key()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the edge key in <code>from-&gt;to</code> form.</div>
+</dd>
 <dt><a href="com/lattice/routing/DispatchSpec.html#keyed(java.util.function.Function)" class="member-name-link">keyed(Function&lt;? super T, ?&gt;)</a> - Static method in class com.lattice.routing.<a href="com/lattice/routing/DispatchSpec.html" title="class in com.lattice.routing">DispatchSpec</a></dt>
 <dd>
 <div class="block">Selects an outgoing branch from the extracted key.</div>
@@ -1232,6 +1508,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/edge/OverflowPolicy.html#kind()" class="member-name-link">kind()</a> - Method in class com.lattice.edge.<a href="com/lattice/edge/OverflowPolicy.html" title="class in com.lattice.edge">OverflowPolicy</a></dt>
 <dd>
 <div class="block">Returns the overflow policy kind.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#kind()" class="member-name-link">kind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns the merge kind.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#kind()" class="member-name-link">kind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the sender kind.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.Node.html#kind()" class="member-name-link">kind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Node.html" title="class in com.lattice.graph">GraphPlan.Node</a></dt>
 <dd>
@@ -1280,6 +1564,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns acquired minus released payload count.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#LIFECYCLE_ONLY" class="member-name-link">LIFECYCLE_ONLY</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#LINEAR_FUSED" class="member-name-link">LINEAR_FUSED</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/stage/BatchPolicy.html#linger()" class="member-name-link">linger()</a> - Method in class com.lattice.stage.<a href="com/lattice/stage/BatchPolicy.html" title="class in com.lattice.stage">BatchPolicy</a></dt>
 <dd>
 <div class="block">Returns the linger duration, or <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/Duration.html#ZERO" title="class or interface in java.time" class="external-link"><code>Duration.ZERO</code></a> when the policy does
@@ -1313,6 +1601,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/nativeaccess/NativeCapabilities.html#localMemoryPolicy()" class="member-name-link">localMemoryPolicy()</a> - Method in record class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeCapabilities.html" title="class in com.lattice.nativeaccess">NativeCapabilities</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>localMemoryPolicy</code> record component.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#logicalOnly(com.lattice.graph.GraphPlan)" class="member-name-link">logicalOnly(GraphPlan)</a> - Static method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Builds a logical-only report for non-Lattice <a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph"><code>StaticGraph</code></a>
+ implementations that expose a <a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph"><code>GraphPlan</code></a> but no physical planner.</div>
 </dd>
 <dt><a href="com/lattice/routing/JoinGroup.html#longStamp()" class="member-name-link">longStamp()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></dt>
 <dd>
@@ -1376,6 +1669,22 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Memory allocation families.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#%3Cinit%3E(com.lattice.graph.GraphCompilationReport.MergeKind,java.lang.String,java.util.List,java.util.List,java.lang.String,com.lattice.graph.GraphCompilationReport.Reason,java.lang.String)" class="member-name-link">Merge(GraphCompilationReport.MergeKind, String, List&lt;String&gt;, List&lt;String&gt;, String, GraphCompilationReport.Reason, String)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Creates a merge row.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#mergedNodes()" class="member-name-link">mergedNodes()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns nodes merged into the owner.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#merges()" class="member-name-link">merges()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns positive merge decisions in deterministic owner order.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#mergesForOwner(java.lang.String)" class="member-name-link">mergesForOwner(String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns merge decisions owned by the given worker.</div>
+</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html#message()" class="member-name-link">message()</a> - Method in record class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>message</code> record component.</div>
@@ -1426,9 +1735,15 @@ loadScripts(document, 'script');</script>
 <div class="block">Allows concurrent calls from multiple producer threads and foreign-thread
  lifecycle close/stop requests.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#MULTI_PRODUCER_SOURCE" class="member-name-link">MULTI_PRODUCER_SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 </dl>
 <h2 class="title" id="I:N">N</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#name()" class="member-name-link">name()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the logical node name.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#name()" class="member-name-link">name()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Returns the graph name.</div>
@@ -1521,18 +1836,44 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates node metadata with explicit source and preallocation flags.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#NODE" class="member-name-link">NODE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Logical node subject.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#nodeKind()" class="member-name-link">nodeKind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the logical node kind.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#nodes()" class="member-name-link">nodes()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Returns the immutable compiled node list.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_EDGE" class="member-name-link">NON_FUSIBLE_EDGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_EDGE_BATCH" class="member-name-link">NON_FUSIBLE_EDGE_BATCH</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_EDGE_KIND" class="member-name-link">NON_FUSIBLE_EDGE_KIND</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_EDGE_MEMORY" class="member-name-link">NON_FUSIBLE_EDGE_MEMORY</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_EDGE_OVERFLOW" class="member-name-link">NON_FUSIBLE_EDGE_OVERFLOW</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_FUSIBLE_STAGE" class="member-name-link">NON_FUSIBLE_STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#NON_LINEAR_TOPOLOGY" class="member-name-link">NON_LINEAR_TOPOLOGY</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/placement/PinPolicy.html#none()" class="member-name-link">none()</a> - Static method in class com.lattice.placement.<a href="com/lattice/placement/PinPolicy.html" title="class in com.lattice.placement">PinPolicy</a></dt>
 <dd>
 <div class="block">Requests no explicit placement.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#NONE" class="member-name-link">NONE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/placement/PinPolicy.PinKind.html#NONE" class="member-name-link">NONE</a> - Enum constant in enum class com.lattice.placement.<a href="com/lattice/placement/PinPolicy.PinKind.html" title="enum class in com.lattice.placement">PinPolicy.PinKind</a></dt>
 <dd>
 <div class="block">No explicit placement.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#NORMAL" class="member-name-link">NORMAL</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/metrics/PlacementStatus.html#NOT_REQUESTED" class="member-name-link">NOT_REQUESTED</a> - Enum constant in enum class com.lattice.metrics.<a href="com/lattice/metrics/PlacementStatus.html" title="enum class in com.lattice.metrics">PlacementStatus</a></dt>
 <dd>
 <div class="block">No placement was requested.</div>
@@ -1664,6 +2005,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns currently opened join groups as a monotonic counter input.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#operatorKind()" class="member-name-link">operatorKind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the executable operator kind.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#output()" class="member-name-link">output()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the output mode.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#output()" class="member-name-link">output()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the output strategy selected for this worker.</div>
+</dd>
 <dt><a href="com/lattice/stage/Output.html" class="type-name-link" title="interface in com.lattice.stage">Output&lt;T&gt;</a> - Interface in <a href="com/lattice/stage/package-summary.html">com.lattice.stage</a></dt>
 <dd>
 <div class="block">Publishes stage outputs to the stage's outgoing edge.</div>
@@ -1696,6 +2049,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns whether any overload policy currently marks the graph overloaded.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#ownerName()" class="member-name-link">ownerName()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns the owner worker name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#ownerName()" class="member-name-link">ownerName()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the sender owner.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:P">P</h2>
 <dl class="index">
@@ -1719,6 +2080,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a keyed partitioning stage with a fixed lane count.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#PARTITION" class="member-name-link">PARTITION</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#PARTITION" class="member-name-link">PARTITION</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">Router that maps each key to a fixed lane.</div>
@@ -1843,6 +2206,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Requests an explicit factory-backed pool size.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#PREALLOCATED_SOURCE" class="member-name-link">PREALLOCATED_SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/StaticGraph.html#preallocatedEmitter(java.lang.String,java.lang.Class)" class="member-name-link">preallocatedEmitter(String, Class&lt;T&gt;)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph">StaticGraph</a></dt>
 <dd>
 <div class="block">Returns the claim/emit API for a preallocated source.</div>
@@ -1905,6 +2270,30 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:R">R</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#reason()" class="member-name-link">reason()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the fallback or specialization reason, when present.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#reason()" class="member-name-link">reason()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Returns the fallback reason.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#reason()" class="member-name-link">reason()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns the positive decision reason, when present.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#reason()" class="member-name-link">reason()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the fallback reason, when present.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#reason()" class="member-name-link">reason()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Returns the fallback reason, when this row carries one.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#reasonCode()" class="member-name-link">reasonCode()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Returns the stable reason code.</div>
+</dd>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#recordBackpressureNanos(long)" class="member-name-link">recordBackpressureNanos(long)</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.html#recordBackpressureNanos(long)" class="member-name-link">recordBackpressureNanos(long)</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></dt>
@@ -2027,6 +2416,12 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Send the item to another node.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#REDIRECT_ONLY" class="member-name-link">REDIRECT_ONLY</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#redirectEdgeKey()" class="member-name-link">redirectEdgeKey()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Returns the redirect edge key, or an empty string.</div>
+</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.html#redirectedMessages()" class="member-name-link">redirectedMessages()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></dt>
 <dd>
 <div class="block">Returns messages redirected by overflow policy.</div>
@@ -2034,6 +2429,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/metrics/EdgeMetrics.html#redirectedOffers()" class="member-name-link">redirectedOffers()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/EdgeMetrics.html" title="class in com.lattice.metrics">EdgeMetrics</a></dt>
 <dd>
 <div class="block">Returns offers redirected by overflow policy.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#redirectOnly()" class="member-name-link">redirectOnly()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns whether this edge exists only as a redirect target.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#redirectOnly()" class="member-name-link">redirectOnly()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
@@ -2072,6 +2471,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the requested pool size.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#REQUIRES_WORKER_PLACEMENT" class="member-name-link">REQUIRES_WORKER_PLACEMENT</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/placement/PinPolicy.html#requiresNativePlacement()" class="member-name-link">requiresNativePlacement()</a> - Method in class com.lattice.placement.<a href="com/lattice/placement/PinPolicy.html" title="class in com.lattice.placement">PinPolicy</a></dt>
 <dd>
 <div class="block">Returns whether this policy needs native placement support.</div>
@@ -2138,10 +2539,16 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Selects outgoing branches in round-robin order.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#ROUTER" class="member-name-link">ROUTER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Router node subject.</div>
+</dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#routingDecisions()" class="member-name-link">routingDecisions()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
 <div class="block">Returns routing decisions made by dispatch, partition, or broadcast nodes.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#RUNNABLE" class="member-name-link">RUNNABLE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphState.html#RUNNING" class="member-name-link">RUNNING</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphState.html" title="enum class in com.lattice.graph">GraphState</a></dt>
 <dd>
 <div class="block">Graph is accepting source input and workers are running.</div>
@@ -2156,6 +2563,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuCounts.html#scanLimit()" class="member-name-link">scanLimit()</a> - Method in record class com.lattice.nativeaccess.<a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuCounts.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuCounts</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>scanLimit</code> record component.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Sender.html#%3Cinit%3E(java.lang.String,java.lang.String,com.lattice.graph.GraphCompilationReport.SenderKind,java.lang.String,com.lattice.graph.GraphCompilationReport.OutputKind,com.lattice.graph.GraphCompilationReport.Reason,java.lang.String)" class="member-name-link">Sender(String, String, GraphCompilationReport.SenderKind, String, GraphCompilationReport.OutputKind, GraphCompilationReport.Reason, String)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></dt>
+<dd>
+<div class="block">Creates a sender decision row.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#senders()" class="member-name-link">senders()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns sender decision rows in deterministic edge order.</div>
 </dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#serviceTimeNanosHistogram()" class="member-name-link">serviceTimeNanosHistogram()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>
@@ -2183,6 +2598,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a terminal consumer stage.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#SINK" class="member-name-link">SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#SINK" class="member-name-link">SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">Terminal consumer stage.</div>
@@ -2227,9 +2644,25 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a source with an explicit producer mode.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#SOURCE" class="member-name-link">SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#SOURCE" class="member-name-link">SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Source node subject.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#SOURCE" class="member-name-link">SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">External ingress node.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#SOURCE_SPECIALIZED_TO_SPSC" class="member-name-link">SOURCE_SPECIALIZED_TO_SPSC</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#sourceIngressCloseGuard()" class="member-name-link">sourceIngressCloseGuard()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns whether this source ingress uses the SPSC close guard.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#sourceInlineEnabled()" class="member-name-link">sourceInlineEnabled()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Returns whether source-inline fusion was enabled.</div>
 </dd>
 <dt><a href="com/lattice/graph/GraphPlan.Node.html#sourceMode()" class="member-name-link">sourceMode()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Node.html" title="class in com.lattice.graph">GraphPlan.Node</a></dt>
 <dd>
@@ -2275,10 +2708,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds a one-message-at-a-time transformation stage.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#STAGE" class="member-name-link">STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/GraphPlan.NodeKind.html#STAGE" class="member-name-link">STAGE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></dt>
 <dd>
 <div class="block">One-message or batch transformation stage.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#STAGE_CHAIN" class="member-name-link">STAGE_CHAIN</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#STAGE_TO_ROUTER" class="member-name-link">STAGE_TO_ROUTER</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#STAGE_TO_SINK" class="member-name-link">STAGE_TO_SINK</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/stage/StageContext.html" class="type-name-link" title="interface in com.lattice.stage">StageContext</a> - Interface in <a href="com/lattice/stage/package-summary.html">com.lattice.stage</a></dt>
 <dd>
 <div class="block">Runtime context passed to stage callbacks.</div>
@@ -2379,6 +2820,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates an instance of a <code>Stamped</code> record class.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#STAMPED_SOURCE" class="member-name-link">STAMPED_SOURCE</a> - Enum constant in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/lattice/graph/StaticGraph.Builder.html#stampedSource(java.lang.String,java.lang.Class)" class="member-name-link">stampedSource(String, Class&lt;T&gt;)</a> - Method in interface com.lattice.graph.<a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></dt>
 <dd>
 <div class="block">Adds a multi-producer source that emits <a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing"><code>Stamped</code></a>
@@ -2472,9 +2915,21 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a copy that controls whether placement failures fail startup.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#subject()" class="member-name-link">subject()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Returns the graph, node, source, router, or edge subject.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Fallback.html#subjectKind()" class="member-name-link">subjectKind()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></dt>
+<dd>
+<div class="block">Returns the subject kind.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:T">T</h2>
 <dl class="index">
+<dt><a href="com/lattice/graph/GraphCompilationReport.Merge.html#terminalNode()" class="member-name-link">terminalNode()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></dt>
+<dd>
+<div class="block">Returns the terminal node involved in the merge, or an empty string.</div>
+</dd>
 <dt><a href="com/lattice/routing/JoinGroup.html#timedOut()" class="member-name-link">timedOut()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></dt>
 <dd>
 <div class="block">Returns whether this group was emitted because a join timeout elapsed.</div>
@@ -2496,6 +2951,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a copy with a different timeout for incomplete groups.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#to()" class="member-name-link">to()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns the target node name.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.Edge.html#to()" class="member-name-link">to()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></dt>
 <dd>
 <div class="block">Returns the target node name.</div>
@@ -2512,6 +2971,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a copy that enables or disables topology-derived stage placement.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Controls.html#topologyAwarePlacementEnabled()" class="member-name-link">topologyAwarePlacementEnabled()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></dt>
+<dd>
+<div class="block">Returns whether topology-aware placement was enabled.</div>
+</dd>
 <dt><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html#toString()" class="member-name-link">toString()</a> - Method in record class com.lattice.metrics.<a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
@@ -2527,6 +2990,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/routing/Stamped.html#toString()" class="member-name-link">toString()</a> - Method in record class com.lattice.routing.<a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing">Stamped</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#toSummaryString()" class="member-name-link">toSummaryString()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Renders a concise human-readable summary.</div>
 </dd>
 <dt><a href="com/lattice/routing/JoinGroup.html#triggeringSource()" class="member-name-link">triggeringSource()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></dt>
 <dd>
@@ -2551,6 +3018,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/lattice/metrics/PlacementStatus.html#UNAVAILABLE" class="member-name-link">UNAVAILABLE</a> - Enum constant in enum class com.lattice.metrics.<a href="com/lattice/metrics/PlacementStatus.html" title="enum class in com.lattice.metrics">PlacementStatus</a></dt>
 <dd>
 <div class="block">Placement support is unavailable in this runtime.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Edge.html#use()" class="member-name-link">use()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></dt>
+<dd>
+<div class="block">Returns how the runtime uses this edge.</div>
 </dd>
 <dt><a href="com/lattice/routing/JoinGroup.html#usesLongStamp()" class="member-name-link">usesLongStamp()</a> - Method in class com.lattice.routing.<a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></dt>
 <dd>
@@ -2581,6 +3052,38 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
 </dd>
 <dt><a href="com/lattice/edge/OverflowPolicy.OverflowKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.edge.<a href="com/lattice/edge/OverflowPolicy.OverflowKind.html" title="enum class in com.lattice.edge">OverflowPolicy.OverflowKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
 <dd>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
 </dd>
@@ -2654,6 +3157,46 @@ loadScripts(document, 'script');</script>
 the order they are declared.</div>
 </dd>
 <dt><a href="com/lattice/edge/OverflowPolicy.OverflowKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.edge.<a href="com/lattice/edge/OverflowPolicy.OverflowKind.html" title="enum class in com.lattice.edge">OverflowPolicy.OverflowKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Reason.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html#values()" class="member-name-link">values()</a> - Static method in enum class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></dt>
 <dd>
 <div class="block">Returns an array containing the constants of this enum class, in
 the order they are declared.</div>
@@ -2800,9 +3343,21 @@ the order they are declared.</div>
 <dd>
 <div class="block">Returns a copy with the same options and a different edge kind.</div>
 </dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#worker(java.lang.String)" class="member-name-link">worker(String)</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Finds a worker decision by logical node name.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.Worker.html#%3Cinit%3E(java.lang.String,com.lattice.graph.GraphPlan.NodeKind,com.lattice.graph.GraphCompilationReport.OperatorKind,com.lattice.graph.GraphCompilationReport.WorkerDecisionKind,com.lattice.graph.GraphCompilationReport.OutputKind,java.lang.String,com.lattice.placement.PinPolicy,com.lattice.graph.GraphCompilationReport.Reason,java.lang.String)" class="member-name-link">Worker(String, GraphPlan.NodeKind, GraphCompilationReport.OperatorKind, GraphCompilationReport.WorkerDecisionKind, GraphCompilationReport.OutputKind, String, PinPolicy, GraphCompilationReport.Reason, String)</a> - Constructor for class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></dt>
+<dd>
+<div class="block">Creates a worker decision row.</div>
+</dd>
 <dt><a href="com/lattice/graph/GraphPlan.html#workerOrder()" class="member-name-link">workerOrder()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></dt>
 <dd>
 <div class="block">Returns the immutable worker startup order.</div>
+</dd>
+<dt><a href="com/lattice/graph/GraphCompilationReport.html#workers()" class="member-name-link">workers()</a> - Method in class com.lattice.graph.<a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></dt>
+<dd>
+<div class="block">Returns worker decision rows in deterministic compilation order.</div>
 </dd>
 <dt><a href="com/lattice/metrics/StageMetrics.html#workerState()" class="member-name-link">workerState()</a> - Method in class com.lattice.metrics.<a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></dt>
 <dd>

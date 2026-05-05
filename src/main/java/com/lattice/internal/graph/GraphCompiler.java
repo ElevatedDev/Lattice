@@ -170,7 +170,8 @@ final class GraphCompiler {
                 pending.declarationOrder(),
                 branchIndex,
                 redirectOnly,
-                from.kind() == GraphPlan.NodeKind.SOURCE
+                from.kind() == GraphPlan.NodeKind.SOURCE,
+                pending.spec().kind()
             );
             if (unique.putIfAbsent(edge.key(), edge) != null) {
                 throw new GraphBuildException("duplicate edge: " + edge.key());

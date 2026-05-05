@@ -3,10 +3,27 @@
 Lattice exposes runtime state through plain Java APIs and optional JFR events.
 There is no logging on the hot path.
 
+## Build-Time Compilation Report
+
+`graph.compilationReport()` returns an immutable `GraphCompilationReport`
+created during `build()`. It is not a metric collector and does not add work to
+the steady-state path. The report lists:
+
+- worker decisions such as `RUNNABLE`, `FUSED_INTO_STAGE`, and
+  `INLINE_SOURCE_CHAIN`;
+- declared and effective edge kinds, including source specialization;
+- sender strategies and redirect edges;
+- positive merge decisions such as `STAGE_CHAIN` and `STAGE_TO_SINK`;
+- fallback rows with stable reason codes such as
+  `fusion.non_fusible_edge.overflow`.
+
+Use the structured rows for tooling and `toSummaryString()` for support output.
+
 ## Metric Surfaces
 
 | Surface | Source | Highlights |
 | --- | --- | --- |
+| `GraphCompilationReport` | `graph.compilationReport()` | Build-time worker, edge, sender, merge, and fallback decisions. |
 | `GraphMetrics` | `graph.metrics()` | Aggregate counters, lifecycle state, placement report. |
 | `StageMetrics` | per stage | Invocations, in/out counts, exceptions, optional histograms. |
 | `EdgeMetrics`  | per edge  | Accepted/consumed counts, failed and blocked offers, drop/coalesce/redirect counters, depth, high-water mark. |

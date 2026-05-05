@@ -24,8 +24,29 @@ class StaticGraphTest {
         assertEquals("builder-plan", graph.plan().name());
         assertEquals(SourceMode.MULTI_PRODUCER, graph.plan().node("source").orElseThrow().sourceMode());
         assertEquals(List.of("sink"), graph.plan().workerOrder());
+        assertEquals("builder-plan", graph.compilationReport().graphName());
+        assertEquals(GraphCompilationReport.WorkerDecisionKind.RUNNABLE,
+            graph.compilationReport().worker("sink").orElseThrow().decision());
         assertEquals(GraphState.NEW, graph.state());
         assertTrue(graph.failure().isEmpty());
+    }
+
+    @Test
+    void compilationReportShowsSourceSpecialization() {
+        final StaticGraph graph = StaticGraph.builder("specialized")
+            .source("source", Integer.class, SourceMode.SINGLE_PRODUCER)
+            .sink("sink", Integer.class, ignored -> { }, StageSpec.singleThreaded())
+            .edge("source", "sink", EdgeSpec.mpscRing(8))
+            .build();
+
+        final GraphCompilationReport.Edge edge = graph.compilationReport()
+            .edge("source", "sink")
+            .orElseThrow();
+
+        assertEquals(EdgeSpec.EdgeKind.MPSC_RING, edge.declaredKind());
+        assertEquals(EdgeSpec.EdgeKind.SPSC_RING, edge.effectiveKind());
+        assertEquals(GraphCompilationReport.Reason.SOURCE_SPECIALIZED_TO_SPSC, edge.reason().orElseThrow());
+        assertFalse(graph.compilationReport().hasMerges());
     }
 
     @Test

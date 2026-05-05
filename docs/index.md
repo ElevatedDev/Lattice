@@ -17,7 +17,7 @@ When browsing the repository, the same material is available through the root
 | --- | --- |
 | [Getting Started](getting-started.md) | Build the project and run a first graph. |
 | [Examples](examples/README.md) | Runnable examples backed by public APIs. |
-| [Graph DSL](graph-dsl.md) | Builder methods for sources, stages, routes, joins, sinks, and edges. |
+| [Graph DSL](graph-dsl.md) | Builder methods for sources, stages, routes, joins, sinks, edges, and compilation report inspection. |
 | [Architecture](architecture.md) | Build-time compile path and runtime worker plan. |
 
 ## Runtime Contract
@@ -33,7 +33,7 @@ When browsing the repository, the same material is available through the root
 
 | Page | Purpose |
 | --- | --- |
-| [Observability](observability.md) | Metrics, hot-counter toggles, JFR, and placement reports. |
+| [Observability](observability.md) | Build-time compilation reports, metrics, hot-counter toggles, JFR, and placement reports. |
 | [Operations Runbook](operations-runbook.md) | Startup checks, lifecycle operations, and diagnostics. |
 | [Compatibility Matrix](compatibility-matrix.md) | JDK, OS, dependency, and versioning policy. |
 | [API Reference](api.md) | Public package summary and planned Maven coordinate. |

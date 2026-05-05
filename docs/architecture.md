@@ -28,7 +28,9 @@ flowchart TB
         Plan["GraphPlan<br/>logical topology"]
         Compile["Compiler<br/>SP/SC source specialization<br/>linear fusion eligibility<br/>MPSC vs SPSC physical edge<br/>worker placement plan"]
         Physical["Physical runtime plan<br/>workers · edges · ownership"]
+        Report["GraphCompilationReport<br/>workers · edges · senders<br/>merges · fallbacks"]
         DSL --> Validate --> Plan --> Compile --> Physical
+        Compile --> Report
     end
 
     subgraph Run["Runtime (steady state, hot path)"]
@@ -64,14 +66,16 @@ flowchart TB
 | Linear fusion | Topology shape, payload type, `StageSpec`, `FusionSpec` | Remove eligible internal SPSC handoffs; source-inline producer-thread execution is a separate per-graph opt-in. |
 | Worker placement | `PinPolicy`, `GraphPlacementSpec`, native lib status | Ask the native backend to apply CPU affinity / NUMA preference at bootstrap; degrade to advisory if the lib is missing and strict placement is not enabled for the graph. |
 | Slab handle wiring | Payload type carries handle? | Emit `Retaining` hop variants where needed, `Benign` hop variants otherwise. |
+| Compilation report | Physical plan decisions and fallbacks | Expose stable build-time rows for worker decisions, edge use, senders, positive merges, and reason-coded fallbacks. |
 
 ## What Stays Inspectable
 
-Even after fusion, the *logical* graph remains inspectable through `GraphPlan`
-and `GraphMetrics`. Per-stage and logical fused-edge counters are available
-when enabled through `MetricsSpec`; per-edge metrics for elided physical edges
-otherwise report zero traffic, and the placement report still names every
-logical worker. The fusion decision is documented in the plan, not hidden.
+Even after fusion, the *logical* graph remains inspectable through `GraphPlan`,
+`GraphCompilationReport`, and `GraphMetrics`. Per-stage and logical fused-edge
+counters are available when enabled through `MetricsSpec`; per-edge metrics for
+elided physical edges otherwise report zero traffic, and the placement report
+still names every logical worker. The fusion decision is documented in the
+compilation report, not hidden.
 
 ## Graph Runtime Specs
 

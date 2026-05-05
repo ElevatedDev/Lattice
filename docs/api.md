@@ -41,7 +41,7 @@ so consumers using explicit module paths must keep `HdrHistogram` visible.
 
 | Package | Purpose | Stability |
 | --- | --- | --- |
-| `com.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphPlan.Node`, `GraphPlan.Edge`, `GraphPlan.Placement`, `GraphState`, `SourceMode`, `PreallocationSpec`, `FusionSpec`, `MetricsSpec`, `GraphPlacementSpec`, `DiagnosticsSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
+| `com.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphPlan.Node`, `GraphPlan.Edge`, `GraphPlan.Placement`, `GraphCompilationReport`, `GraphState`, `SourceMode`, `PreallocationSpec`, `FusionSpec`, `MetricsSpec`, `GraphPlacementSpec`, `DiagnosticsSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
 | `com.lattice.stage` | `StageLogic`, `BatchStageLogic`, `Output`, `StageContext`, `StageHandle`, `StageSpec`, `Emitter`, `PreallocatedEmitter`, `Batch`, `BatchPolicy`, `StageExceptionHandler`, `StageExceptionAction`. | **Stable** |
 | `com.lattice.edge` | `EdgeSpec`, `OverflowPolicy`, `BackpressureException`. | **Stable** |
 | `com.lattice.metrics` | `GraphMetrics`, `GraphMetrics.StagePlacement`, `StageMetrics`, `EdgeMetrics`, `WaitMetrics`, `PlacementStatus`, `WorkerState`. | **Stable** |
@@ -60,6 +60,10 @@ annotations.
 - **Stable** packages are covered by SemVer once 1.0.0 is published.
 - **Experimental** packages may change in minor releases.
 - Non-exported `com.lattice.internal.*` packages are not public API.
+
+`GraphCompilationReport.Reason#code()` values are intended for diagnostics and
+support tooling. They should be treated as stable public vocabulary after
+1.0.0.
 
 ## Planned Maven Coordinate
 

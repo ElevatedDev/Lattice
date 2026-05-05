@@ -10,8 +10,22 @@ public record EdgeDefinition(
     int declarationOrder,
     int branchIndex,
     boolean redirectOnly,
-    boolean sourceIngress
+    boolean sourceIngress,
+    EdgeSpec.EdgeKind declaredKind
 ) {
+
+    public EdgeDefinition(
+        final String from,
+        final String to,
+        final Class<?> messageType,
+        final EdgeSpec spec,
+        final int declarationOrder,
+        final int branchIndex,
+        final boolean redirectOnly,
+        final boolean sourceIngress
+    ) {
+        this(from, to, messageType, spec, declarationOrder, branchIndex, redirectOnly, sourceIngress, spec.kind());
+    }
 
     public String key() {
         return from + "->" + to;

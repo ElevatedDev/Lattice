@@ -120,211 +120,272 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown when a graph plan cannot be compiled or validated.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.html" title="class in com.lattice.graph">GraphCompilationReport</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Immutable build-time report explaining physical runtime decisions for a
+ compiled graph.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Controls.html" title="class in com.lattice.graph">GraphCompilationReport.Controls</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Graph-level controls that influenced compilation.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Edge.html" title="class in com.lattice.graph">GraphCompilationReport.Edge</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Decision row for one logical edge.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.EdgeUseKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.EdgeUseKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Runtime edge-use categories.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Fallback.html" title="class in com.lattice.graph">GraphCompilationReport.Fallback</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Explanation for a merge candidate or optimization that did not apply.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Merge.html" title="class in com.lattice.graph">GraphCompilationReport.Merge</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Positive merge decision.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.MergeKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.MergeKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Positive merge categories.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.OperatorKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OperatorKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Executable operator categories.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.OutputKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.OutputKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Output strategy categories.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.Reason.html" title="enum class in com.lattice.graph">GraphCompilationReport.Reason</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Curated compilation decision reasons.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Sender.html" title="class in com.lattice.graph">GraphCompilationReport.Sender</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Decision row for one runtime sender.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.SenderKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SenderKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Runtime sender categories.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.SubjectKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.SubjectKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Fallback subject categories.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphCompilationReport.Worker.html" title="class in com.lattice.graph">GraphCompilationReport.Worker</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Decision row for one logical worker-capable node.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphCompilationReport.WorkerDecisionKind.html" title="enum class in com.lattice.graph">GraphCompilationReport.WorkerDecisionKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Worker decision categories.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/metrics/GraphMetrics.html" title="class in com.lattice.metrics">GraphMetrics</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Live metrics for one graph instance.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/metrics/GraphMetrics.StagePlacement.html" title="class in com.lattice.metrics">GraphMetrics.StagePlacement</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Stage placement row used by <a href="com/lattice/metrics/GraphMetrics.html#placementReport()"><code>GraphMetrics.placementReport()</code></a>.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlacementSpec.html" title="class in com.lattice.graph">GraphPlacementSpec</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Graph-level controls for runtime-derived placement behavior.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.html" title="class in com.lattice.graph">GraphPlan</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Immutable description of a graph after validation and compilation.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Edge.html" title="class in com.lattice.graph">GraphPlan.Edge</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Immutable edge metadata in a compiled graph plan.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Node.html" title="class in com.lattice.graph">GraphPlan.Node</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Node.html" title="class in com.lattice.graph">GraphPlan.Node</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Immutable node metadata in a compiled graph plan.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphPlan.NodeKind.html" title="enum class in com.lattice.graph">GraphPlan.NodeKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Logical node kinds supported by the public graph DSL.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Placement.html" title="class in com.lattice.graph">GraphPlan.Placement</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/GraphPlan.Placement.html" title="class in com.lattice.graph">GraphPlan.Placement</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Requested placement metadata for one stage worker.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/graph/GraphRuntimeException.html" title="class in com.lattice.graph">GraphRuntimeException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/graph/GraphRuntimeException.html" title="class in com.lattice.graph">GraphRuntimeException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown when a built graph rejects an invalid runtime operation.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphState.html" title="enum class in com.lattice.graph">GraphState</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/GraphState.html" title="enum class in com.lattice.graph">GraphState</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Lifecycle states exposed by <a href="com/lattice/graph/StaticGraph.html#state()"><code>StaticGraph.state()</code></a>.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/JoinGroup.html" title="class in com.lattice.routing">JoinGroup</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Values delivered to a join combiner for one stamp.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/JoinSpec.html" title="class in com.lattice.routing">JoinSpec&lt;O&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/JoinSpec.html" title="class in com.lattice.routing">JoinSpec&lt;O&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Configures a join stage.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.DuplicatePolicy.html" title="enum class in com.lattice.routing">JoinSpec.DuplicatePolicy</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.DuplicatePolicy.html" title="enum class in com.lattice.routing">JoinSpec.DuplicatePolicy</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Handling for duplicate values from the same branch and stamp.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.JoinKind.html" title="enum class in com.lattice.routing">JoinSpec.JoinKind</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.MissingBranchPolicy.html" title="enum class in com.lattice.routing">JoinSpec.MissingBranchPolicy</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.JoinKind.html" title="enum class in com.lattice.routing">JoinSpec.JoinKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">&nbsp;</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/routing/JoinSpec.MissingBranchPolicy.html" title="enum class in com.lattice.routing">JoinSpec.MissingBranchPolicy</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Handling for groups that cannot receive every expected branch.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/placement/MemoryMode.html" title="class in com.lattice.placement">MemoryMode</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/placement/MemoryMode.html" title="class in com.lattice.placement">MemoryMode</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Declares where edge slot or handle metadata is allocated.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/placement/MemoryMode.MemoryKind.html" title="enum class in com.lattice.placement">MemoryMode.MemoryKind</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/placement/MemoryMode.MemoryKind.html" title="enum class in com.lattice.placement">MemoryMode.MemoryKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Memory allocation families.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/MetricsSpec.html" title="class in com.lattice.graph">MetricsSpec</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Graph-level metrics controls.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/nativeaccess/NativeCapabilities.html" title="class in com.lattice.nativeaccess">NativeCapabilities</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/nativeaccess/NativeCapabilities.html" title="class in com.lattice.nativeaccess">NativeCapabilities</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Capability bits reported by the loaded native topology library.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopology.html" title="class in com.lattice.nativeaccess">NativeTopology</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopology.html" title="class in com.lattice.nativeaccess">NativeTopology</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Java 21 wrapper for worker-bootstrap native operations: CPU affinity, NUMA
  diagnostics, local allocation policy, and first-touch memory placement.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/nativeaccess/NativeTopologyException.html" title="class in com.lattice.nativeaccess">NativeTopologyException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/nativeaccess/NativeTopologyException.html" title="class in com.lattice.nativeaccess">NativeTopologyException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Raised when a native topology operation is available but the operating system
  rejects it, for example because a CPU is outside the process cpuset.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Process-local native topology observations captured for graph and worker
  startup.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuCounts.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuCounts</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuTopology.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuTopology</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/nativeaccess/NativeTopologyUnavailableException.html" title="class in com.lattice.nativeaccess">NativeTopologyUnavailableException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuCounts.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuCounts</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">&nbsp;</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/nativeaccess/NativeTopologySnapshot.CpuTopology.html" title="class in com.lattice.nativeaccess">NativeTopologySnapshot.CpuTopology</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/lattice/nativeaccess/NativeTopologyUnavailableException.html" title="class in com.lattice.nativeaccess">NativeTopologyUnavailableException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Raised when the static topology native library cannot be loaded or the host
  platform does not implement the requested native operation.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/Output.html" title="interface in com.lattice.stage">Output&lt;T&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/Output.html" title="interface in com.lattice.stage">Output&lt;T&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Publishes stage outputs to the stage's outgoing edge.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/edge/OverflowPolicy.html" title="class in com.lattice.edge">OverflowPolicy</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/edge/OverflowPolicy.html" title="class in com.lattice.edge">OverflowPolicy</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Immutable policy for writes to a full edge.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/edge/OverflowPolicy.OverflowKind.html" title="enum class in com.lattice.edge">OverflowPolicy.OverflowKind</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/edge/OverflowPolicy.OverflowKind.html" title="enum class in com.lattice.edge">OverflowPolicy.OverflowKind</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Full-edge behaviors.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/PartitionSpec.html" title="class in com.lattice.routing">PartitionSpec&lt;T,<wbr>K&gt;</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/routing/PartitionSpec.html" title="class in com.lattice.routing">PartitionSpec&lt;T,<wbr>K&gt;</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Configures keyed partitioning across a fixed number of lanes.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/placement/PinPolicy.html" title="class in com.lattice.placement">PinPolicy</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/placement/PinPolicy.html" title="class in com.lattice.placement">PinPolicy</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Declares preferred CPU or NUMA placement for a stage worker.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/placement/PinPolicy.PinKind.html" title="enum class in com.lattice.placement">PinPolicy.PinKind</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/placement/PinPolicy.PinKind.html" title="enum class in com.lattice.placement">PinPolicy.PinKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Placement request kinds.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/metrics/PlacementStatus.html" title="enum class in com.lattice.metrics">PlacementStatus</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/metrics/PlacementStatus.html" title="enum class in com.lattice.metrics">PlacementStatus</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Outcome of applying a stage placement policy.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/PreallocatedEmitter.html" title="interface in com.lattice.stage">PreallocatedEmitter&lt;T&gt;</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/PreallocatedEmitter.html" title="interface in com.lattice.stage">PreallocatedEmitter&lt;T&gt;</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Emits objects claimed from a preallocated source pool.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/PreallocationSpec.html" title="class in com.lattice.graph">PreallocationSpec&lt;T&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/graph/PreallocationSpec.html" title="class in com.lattice.graph">PreallocationSpec&lt;T&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Describes the object pool used by a preallocated source.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/slab/SlabHandle.html" title="class in com.lattice.slab">SlabHandle&lt;T&gt;</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/slab/SlabHandle.html" title="class in com.lattice.slab">SlabHandle&lt;T&gt;</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Reference-counted handle for a slab payload.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/slab/SlabPool.html" title="class in com.lattice.slab">SlabPool&lt;T&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/slab/SlabPool.html" title="class in com.lattice.slab">SlabPool&lt;T&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Bounded pool for shared payload handles.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/SourceMode.html" title="enum class in com.lattice.graph">SourceMode</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/graph/SourceMode.html" title="enum class in com.lattice.graph">SourceMode</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Declares how a source emitter is used by application threads.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageContext.html" title="interface in com.lattice.stage">StageContext</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageContext.html" title="interface in com.lattice.stage">StageContext</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Runtime context passed to stage callbacks.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/stage/StageExceptionAction.html" title="enum class in com.lattice.stage">StageExceptionAction</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/stage/StageExceptionAction.html" title="enum class in com.lattice.stage">StageExceptionAction</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Runtime response chosen by a <a href="com/lattice/stage/StageExceptionHandler.html" title="interface in com.lattice.stage"><code>StageExceptionHandler</code></a>.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageExceptionHandler.html" title="interface in com.lattice.stage">StageExceptionHandler</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageExceptionHandler.html" title="interface in com.lattice.stage">StageExceptionHandler</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Handles exceptions thrown by stage callbacks.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/stage/StageHandle.html" title="class in com.lattice.stage">StageHandle</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/stage/StageHandle.html" title="class in com.lattice.stage">StageHandle</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Lightweight public handle for a named stage.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageLogic.html" title="interface in com.lattice.stage">StageLogic&lt;I,<wbr>O&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/stage/StageLogic.html" title="interface in com.lattice.stage">StageLogic&lt;I,<wbr>O&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">User callback for single-message stage processing.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/metrics/StageMetrics.html" title="class in com.lattice.metrics">StageMetrics</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Live metrics for one stage worker.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/stage/StageSpec.html" title="class in com.lattice.stage">StageSpec</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/stage/StageSpec.html" title="class in com.lattice.stage">StageSpec</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Immutable configuration for a graph worker stage.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/stage/StageSpec.StageExecution.html" title="enum class in com.lattice.stage">StageSpec.StageExecution</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/stage/StageSpec.StageExecution.html" title="enum class in com.lattice.stage">StageSpec.StageExecution</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Stage execution models.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing">Stamped&lt;T&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/lattice/routing/Stamped.html" title="class in com.lattice.routing">Stamped&lt;T&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Payload wrapper with a primitive long stamp.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph">StaticGraph</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/graph/StaticGraph.html" title="interface in com.lattice.graph">StaticGraph</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">A compiled static topology graph.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/graph/StaticGraph.Builder.html" title="interface in com.lattice.graph">StaticGraph.Builder</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Builder for a validated, immutable static topology.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/metrics/WaitMetrics.html" title="interface in com.lattice.metrics">WaitMetrics</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/lattice/metrics/WaitMetrics.html" title="interface in com.lattice.metrics">WaitMetrics</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Sink for wait-strategy counters.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/wait/WaitSpec.html" title="class in com.lattice.wait">WaitSpec</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/lattice/wait/WaitSpec.html" title="class in com.lattice.wait">WaitSpec</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Describes how a worker or edge writer waits when no immediate progress is
  possible.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/wait/WaitSpec.WaitKind.html" title="enum class in com.lattice.wait">WaitSpec.WaitKind</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/wait/WaitSpec.WaitKind.html" title="enum class in com.lattice.wait">WaitSpec.WaitKind</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Wait strategy families.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/metrics/WorkerState.html" title="enum class in com.lattice.metrics">WorkerState</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/lattice/metrics/WorkerState.html" title="enum class in com.lattice.metrics">WorkerState</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Observable lifecycle state for a stage worker.</div>
 </div>
 </div>
