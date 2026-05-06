@@ -95,22 +95,22 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: native-*
-          path: build/native-artifacts
+          path: release-native-artifacts
 
       - name: Stage native libraries
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p build/native-bundle/linux-x86_64
-          mkdir -p build/native-bundle/linux-aarch64
-          mkdir -p build/native-bundle/windows-x86_64
-          mkdir -p build/native-bundle/macos-x86_64
-          mkdir -p build/native-bundle/macos-aarch64
-          cp build/native-artifacts/native-linux-x86_64/target/release/libstatic_topology_native.so build/native-bundle/linux-x86_64/
-          cp build/native-artifacts/native-linux-aarch64/target/release/libstatic_topology_native.so build/native-bundle/linux-aarch64/
-          cp build/native-artifacts/native-windows-x86_64/target/release/static_topology_native.dll build/native-bundle/windows-x86_64/
-          cp build/native-artifacts/native-macos-x86_64/target/release/libstatic_topology_native.dylib build/native-bundle/macos-x86_64/
-          cp build/native-artifacts/native-macos-aarch64/target/release/libstatic_topology_native.dylib build/native-bundle/macos-aarch64/
+          mkdir -p release-native-bundle/linux-x86_64
+          mkdir -p release-native-bundle/linux-aarch64
+          mkdir -p release-native-bundle/windows-x86_64
+          mkdir -p release-native-bundle/macos-x86_64
+          mkdir -p release-native-bundle/macos-aarch64
+          cp release-native-artifacts/native-linux-x86_64/target/release/libstatic_topology_native.so release-native-bundle/linux-x86_64/
+          cp release-native-artifacts/native-linux-aarch64/target/release/libstatic_topology_native.so release-native-bundle/linux-aarch64/
+          cp release-native-artifacts/native-windows-x86_64/target/release/static_topology_native.dll release-native-bundle/windows-x86_64/
+          cp release-native-artifacts/native-macos-x86_64/target/release/libstatic_topology_native.dylib release-native-bundle/macos-x86_64/
+          cp release-native-artifacts/native-macos-aarch64/target/release/libstatic_topology_native.dylib release-native-bundle/macos-aarch64/
 
       - name: Resolve release version
         shell: bash
@@ -128,7 +128,7 @@ jobs:
         run: >
           ./gradlew clean releaseCheck
           -PreleaseVersion="${RELEASE_VERSION}"
-          -Plattice.native.bundle.dir="${PWD}/build/native-bundle"
+          -Plattice.native.bundle.dir="${PWD}/release-native-bundle"
           -Plattice.requireBundledNative=true
 
       - name: Generate checksums
@@ -136,10 +136,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/release-evidence
-          find build/libs build/reports build/native-artifacts -type f \
+          find build/libs build/reports release-native-artifacts -type f \
             \( -name '*.jar' -o -name '*.xml' -o -name '*.json' -o -name '*.log' \) \
             -print0 | sort -z | xargs -0 sha256sum > build/release-evidence/SHA256SUMS
-          find build/libs build/reports build/native-artifacts -type f \
+          find build/libs build/reports release-native-artifacts -type f \
             \( -name '*.jar' -o -name '*.xml' -o -name '*.json' -o -name '*.log' \) \
             -print0 | sort -z | xargs -0 sha512sum > build/release-evidence/SHA512SUMS
 
@@ -161,7 +161,7 @@ jobs:
             build/publications/**
             build/reports/bom.*
             build/reports/jacoco/test/**
-            build/native-artifacts/**/native-test.log
+            release-native-artifacts/**/native-test.log
             build/release-evidence/**
 
       - name: Upload to Maven Central Portal
@@ -175,5 +175,5 @@ jobs:
         run: >
           ./gradlew publishToMavenCentral
           -PreleaseVersion="${RELEASE_VERSION}"
-          -Plattice.native.bundle.dir="${PWD}/build/native-bundle"
+          -Plattice.native.bundle.dir="${PWD}/release-native-bundle"
           -Plattice.requireBundledNative=true
