@@ -1,6 +1,9 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'jacoco'
+    id 'com.vanniktech.maven.publish.base' version '0.34.0'
+    id 'org.cyclonedx.bom' version '3.2.4'
     id 'me.champeau.jmh' version '0.7.3'
 }
 
@@ -15,6 +18,31 @@ def releasePomUrl = 'https://github.com/ElevatedDev/Lattice'
 def releaseLicenseName = providers.gradleProperty('releaseLicenseName')
 def releaseLicenseUrl = providers.gradleProperty('releaseLicenseUrl')
 def releaseLicenseDistribution = providers.gradleProperty('releaseLicenseDistribution').orElse('repo')
+def nativeBundleInputDir = providers.gradleProperty('lattice.native.bundle.dir')
+    .orElse(providers.environmentVariable('LATTICE_NATIVE_BUNDLE_DIR'))
+def requireBundledNative = providers.gradleProperty('lattice.requireBundledNative')
+    .map { value -> Boolean.parseBoolean(value) }
+    .orElse(false)
+def bundledNativeResourceDir = layout.buildDirectory.dir('generated/resources/bundledNative')
+def bundledNativeResources = [
+    'linux-x86_64'  : 'libstatic_topology_native.so',
+    'linux-aarch64' : 'libstatic_topology_native.so',
+    'windows-x86_64': 'static_topology_native.dll',
+    'macos-x86_64'  : 'libstatic_topology_native.dylib',
+    'macos-aarch64' : 'libstatic_topology_native.dylib'
+]
+def cargoExecutable = providers.environmentVariable('CARGO').orElse(providers.provider {
+    def cargoName = System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('windows')
+        ? 'cargo.exe'
+        : 'cargo'
+    def rustupCargo = file("${System.getProperty('user.home')}/.cargo/bin/${cargoName}")
+    rustupCargo.isFile() ? rustupCargo.absolutePath : 'cargo'
+})
+def coverageClassExcludes = [
+    'io/github/elevateddev/lattice/core/**',
+    'io/github/elevateddev/lattice/internal/jfr/**',
+    'module-info.class'
+]
 
 java {
     modularity.inferModulePath = true
@@ -71,7 +99,7 @@ exampleMainClasses.each { taskName, className ->
         description = "Runs ${className}."
         dependsOn tasks.named('examplesClasses')
         classpath = sourceSets.examples.runtimeClasspath
-        mainClass = "com.lattice.examples.${className}"
+        mainClass = "io.github.elevateddev.lattice.examples.${className}"
     }
 }
 
@@ -99,6 +127,39 @@ test {
         .get()
 }
 
+jacocoTestReport {
+    dependsOn tasks.named('test')
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+    classDirectories.setFrom(files(classDirectories.files.collect { classesDir ->
+        fileTree(dir: classesDir, exclude: coverageClassExcludes)
+    }))
+}
+
+jacocoTestCoverageVerification {
+    dependsOn tasks.named('jacocoTestReport')
+    classDirectories.setFrom(files(classDirectories.files.collect { classesDir ->
+        fileTree(dir: classesDir, exclude: coverageClassExcludes)
+    }))
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
@@ -118,12 +179,42 @@ tasks.withType(Javadoc).configureEach {
 
 tasks.named('javadoc', Javadoc) {
     exclude 'module-info.java'
-    exclude 'com/lattice/core/**'
-    exclude 'com/lattice/internal/**'
+    exclude 'io/github/elevateddev/lattice/core/**'
+    exclude 'io/github/elevateddev/lattice/internal/**'
     classpath = configurations.compileClasspath
     options.windowTitle = 'Lattice API'
     options.docTitle = 'Lattice API'
     options.header = 'Lattice'
+}
+
+tasks.named('sourcesJar', Jar) {
+    exclude 'io/github/elevateddev/lattice/core/**'
+}
+
+tasks.register('cleanBundledNativeLibraries', Delete) {
+    delete bundledNativeResourceDir
+}
+
+tasks.register('syncBundledNativeLibraries', Sync) {
+    group = 'native'
+    description = 'Stages host-native shared libraries into the jar resource layout.'
+    dependsOn tasks.named('cleanBundledNativeLibraries')
+    into bundledNativeResourceDir
+
+    bundledNativeResources.each { platform, libraryFileName ->
+        from({
+            nativeBundleInputDir.isPresent()
+                ? file("${nativeBundleInputDir.get()}/${platform}/${libraryFileName}")
+                : []
+        }) {
+            into "META-INF/native/lattice/${platform}"
+        }
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn tasks.named('syncBundledNativeLibraries')
+    from bundledNativeResourceDir
 }
 
 tasks.register('docsJavadoc', Sync) {
@@ -140,9 +231,10 @@ tasks.withType(AbstractArchiveTask).configureEach {
 }
 
 tasks.named('jar', Jar) {
+    exclude 'io/github/elevateddev/lattice/core/**'
     manifest {
         attributes(
-            'Automatic-Module-Name': 'com.lattice',
+            'Automatic-Module-Name': 'io.github.elevateddev.lattice',
             'Implementation-Title': 'Lattice',
             'Implementation-Version': project.version.toString(),
             'Implementation-Vendor': 'ElevatedDev',
@@ -151,6 +243,11 @@ tasks.named('jar', Jar) {
             'Specification-Vendor': 'ElevatedDev'
         )
     }
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 }
 
 publishing {
@@ -214,18 +311,27 @@ jmh {
     ]
 }
 
+tasks.named('cyclonedxDirectBom') {
+    includeConfigs = ['runtimeClasspath']
+}
+
+tasks.named('cyclonedxBom') {
+    jsonOutput = file('build/reports/bom.json')
+    xmlOutput = file('build/reports/bom.xml')
+}
+
 tasks.register('nativeBuildRelease', Exec) {
     group = 'native'
     description = 'Builds the Rust JNI backend in native/static-topology-native.'
     workingDir = file('native/static-topology-native')
-    commandLine 'cargo', 'build', '--release'
+    commandLine cargoExecutable.get(), 'build', '--release', '--locked'
 }
 
 tasks.register('nativeTest', Exec) {
     group = 'verification'
     description = 'Runs Rust native backend tests.'
     workingDir = file('native/static-topology-native')
-    commandLine 'cargo', 'test'
+    commandLine cargoExecutable.get(), 'test', '--locked'
 }
 
 tasks.register('jcstress', JavaExec) {
@@ -361,9 +467,47 @@ tasks.register('verifyReleaseArtifacts') {
                 }
             }
 
-            if (manifest.getValue('Automatic-Module-Name') != 'com.lattice'
+            if (manifest.getValue('Automatic-Module-Name') != 'io.github.elevateddev.lattice'
                 && jarFile.getEntry('module-info.class') == null) {
-                throw new GradleException('Main jar must provide either module-info.class or Automatic-Module-Name=com.lattice')
+                throw new GradleException('Main jar must provide either module-info.class or Automatic-Module-Name=io.github.elevateddev.lattice')
+            }
+            if (jarFile.getEntry('io/github/elevateddev/lattice/core/Main.class') != null) {
+                throw new GradleException('Release jar must not include io.github.elevateddev.lattice.core.Main; examples belong outside the runtime artifact')
+            }
+            if (requireBundledNative.get()) {
+                bundledNativeResources.each { platform, libraryFileName ->
+                    def entryName = "META-INF/native/lattice/${platform}/${libraryFileName}"
+                    if (jarFile.getEntry(entryName) == null) {
+                        throw new GradleException("Release jar is missing bundled native library: ${entryName}")
+                    }
+                }
+            }
+        }
+
+        new java.util.jar.JarFile(sourcesJarTask.archiveFile.get().asFile).withCloseable { sourcesJarFile ->
+            if (sourcesJarFile.getEntry('io/github/elevateddev/lattice/core/Main.java') != null) {
+                throw new GradleException('Sources jar must not include io.github.elevateddev.lattice.core.Main; examples belong outside the runtime artifact')
+            }
+        }
+    }
+}
+
+tasks.register('verifyReleaseNativeBundle') {
+    group = 'verification'
+    description = 'Checks that release-required bundled native resources were staged.'
+    dependsOn tasks.named('processResources')
+
+    doLast {
+        if (!requireBundledNative.get()) {
+            return
+        }
+        bundledNativeResources.each { platform, libraryFileName ->
+            def resourceFile = bundledNativeResourceDir.get().file("META-INF/native/lattice/${platform}/${libraryFileName}").asFile
+            if (!resourceFile.isFile()) {
+                throw new GradleException("Missing release native resource: ${resourceFile}")
+            }
+            if (resourceFile.length() == 0L) {
+                throw new GradleException("Release native resource is empty: ${resourceFile}")
             }
         }
     }
@@ -387,7 +531,9 @@ tasks.register('verifyOpenSourceRelease') {
             '.gitattributes',
             '.editorconfig',
             '.github/workflows/ci.yml',
+            '.github/workflows/codeql.yml',
             '.github/workflows/release.yml',
+            '.github/workflows/scorecard.yml',
             '.github/ISSUE_TEMPLATE/bug_report.yml',
             '.github/ISSUE_TEMPLATE/config.yml',
             '.github/pull_request_template.md',
@@ -413,4 +559,7 @@ tasks.register('verifyOpenSourceRelease') {
 
 tasks.named('releaseCheck') {
     dependsOn tasks.named('verifyOpenSourceRelease')
+    dependsOn tasks.named('verifyReleaseNativeBundle')
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+    dependsOn tasks.named('cyclonedxBom')
 }

@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -191,7 +191,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,

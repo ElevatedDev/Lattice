@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.AllPathsLatencyBenchmark.disruptorPhysicalEndToEnd",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.AllPathsLatencyBenchmark.disruptorPhysicalEndToEnd",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 3,

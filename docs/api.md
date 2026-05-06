@@ -6,50 +6,42 @@ can serve the current public surface:
 - **Latest checked-in API files**: [api/latest/](api/latest/index.html)
 - **Rendered Javadocs**: available only after GitHub Pages or another static
   host serves the `docs/` directory.
-- **By version, after Pages is enabled**: `api/<version>/`
-  (for example `api/1.0.0/`).
+- **Current release path after Pages is enabled**: `api/latest/`.
 
-No Maven Central artifact has been published yet. Until the first release,
-build from source and use `./gradlew docsJavadoc` to refresh the checked-in
-copy.
+Maven Central release metadata is configured for
+`io.github.elevateddev:lattice`. Use `./gradlew docsJavadoc` to refresh the
+checked-in copy before cutting a release.
 
 This page summarizes the public packages and the intended stability contract
 for each type. See the repository [`CONTRIBUTING.md`](../CONTRIBUTING.md) for
 the full stable-surface list and the
 [Compatibility Matrix](compatibility-matrix.md) for the versioning policy.
 
-## Using Before Maven Central
+## Maven Central
 
-For local adoption before the first published artifact, install the jar into
-your local Maven cache:
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-Then depend on the current snapshot coordinate:
-
-```kotlin
-implementation("io.github.elevateddev:lattice:1.0-SNAPSHOT")
-```
-
-Lattice exports the JPMS module `com.lattice`. `HdrHistogram` is an API
+Lattice exports the JPMS module `io.github.elevateddev.lattice`. `HdrHistogram` is an API
 dependency because public metrics accessors return defensive histogram copies,
 so consumers using explicit module paths must keep `HdrHistogram` visible.
+
+Depend on:
+
+```kotlin
+implementation("io.github.elevateddev:lattice:1.0.0")
+```
 
 ## Public Packages
 
 | Package | Purpose | Stability |
 | --- | --- | --- |
-| `com.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphPlan.Node`, `GraphPlan.Edge`, `GraphPlan.Placement`, `GraphCompilationReport`, `GraphState`, `SourceMode`, `PreallocationSpec`, `FusionSpec`, `MetricsSpec`, `GraphPlacementSpec`, `DiagnosticsSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
-| `com.lattice.stage` | `StageLogic`, `BatchStageLogic`, `Output`, `StageContext`, `StageHandle`, `StageSpec`, `Emitter`, `PreallocatedEmitter`, `Batch`, `BatchPolicy`, `StageExceptionHandler`, `StageExceptionAction`. | **Stable** |
-| `com.lattice.edge` | `EdgeSpec`, `OverflowPolicy`, `BackpressureException`. | **Stable** |
-| `com.lattice.metrics` | `GraphMetrics`, `GraphMetrics.StagePlacement`, `StageMetrics`, `EdgeMetrics`, `WaitMetrics`, `PlacementStatus`, `WorkerState`. | **Stable** |
-| `com.lattice.placement` | `PinPolicy`, `MemoryMode`, related strategy types. | **Stable** |
-| `com.lattice.routing` | `dispatch` / `broadcast` / `partition` / `join` specifications. | **Stable** |
-| `com.lattice.slab` | `SlabPool`, `SlabHandle` and supporting types. | **Stable** |
-| `com.lattice.wait` | `WaitSpec`, wait-strategy primitives. | **Stable** |
-| `com.lattice.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
+| `io.github.elevateddev.lattice.graph` | `StaticGraph`, `StaticGraph.Builder`, `GraphPlan`, `GraphPlan.Node`, `GraphPlan.Edge`, `GraphPlan.Placement`, `GraphCompilationReport`, `GraphState`, `SourceMode`, `PreallocationSpec`, `FusionSpec`, `MetricsSpec`, `GraphPlacementSpec`, `DiagnosticsSpec`, `GraphBuildException`, `GraphRuntimeException`. | **Stable** |
+| `io.github.elevateddev.lattice.stage` | `StageLogic`, `BatchStageLogic`, `Output`, `StageContext`, `StageHandle`, `StageSpec`, `Emitter`, `PreallocatedEmitter`, `Batch`, `BatchPolicy`, `StageExceptionHandler`, `StageExceptionAction`. | **Stable** |
+| `io.github.elevateddev.lattice.edge` | `EdgeSpec`, `OverflowPolicy`, `BackpressureException`. | **Stable** |
+| `io.github.elevateddev.lattice.metrics` | `GraphMetrics`, `GraphMetrics.StagePlacement`, `StageMetrics`, `EdgeMetrics`, `WaitMetrics`, `PlacementStatus`, `WorkerState`. | **Stable** |
+| `io.github.elevateddev.lattice.placement` | `PinPolicy`, `MemoryMode`, related strategy types. | **Stable** |
+| `io.github.elevateddev.lattice.routing` | `dispatch` / `broadcast` / `partition` / `join` specifications. | **Stable** |
+| `io.github.elevateddev.lattice.slab` | `SlabPool`, `SlabHandle` and supporting types. | **Stable** |
+| `io.github.elevateddev.lattice.wait` | `WaitSpec`, wait-strategy primitives. | **Stable** |
+| `io.github.elevateddev.lattice.nativeaccess` | Optional native topology capability checks and JNI access types. | **Experimental** |
 
 ## Stability Contract
 
@@ -57,15 +49,15 @@ The stability labels above are the intended public contract for 1.0. The
 project does not yet ship public `@Stable`, `@Experimental`, or `@Internal`
 annotations.
 
-- **Stable** packages are covered by SemVer once 1.0.0 is published.
+- **Stable** packages are covered by SemVer for the 1.x release line.
 - **Experimental** packages may change in minor releases.
-- Non-exported `com.lattice.internal.*` packages are not public API.
+- Non-exported `io.github.elevateddev.lattice.internal.*` packages are not public API.
 
 `GraphCompilationReport.Reason#code()` values are intended for diagnostics and
-support tooling. They should be treated as stable public vocabulary after
-1.0.0.
+support tooling. They should be treated as stable public vocabulary for the
+1.x release line.
 
-## Planned Maven Coordinate
+## Maven Coordinate
 
 ```xml
 <dependency>
@@ -79,4 +71,5 @@ support tooling. They should be treated as stable public vocabulary after
 implementation("io.github.elevateddev:lattice:1.0.0")
 ```
 
-The release jar declares `module com.lattice`.
+The release jar declares `module io.github.elevateddev.lattice` and is prepared to carry bundled
+native libraries under `META-INF/native/lattice/<os>-<arch>/`.

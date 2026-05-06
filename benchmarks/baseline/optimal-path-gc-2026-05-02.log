@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
 
 # Run progress: 0.00% complete, ETA 00:02:24
 # Fork: 1 of 2
@@ -97,20 +97,20 @@ Iteration   7: 3377689.507 ops/s
 
 
 
-Result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
   3563680.118 ±(99.9%) 74151.844 ops/s [Average]
   (min, avg, max) = (3377689.507, 3563680.118, 3641228.383), stdev = 65733.678
   CI (99.9%): [3489528.274, 3637831.961] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate":
   0.001 ±(99.9%) 0.003 MB/sec [Average]
   (min, avg, max) = (≈ 10⁻⁴, 0.001, 0.007), stdev = 0.002
   CI (99.9%): [≈ 0, 0.004] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate.norm":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.alloc.rate.norm":
   ≈ 10⁻³ B/op
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.count":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted:·gc.count":
   ≈ 0 counts
 
 
@@ -124,7 +124,7 @@ Secondary result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFuse
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
 
 # Run progress: 50.00% complete, ETA 00:01:12
 # Fork: 1 of 2
@@ -213,18 +213,18 @@ Iteration   7: 76525482.656 ops/s
 
 
 
-Result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
   77929073.398 ±(99.9%) 1763223.042 ops/s [Average]
   (min, avg, max) = (73668250.310, 77929073.398, 80076066.044), stdev = 1563051.300
   CI (99.9%): [76165850.356, 79692296.440] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate":
   ≈ 10⁻³ MB/sec
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate.norm":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.alloc.rate.norm":
   ≈ 10⁻⁵ B/op
 
-Secondary result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.count":
+Secondary result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted:·gc.count":
   ≈ 0 counts
 
 

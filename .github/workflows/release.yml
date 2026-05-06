@@ -2,17 +2,78 @@ name: Release Artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      publishToCentral:
+        description: Upload the validated deployment to Maven Central Portal
+        required: true
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
+  native:
+    name: Native library (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x86_64
+            os: ubuntu-latest
+            library: libstatic_topology_native.so
+          - platform: linux-aarch64
+            os: ubuntu-24.04-arm
+            library: libstatic_topology_native.so
+          - platform: windows-x86_64
+            os: windows-latest
+            library: static_topology_native.dll
+          - platform: macos-x86_64
+            os: macos-13
+            library: libstatic_topology_native.dylib
+          - platform: macos-aarch64
+            os: macos-14
+            library: libstatic_topology_native.dylib
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test native backend
+        shell: bash
+        working-directory: native/static-topology-native
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee native-test.log
+
+      - name: Build native backend
+        working-directory: native/static-topology-native
+        run: cargo build --release --locked
+
+      - name: Upload native backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: |
+            native/static-topology-native/target/release/${{ matrix.library }}
+            native/static-topology-native/native-test.log
+          if-no-files-found: error
+
   artifacts:
-    name: Build release bundle
+    name: Build Java release bundle
+    needs: native
     runs-on: ubuntu-latest
+    environment: release
 
     steps:
       - name: Checkout
@@ -24,41 +85,95 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Download native libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: build/native-artifacts
+
+      - name: Stage native libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/native-bundle/linux-x86_64
+          mkdir -p build/native-bundle/linux-aarch64
+          mkdir -p build/native-bundle/windows-x86_64
+          mkdir -p build/native-bundle/macos-x86_64
+          mkdir -p build/native-bundle/macos-aarch64
+          cp build/native-artifacts/native-linux-x86_64/target/release/libstatic_topology_native.so build/native-bundle/linux-x86_64/
+          cp build/native-artifacts/native-linux-aarch64/target/release/libstatic_topology_native.so build/native-bundle/linux-aarch64/
+          cp build/native-artifacts/native-windows-x86_64/target/release/static_topology_native.dll build/native-bundle/windows-x86_64/
+          cp build/native-artifacts/native-macos-x86_64/target/release/libstatic_topology_native.dylib build/native-bundle/macos-x86_64/
+          cp build/native-artifacts/native-macos-aarch64/target/release/libstatic_topology_native.dylib build/native-bundle/macos-aarch64/
+
       - name: Resolve release version
         shell: bash
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             echo "RELEASE_VERSION=${GITHUB_REF_NAME#v}" >> "${GITHUB_ENV}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publishToCentral }}" == "true" ]]; then
+            echo "::error::Maven Central publishing must be dispatched from a v* tag ref."
+            exit 1
           else
             echo "RELEASE_VERSION=1.0-SNAPSHOT" >> "${GITHUB_ENV}"
           fi
 
       - name: Build Java release artifacts
-        run: ./gradlew verifyReleaseArtifacts -PreleaseVersion="${RELEASE_VERSION}"
+        run: >
+          ./gradlew clean releaseCheck
+          -PreleaseVersion="${RELEASE_VERSION}"
+          -Plattice.native.bundle.dir="${PWD}/build/native-bundle"
+          -Plattice.requireBundledNative=true
 
-      - name: Build Linux native backend
-        run: ./gradlew nativeBuildRelease
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/release-evidence
+          find build/libs build/reports build/native-artifacts -type f \
+            \( -name '*.jar' -o -name '*.xml' -o -name '*.json' -o -name '*.log' \) \
+            -print0 | sort -z | xargs -0 sha256sum > build/release-evidence/SHA256SUMS
+          find build/libs build/reports build/native-artifacts -type f \
+            \( -name '*.jar' -o -name '*.xml' -o -name '*.json' -o -name '*.log' \) \
+            -print0 | sort -z | xargs -0 sha512sum > build/release-evidence/SHA512SUMS
+
+      - name: Attest release artifacts
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            build/libs/*.jar
+            build/release-evidence/SHA256SUMS
+            build/release-evidence/SHA512SUMS
+            build/reports/bom.*
 
       - name: Upload Java artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lattice-java-artifacts
+          name: lattice-java-release
           path: |
             build/libs/*.jar
             build/publications/**
+            build/reports/bom.*
+            build/reports/jacoco/test/**
+            build/native-artifacts/**/native-test.log
+            build/release-evidence/**
 
-      - name: Upload Linux native backend
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-topology-native-linux
-          path: native/static-topology-native/target/release/libstatic_topology_native.so
-
+      - name: Upload to Maven Central Portal
+        if: github.event_name == 'workflow_dispatch' && inputs.publishToCentral
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: >
+          ./gradlew publishToMavenCentral
+          -PreleaseVersion="${RELEASE_VERSION}"
+          -Plattice.native.bundle.dir="${PWD}/build/native-bundle"
+          -Plattice.requireBundledNative=true

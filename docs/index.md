@@ -8,6 +8,11 @@ It is aimed at services whose processing shape is known before startup:
 validate, enrich, route, join, and sink inside one JVM without pretending to be
 a broker or distributed stream processor.
 
+Lattice is currently used in production for drone telemetry workloads. The
+public release process keeps that trust signal tied to verifiable artifacts:
+CI checks, coverage reports, JCStress, benchmark evidence, SBOMs, checksums,
+and artifact attestations.
+
 When browsing the repository, the same material is available through the root
 [README](https://github.com/ElevatedDev/Lattice/blob/main/README.md).
 
@@ -36,9 +41,18 @@ When browsing the repository, the same material is available through the root
 | [Observability](observability.md) | Build-time compilation reports, metrics, hot-counter toggles, JFR, and placement reports. |
 | [Operations Runbook](operations-runbook.md) | Startup checks, lifecycle operations, and diagnostics. |
 | [Compatibility Matrix](compatibility-matrix.md) | JDK, OS, dependency, and versioning policy. |
-| [API Reference](api.md) | Public package summary and planned Maven coordinate. |
+| [API Reference](api.md) | Public package summary and Maven coordinate. |
 | [Generated Javadocs](api/latest/index.html) | Checked-in generated Javadoc HTML. It becomes normal navigable Javadocs when served by GitHub Pages or another static host. |
 | [Release Process](release.md) | Maintainer checklist for release verification and publishing. |
+
+## Trust Evidence
+
+| Evidence | Purpose |
+| --- | --- |
+| CI and release checks | Build, test, coverage, documentation, release metadata, and artifact gates. |
+| Security policy | Private vulnerability reporting before public issue disclosure. |
+| Benchmark evidence | Raw JMH artifacts, methodology notes, and caveats for performance claims. |
+| Release evidence | Signed Maven artifacts, checksums, SBOM, and GitHub artifact attestations. |
 
 ## Performance
 

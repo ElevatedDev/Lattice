@@ -4,7 +4,7 @@
 
 | JDK | Status | Notes |
 | --- | --- | --- |
-| 21 | **Supported** | Build baseline. JPMS module name `com.lattice`. |
+| 21 | **Supported** | Build baseline. JPMS module name `io.github.elevateddev.lattice`. |
 | 22 | Best-effort | Compiles and tests cleanly on `--release 21`. |
 | 23 | Best-effort | Same. |
 | 24 | Best-effort | Same. |
@@ -14,8 +14,10 @@
 
 The release jar contains:
 
-- `module-info.class` for `com.lattice`.
-- `Automatic-Module-Name: com.lattice` as a fallback.
+- `module-info.class` for `io.github.elevateddev.lattice`.
+- `Automatic-Module-Name: io.github.elevateddev.lattice` as a fallback.
+- Bundled native libraries under `META-INF/native/lattice/<os>-<arch>/` when
+  built by the release workflow.
 - Reproducible archive flags (`preserveFileTimestamps=false`,
   `reproducibleFileOrder=true`).
 
@@ -34,11 +36,21 @@ library does not imply Linux-equivalent NUMA behavior; check
 `NativeTopology.capabilities()` or `GraphMetrics.placementReport()` before
 making placement or benchmark claims for a platform.
 
+The Java loader uses this order: `-Dlattice.native.enabled=false` disables
+native loading, `-Dlattice.native.library.path=...` loads an exact file, bundled
+jar resources are tried next, and `System.loadLibrary("static_topology_native")`
+is the final fallback.
+
 On Linux, single-CPU pinning is exact. CPU-set pinning is any-of placement: the
 native backend intersects the requested set with the worker thread's current
 allowed affinity before applying it. This keeps Lattice aligned with cgroups,
 `taskset`, and service managers; an empty effective set is reported as a
 placement failure.
+
+## Native Build Toolchain
+
+The Rust JNI backend uses Rust edition 2024 and requires Rust/Cargo 1.85 or
+newer. Java-only consumers do not need Rust.
 
 ## Disruptor
 
@@ -55,12 +67,12 @@ unless histograms are explicitly enabled.
 ## Versioning Policy
 
 - SemVer 2.0.0.
-- Stable contracts (the 17 types listed in repository
+- Stable contracts (the public stable-surface types listed in repository
   [CONTRIBUTING.md](../CONTRIBUTING.md)
   and the stable packages listed in [API Reference](api.md)) cannot break in
   MINOR or PATCH releases after 1.0.0.
 - Experimental surfaces listed in [API Reference](api.md) may break in MINOR.
-- Non-exported `com.lattice.internal.*` packages may break at any time; do not
+- Non-exported `io.github.elevateddev.lattice.internal.*` packages may break at any time; do not
   depend on them.
 - The native library's basename `static_topology_native` is part of the
   contract and only changes on MAJOR.

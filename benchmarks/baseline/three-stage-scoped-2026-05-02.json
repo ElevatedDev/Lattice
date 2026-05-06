@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,
@@ -83,7 +83,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,
@@ -162,7 +162,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,
@@ -244,7 +244,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,
@@ -323,7 +323,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,
@@ -402,7 +402,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 3,

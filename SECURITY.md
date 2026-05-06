@@ -9,7 +9,7 @@ pre-release software.
 | --- | --- |
 | `main` / current development branch | Best-effort pre-release review |
 | `< 1.0` source snapshots | No sustained security support |
-| Published Maven artifacts | Not available yet |
+| Published Maven artifacts | Supported after the first 1.0.0 Maven Central release |
 
 ## Reporting A Vulnerability
 

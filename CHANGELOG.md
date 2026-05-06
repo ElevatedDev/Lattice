@@ -61,6 +61,20 @@ state is pre-1.0.
 
 ### Added
 
+- Maven Central release wiring through Vanniktech's Central Portal publishing
+  plugin, including signed publication tasks for
+  `io.github.elevateddev:lattice`.
+- Bundled native-library loading support. Release jars can carry platform
+  libraries under `META-INF/native/lattice/<os>-<arch>/`, while
+  `lattice.native.enabled=false` and `lattice.native.library.path=...` keep
+  their explicit override behavior.
+- JaCoCo coverage reporting and verification, CycloneDX SBOM generation,
+  CodeQL, OpenSSF Scorecard, Dependency Review, release checksums, and GitHub
+  artifact attestation workflow coverage.
+- Native Rust tests now run in CI and in the per-platform release native
+  artifact matrix before release binaries are packaged.
+- Public trust wording that Lattice is currently used in production for drone
+  telemetry workloads.
 - `StaticGraph#compilationReport()` and public
   `GraphCompilationReport` rows for build-time worker, edge, sender, merge,
   and fallback decisions. Reports include stable reason codes such as
@@ -102,7 +116,7 @@ state is pre-1.0.
   `HdrHistogram` is exposed as an API dependency because histogram types appear
   in public metrics accessors.
 - Optional native access classes moved from the old `com.staticgraph.*`
-  namespace to `com.lattice.nativeaccess` before the first public release.
+  namespace to `io.github.elevateddev.lattice.nativeaccess` before the first public release.
 - `CONTRIBUTING.md` expanded with scope, hot-path, test, documentation, and
   security expectations for public contributions.
 - `SECURITY.md` rewritten for pre-1.0 support status and private vulnerability

@@ -1,0 +1,77 @@
+package io.github.elevateddev.lattice.examples;
+
+import io.github.elevateddev.lattice.edge.EdgeSpec;
+import io.github.elevateddev.lattice.graph.MetricsSpec;
+import io.github.elevateddev.lattice.graph.StaticGraph;
+import io.github.elevateddev.lattice.metrics.EdgeMetrics;
+import io.github.elevateddev.lattice.metrics.GraphMetrics;
+import io.github.elevateddev.lattice.metrics.StageMetrics;
+import io.github.elevateddev.lattice.stage.Emitter;
+import io.github.elevateddev.lattice.stage.StageSpec;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+public final class MetricsDiagnosticsExample {
+
+    private MetricsDiagnosticsExample() {
+    }
+
+    public static void main(final String[] args) throws Exception {
+        final CountDownLatch consumed = new CountDownLatch(2);
+        final StaticGraph graph = StaticGraph.builder("example-metrics-diagnostics")
+            .metrics(MetricsSpec.off()
+                .hotCounters(true)
+                .stageHistograms(true)
+                .residenceTiming(true)
+                .fusedLogicalEdgeCounters(true))
+            .source("ingress", String.class)
+            .stage("parse", String.class, Integer.class, (value, out, ctx) ->
+                out.push(Integer.parseInt(value)), StageSpec.singleThreaded())
+            .sink("egress", Integer.class, ignored -> consumed.countDown(), StageSpec.singleThreaded())
+            .edge("ingress", "parse", EdgeSpec.mpscRing(32))
+            .edge("parse", "egress", EdgeSpec.spscRing(32))
+            .build();
+
+        graph.start();
+        final Emitter<String> ingress = graph.emitter("ingress", String.class);
+        ingress.emit("41");
+        ingress.emit("42");
+        ingress.close();
+
+        await(consumed, graph, "metrics input");
+        awaitTermination(graph);
+
+        final GraphMetrics metrics = graph.metrics();
+        final StageMetrics parse = metrics.stage("parse");
+        final EdgeMetrics ingressToParse = metrics.edge("ingress", "parse");
+
+        System.out.printf("graph=%s emitted=%d consumed=%d failedOffers=%d%n",
+            metrics.graphName(), metrics.emittedCount(), metrics.consumedCount(), metrics.failedOffers());
+        System.out.printf("stage=parse processed=%d state=%s ratePerSecond=%.2f%n",
+            parse.processedMessages(), parse.workerState(), parse.processRatePerSecond());
+        System.out.printf("edge=ingress->parse highWaterMark=%d blockedOffers=%d parks=%d%n",
+            ingressToParse.highWaterMark(), ingressToParse.blockedOffers(), ingressToParse.parkCount());
+        System.out.printf("diagnosticFlags hotCounters=%s stageHistograms=%s residenceTiming=%s%n",
+            metrics.hotCounters(), parse.histograms(), ingressToParse.residenceTiming());
+        System.out.printf("placementReport=%s%n", metrics.placementReport());
+    }
+
+    private static void await(
+        final CountDownLatch latch,
+        final StaticGraph graph,
+        final String name
+    ) throws InterruptedException {
+        if (!latch.await(5, TimeUnit.SECONDS)) {
+            graph.abort();
+            throw new IllegalStateException("timed out waiting for " + name);
+        }
+    }
+
+    private static void awaitTermination(final StaticGraph graph) throws InterruptedException {
+        if (!graph.awaitTermination(Duration.ofSeconds(5))) {
+            graph.abort();
+            throw new IllegalStateException("graph did not stop cleanly");
+        }
+    }
+}

@@ -6,17 +6,17 @@
  * helpers, and experimental native topology access used by placement-aware
  * deployments.
  */
-module com.lattice {
+module io.github.elevateddev.lattice {
     requires HdrHistogram;
     requires jdk.jfr;
 
-    exports com.lattice.edge;
-    exports com.lattice.graph;
-    exports com.lattice.metrics;
-    exports com.lattice.placement;
-    exports com.lattice.routing;
-    exports com.lattice.slab;
-    exports com.lattice.stage;
-    exports com.lattice.wait;
-    exports com.lattice.nativeaccess;
+    exports io.github.elevateddev.lattice.edge;
+    exports io.github.elevateddev.lattice.graph;
+    exports io.github.elevateddev.lattice.metrics;
+    exports io.github.elevateddev.lattice.placement;
+    exports io.github.elevateddev.lattice.routing;
+    exports io.github.elevateddev.lattice.slab;
+    exports io.github.elevateddev.lattice.stage;
+    exports io.github.elevateddev.lattice.wait;
+    exports io.github.elevateddev.lattice.nativeaccess;
 }

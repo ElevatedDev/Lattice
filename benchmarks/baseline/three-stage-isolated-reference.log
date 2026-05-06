@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference
 
 # Run progress: 0.00% complete, ETA 00:02:24
 # Fork: 1 of 2
@@ -33,7 +33,7 @@ Iteration   4: 46991923.866 ops/s
 Iteration   5: 44462222.455 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference":
   38713479.307 ±(99.9%) 17919267.452 ops/s [Average]
   (min, avg, max) = (17448541.188, 38713479.307, 47350375.136), stdev = 11852485.929
   CI (99.9%): [20794211.855, 56632746.760] (assumes normal distribution)
@@ -49,7 +49,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeSta
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference
 
 # Run progress: 33.33% complete, ETA 00:01:43
 # Fork: 1 of 2
@@ -74,7 +74,7 @@ Iteration   4: 90002439.587 ops/s
 Iteration   5: 94906497.782 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference":
   69320688.294 ±(99.9%) 43504017.360 ops/s [Average]
   (min, avg, max) = (23376930.692, 69320688.294, 95165843.998), stdev = 28775213.885
   CI (99.9%): [25816670.934, 112824705.653] (assumes normal distribution)
@@ -90,7 +90,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFu
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFusedReference
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFusedReference
 
 # Run progress: 66.67% complete, ETA 00:00:51
 # Fork: 1 of 2
@@ -115,7 +115,7 @@ Iteration   4: 63819674.016 ops/s
 Iteration   5: 63631620.754 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFusedReference":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFusedReference":
   52698325.067 ±(99.9%) 20042136.371 ops/s [Average]
   (min, avg, max) = (24519395.489, 52698325.067, 63819674.016), stdev = 13256632.279
   CI (99.9%): [32656188.696, 72740461.439] (assumes normal distribution)

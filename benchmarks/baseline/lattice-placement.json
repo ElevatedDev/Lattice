@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.PlacementBenchmark.mpscPlacement",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 1,
@@ -71,7 +71,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.PlacementBenchmark.mpscPlacement",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 1,
@@ -141,7 +141,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.PlacementBenchmark.spscPlacement",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -211,7 +211,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.PlacementBenchmark.spscPlacement",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,

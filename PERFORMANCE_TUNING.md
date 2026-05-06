@@ -302,7 +302,7 @@ and requires the library path to be supplied to the forked JVM:
 ```bash
 ./gradlew nativeBuildRelease jmhJar
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
-  "com.lattice.benchmark.NativePlacementComparisonBenchmark.*" \
+  "io.github.elevateddev.lattice.benchmark.NativePlacementComparisonBenchmark.*" \
   -p pinPolicy=none,cpu,core,cpuSet,numaNode,inheritCpuset \
   -jvmArgsAppend "-Dlattice.native.library.path=$(pwd)/native/static-topology-native/target/release/libstatic_topology_native.so -Dlattice.bench.cpuA=0 -Dlattice.bench.cpuB=1 -Dlattice.bench.cpuC=2"
 ```
@@ -377,7 +377,7 @@ multiple forks, and store JSON results with the exact JVM flags:
 ```bash
 ./gradlew clean test jmhJar
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
-  "com.lattice.benchmark.(TopologyBenchmark|ApplesToApplesDisruptorBenchmark|OptimalPathBenchmark|DisruptorBaselineBenchmark).*" \
+  "io.github.elevateddev.lattice.benchmark.(TopologyBenchmark|ApplesToApplesDisruptorBenchmark|OptimalPathBenchmark|DisruptorBaselineBenchmark).*" \
   -wi 5 -i 8 -f 3 -w 5s -r 5s \
   -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC" \
   -rf json -rff results/lattice-jmh.json

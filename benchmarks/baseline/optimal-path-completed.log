@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
 
 # Run progress: 0.00% complete, ETA 00:06:30
 # Fork: 1 of 3
@@ -59,7 +59,7 @@ Iteration   7: 5888010.683 ops/s
 Iteration   8: 5178483.323 ops/s
 
 
-Result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted":
   4742326.127 ±(99.9%) 1028517.313 ops/s [Average]
   (min, avg, max) = (1074687.461, 4742326.127, 6153774.249), stdev = 1337363.140
   CI (99.9%): [3713808.814, 5770843.439] (assumes normal distribution)
@@ -75,7 +75,7 @@ Result "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted
 
 # Run progress: 50.00% complete, ETA 00:03:18
 # Fork: 1 of 3
@@ -126,7 +126,7 @@ Iteration   7: 25384935.793 ops/s
 Iteration   8: 34279876.632 ops/s
 
 
-Result "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted":
   29903291.128 ±(99.9%) 4942063.039 ops/s [Average]
   (min, avg, max) = (15444787.554, 29903291.128, 36698181.508), stdev = 6426078.458
   CI (99.9%): [24961228.089, 34845354.168] (assumes normal distribution)

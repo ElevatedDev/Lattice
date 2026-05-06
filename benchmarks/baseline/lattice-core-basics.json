@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -65,7 +65,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -129,7 +129,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -193,7 +193,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -257,7 +257,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -321,7 +321,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -385,7 +385,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -449,7 +449,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -513,7 +513,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -577,7 +577,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,
@@ -641,7 +641,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 1,

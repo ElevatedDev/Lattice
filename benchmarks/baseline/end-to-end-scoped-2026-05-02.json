@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -68,7 +68,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -135,7 +135,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -202,7 +202,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -269,7 +269,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -336,7 +336,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -403,7 +403,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -470,7 +470,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -537,7 +537,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -604,7 +604,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,

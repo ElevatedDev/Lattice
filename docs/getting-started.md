@@ -7,7 +7,7 @@ minutes.
 
 - JDK 21 (matching the project's Gradle toolchain).
 - The checked-in Gradle wrapper (`./gradlew` / `gradlew.bat`).
-- Optional: Rust + Cargo, only if you want the [native placement
+- Optional: Rust 1.85+ + Cargo, only if you want the [native placement
   backend](../README.md#native-placement-backend)
   for Linux affinity and NUMA diagnostics.
 
@@ -26,16 +26,24 @@ The portable release gate is:
 
 This compiles main, examples, tests, JMH, JCStress; builds the runtime jar,
 sources jar, and javadoc jar; generates the Maven POM; and verifies the
-documentation links you are reading right now.
+documentation links you are reading right now. It also generates a CycloneDX
+SBOM and enforces the current JaCoCo coverage floor: at least 80% line and 65%
+branch coverage on the release scope.
+
+The Maven Central coordinate is:
+
+```kotlin
+implementation("io.github.elevateddev:lattice:1.0.0")
+```
 
 ## Your First Graph
 
 ```java
-import com.lattice.edge.EdgeSpec;
-import com.lattice.graph.SourceMode;
-import com.lattice.graph.StaticGraph;
-import com.lattice.stage.Emitter;
-import com.lattice.stage.StageSpec;
+import io.github.elevateddev.lattice.edge.EdgeSpec;
+import io.github.elevateddev.lattice.graph.SourceMode;
+import io.github.elevateddev.lattice.graph.StaticGraph;
+import io.github.elevateddev.lattice.stage.Emitter;
+import io.github.elevateddev.lattice.stage.StageSpec;
 import java.time.Duration;
 
 record Order(int id, boolean valid) {}

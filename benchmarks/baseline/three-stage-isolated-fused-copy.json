@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,
@@ -74,7 +74,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused",
         "mode" : "thrpt",
         "threads" : 1,
         "forks" : 2,

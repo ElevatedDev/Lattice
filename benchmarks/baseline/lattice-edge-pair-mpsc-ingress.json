@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EdgePairBenchmark.mpscPair",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.mpscPair",
         "mode" : "thrpt",
         "threads" : 2,
         "forks" : 1,
@@ -125,7 +125,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.EdgePairBenchmark.spscPair",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.spscPair",
         "mode" : "thrpt",
         "threads" : 2,
         "forks" : 1,
@@ -249,7 +249,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.MpscIngressBenchmark.mpscIngress",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.MpscIngressBenchmark.mpscIngress",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 1,

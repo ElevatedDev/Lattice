@@ -30,13 +30,51 @@ fixed Java graphs with explicit backpressure and observable failure semantics.
 
 ## Status
 
-- Pre-1.0. Build from source until the first Maven Central release is
-  published.
+- The first public release line is 1.0.x.
+- Maven Central coordinate: `io.github.elevateddev:lattice`.
 - Java 21 is the build baseline.
-- The JPMS module name is `com.lattice`.
+- The JPMS module name is `io.github.elevateddev.lattice`.
 - The core runtime is Java. The optional native backend is Rust JNI for
-  placement and topology diagnostics.
+  placement and topology diagnostics, and release jars are prepared to load
+  bundled host-native libraries when present.
+- Lattice is currently used in production for drone telemetry workloads.
 - Licensed under the [Apache License 2.0](LICENSE).
+
+## Add Lattice To Your Build
+
+Lattice is published to Maven Central as `io.github.elevateddev:lattice`.
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("io.github.elevateddev:lattice:1.0.0")
+}
+```
+
+Gradle Groovy:
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'io.github.elevateddev:lattice:1.0.0'
+}
+```
+
+Maven:
+
+```xml
+<dependency>
+  <groupId>io.github.elevateddev</groupId>
+  <artifactId>lattice</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
 
 ## Quick Start
 
@@ -44,7 +82,7 @@ Requirements:
 
 - JDK 21.
 - The checked-in Gradle wrapper.
-- Rust and Cargo only if you need the optional native placement backend.
+- Rust 1.85+ and Cargo only if you need the optional native placement backend.
 
 Build and run the main checks:
 
@@ -56,13 +94,13 @@ Build and run the main checks:
 Minimal graph:
 
 ```java
-import com.lattice.edge.EdgeSpec;
-import com.lattice.graph.FusionSpec;
-import com.lattice.graph.MetricsSpec;
-import com.lattice.graph.SourceMode;
-import com.lattice.graph.StaticGraph;
-import com.lattice.stage.Emitter;
-import com.lattice.stage.StageSpec;
+import io.github.elevateddev.lattice.edge.EdgeSpec;
+import io.github.elevateddev.lattice.graph.FusionSpec;
+import io.github.elevateddev.lattice.graph.MetricsSpec;
+import io.github.elevateddev.lattice.graph.SourceMode;
+import io.github.elevateddev.lattice.graph.StaticGraph;
+import io.github.elevateddev.lattice.stage.Emitter;
+import io.github.elevateddev.lattice.stage.StageSpec;
 import java.time.Duration;
 
 record Order(int id, boolean valid) {}
@@ -305,7 +343,7 @@ Release-oriented local gate:
 
 ```bash
 ./gradlew releaseCheck
-./gradlew javadoc
+./gradlew jacocoTestReport jacocoTestCoverageVerification
 ```
 
 Concurrency validation:
@@ -316,13 +354,21 @@ Concurrency validation:
 
 The portable release gate builds runtime classes, examples, tests, JMH classes,
 JCStress classes, source and Javadoc artifacts, Maven metadata, and public docs
-link/benchmark references. Full JCStress is intentionally kept as a longer
-validation step.
+link/benchmark references. It also generates a CycloneDX SBOM and enforces the
+current JaCoCo coverage floor: at least 80% line and 65% branch coverage on the
+release scope. Full JCStress is intentionally kept as a longer validation step.
+
+## Maven Coordinates
+
+The release coordinate is `io.github.elevateddev:lattice`; see
+[Add Lattice To Your Build](#add-lattice-to-your-build) for Gradle and Maven
+snippets.
 
 ## Native Placement Backend
 
-The native backend is optional and currently uses Rust JNI. Build it when you
-need host affinity, placement diagnostics, or first-touch support:
+The native backend is optional and currently uses Rust JNI. It requires Rust
+1.85+ because the crate uses edition 2024. Build it when you need host
+affinity, placement diagnostics, or first-touch support:
 
 ```bash
 ./gradlew nativeBuildRelease
@@ -333,6 +379,12 @@ Run Java with the native library visible:
 ```bash
 java -Djava.library.path=native/static-topology-native/target/release ...
 ```
+
+Release jars are prepared to look for bundled native libraries first under
+`META-INF/native/lattice/<os>-<arch>/`, then fall back to
+`System.loadLibrary("static_topology_native")`. You can still point at an exact
+shared library with `-Dlattice.native.library.path=...`, or disable native
+loading with `-Dlattice.native.enabled=false`.
 
 Linux exposes the full native placement surface. Windows and macOS expose
 narrower capability bits; see the [Compatibility Matrix](docs/compatibility-matrix.md)
@@ -361,6 +413,17 @@ browsing the repository.
 | Runtime contract | [Edge Semantics](docs/edge-semantics.md), [Ordering Guarantees](docs/ordering-guarantees.md), [Backpressure](docs/backpressure.md), [Failure Modes](docs/failure-modes.md) |
 | Operations | [Observability](docs/observability.md), [Operations Runbook](docs/operations-runbook.md), [Compatibility Matrix](docs/compatibility-matrix.md) |
 | Release | [API Reference](docs/api.md), [Generated Javadocs HTML](docs/api/latest/index.html), [Release Process](docs/release.md), [Benchmark Results](docs/benchmark-results/README.md) |
+
+## Trust And Evidence
+
+- Production use: Lattice is currently used in production for drone telemetry
+  workloads.
+- Verification: `releaseCheck`, JaCoCo coverage verification, JCStress,
+  native tests, and JMH benchmark classes are part of the release evidence.
+- Supply chain: release workflows produce signed Maven artifacts, checksums, a
+  CycloneDX SBOM, and GitHub artifact attestations.
+- Project policy: security reporting, contribution expectations, code of
+  conduct, license, and notice files are linked below.
 
 ## Contact
 

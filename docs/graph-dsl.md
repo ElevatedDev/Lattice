@@ -1,6 +1,6 @@
 # Graph DSL
 
-`com.lattice.graph.StaticGraph.builder(name)` returns a fluent builder. Calls
+`io.github.elevateddev.lattice.graph.StaticGraph.builder(name)` returns a fluent builder. Calls
 declare the *logical* topology; the compiler decides the *physical* runtime
 plan.
 

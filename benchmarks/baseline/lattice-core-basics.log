@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink
+# Benchmark: io.github.elevateddev.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink
 
 # Run progress: 0.00% complete, ETA 00:07:20
 # Fork: 1 of 1
@@ -24,7 +24,7 @@ batchedValidateSink endToEnd latency nanos p50=1001 p99=1740799 p99.9=7335935 p9
 7392088.117 ops/s
 
 
-Result "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink":
+Result "io.github.elevateddev.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink":
   8915110.808 ±(99.9%) 3600748.794 ops/s [Average]
   (min, avg, max) = (7392088.117, 8915110.808, 9746794.254), stdev = 935103.027
   CI (99.9%): [5314362.014, 12515859.603] (assumes normal distribution)
@@ -40,7 +40,7 @@ Result "com.lattice.benchmark.BatchTopologyBenchmark.batchedValidateSink":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath
+# Benchmark: io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath
 
 # Run progress: 9.09% complete, ETA 00:06:50
 # Fork: 1 of 1
@@ -54,7 +54,7 @@ Iteration   4: 29916180.209 ops/s
 Iteration   5: 26027261.477 ops/s
 
 
-Result "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath":
+Result "io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath":
   25057290.286 ±(99.9%) 17254709.238 ops/s [Average]
   (min, avg, max) = (18543733.362, 25057290.286, 29916180.209), stdev = 4480993.194
   CI (99.9%): [7802581.047, 42311999.524] (assumes normal distribution)
@@ -70,7 +70,7 @@ Result "com.lattice.benchmark.EdgeMicroBenchmark.mpscSingleProducerSanityPath":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath
+# Benchmark: io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath
 
 # Run progress: 18.18% complete, ETA 00:06:13
 # Fork: 1 of 1
@@ -84,7 +84,7 @@ Iteration   4: 36693205.463 ops/s
 Iteration   5: 31528514.092 ops/s
 
 
-Result "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath":
+Result "io.github.elevateddev.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath":
   41650443.018 ±(99.9%) 55884183.684 ops/s [Average]
   (min, avg, max) = (31528514.092, 41650443.018, 66956663.941), stdev = 14512945.035
   CI (99.9%): [≈ 0, 97534626.702] (assumes normal distribution)
@@ -100,7 +100,7 @@ Result "com.lattice.benchmark.EdgeMicroBenchmark.spscSameThreadSanityPath":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch
+# Benchmark: io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch
 
 # Run progress: 27.27% complete, ETA 00:05:39
 # Fork: 1 of 1
@@ -115,7 +115,7 @@ Iteration   5: broadcastFourBranch enqueue latency nanos p50=100 p99=200 p99.9=4
 7103271.065 ops/s
 
 
-Result "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch":
+Result "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch":
   4873629.363 ±(99.9%) 8298715.313 ops/s [Average]
   (min, avg, max) = (1991917.442, 4873629.363, 7103271.065), stdev = 2155150.013
   CI (99.9%): [≈ 0, 13172344.676] (assumes normal distribution)
@@ -131,7 +131,7 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.broadcastFourBranch":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout
+# Benchmark: io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout
 
 # Run progress: 36.36% complete, ETA 00:04:59
 # Fork: 1 of 1
@@ -146,7 +146,7 @@ Iteration   5: dispatchFanout enqueue latency nanos p50=100 p99=200 p99.9=300 p9
 9051820.267 ops/s
 
 
-Result "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout":
+Result "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout":
   8892557.858 ±(99.9%) 778723.297 ops/s [Average]
   (min, avg, max) = (8621450.255, 8892557.858, 9121195.227), stdev = 202231.967
   CI (99.9%): [8113834.562, 9671281.155] (assumes normal distribution)
@@ -162,7 +162,7 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.dispatchFanout":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes
+# Benchmark: io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes
 
 # Run progress: 45.45% complete, ETA 00:04:14
 # Fork: 1 of 1
@@ -177,7 +177,7 @@ Iteration   5: partitionFourLanes enqueue latency nanos p50=100 p99=200 p99.9=30
 10166056.187 ops/s
 
 
-Result "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes":
+Result "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes":
   9880369.973 ±(99.9%) 1567154.339 ops/s [Average]
   (min, avg, max) = (9234840.070, 9880369.973, 10270800.842), stdev = 406985.005
   CI (99.9%): [8313215.634, 11447524.313] (assumes normal distribution)
@@ -193,7 +193,7 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.partitionFourLanes":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin
+# Benchmark: io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin
 
 # Run progress: 54.55% complete, ETA 00:03:31
 # Fork: 1 of 1
@@ -208,7 +208,7 @@ Iteration   5: stampedAllOfJoin enqueue latency nanos p50=100 p99=300 p99.9=801 
 5276546.036 ops/s
 
 
-Result "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin":
+Result "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin":
   5244671.531 ±(99.9%) 223595.769 ops/s [Average]
   (min, avg, max) = (5166044.934, 5244671.531, 5319287.272), stdev = 58067.111
   CI (99.9%): [5021075.763, 5468267.300] (assumes normal distribution)
@@ -224,7 +224,7 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.stampedAllOfJoin":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit
+# Benchmark: io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit
 
 # Run progress: 63.64% complete, ETA 00:02:48
 # Fork: 1 of 1
@@ -240,7 +240,7 @@ validateJournalRiskCommit endToEnd latency nanos p50=1500 p99=2498559 p99.9=1165
 9129231.715 ops/s
 
 
-Result "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit":
+Result "io.github.elevateddev.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit":
   8667265.766 ±(99.9%) 2726701.513 ops/s [Average]
   (min, avg, max) = (7443877.107, 8667265.766, 9129231.715), stdev = 708115.724
   CI (99.9%): [5940564.252, 11393967.279] (assumes normal distribution)
@@ -256,7 +256,7 @@ Result "com.lattice.benchmark.Phase4TopologyBenchmark.validateJournalRiskCommit"
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer
+# Benchmark: io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer
 
 # Run progress: 72.73% complete, ETA 00:02:05
 # Fork: 1 of 1
@@ -272,7 +272,7 @@ oneSourceOneSinkPreallocatedSingleProducer endToEnd latency nanos p50=12911 p99=
 12261222.514 ops/s
 
 
-Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer":
+Result "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSingleProducer":
   11001288.900 ±(99.9%) 6079214.136 ops/s [Average]
   (min, avg, max) = (8531888.563, 11001288.900, 12404384.099), stdev = 1578752.606
   CI (99.9%): [4922074.764, 17080503.036] (assumes normal distribution)
@@ -288,7 +288,7 @@ Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkPreallocatedSing
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer
+# Benchmark: io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer
 
 # Run progress: 81.82% complete, ETA 00:01:23
 # Fork: 1 of 1
@@ -304,7 +304,7 @@ oneSourceOneSinkSingleProducer endToEnd latency nanos p50=801 p99=892415 p99.9=4
 13572143.067 ops/s
 
 
-Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer":
+Result "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer":
   12398644.378 ±(99.9%) 4959989.558 ops/s [Average]
   (min, avg, max) = (10294043.248, 12398644.378, 13572143.067), stdev = 1288093.537
   CI (99.9%): [7438654.820, 17358633.936] (assumes normal distribution)
@@ -320,7 +320,7 @@ Result "com.lattice.benchmark.TopologyBenchmark.oneSourceOneSinkSingleProducer":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused
+# Benchmark: io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused
 
 # Run progress: 90.91% complete, ETA 00:00:41
 # Fork: 1 of 1
@@ -338,7 +338,7 @@ oneSourceThreeStageSinkFused endToEnd latency nanos p50=342527 p99=1847295 p99.9
 9543376.348 ops/s
 
 
-Result "com.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused":
+Result "io.github.elevateddev.lattice.benchmark.TopologyBenchmark.oneSourceThreeStageSinkFused":
   8438269.630 ±(99.9%) 3936722.084 ops/s [Average]
   (min, avg, max) = (7070850.009, 8438269.630, 9543376.348), stdev = 1022354.224
   CI (99.9%): [4501547.546, 12374991.713] (assumes normal distribution)

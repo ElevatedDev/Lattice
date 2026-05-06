@@ -22,6 +22,7 @@ Run the core checks before opening a change:
 ```bash
 ./gradlew test
 ./gradlew jmhClasses
+./gradlew jacocoTestReport jacocoTestCoverageVerification
 ./gradlew jcstress
 ```
 
@@ -125,6 +126,10 @@ Match test depth to the behavioral risk:
 - Performance-sensitive changes need JMH coverage or a reason why an existing
   benchmark already covers the path.
 - Placement changes need fallback tests and strict-mode tests where possible.
+- Release-bound changes must keep the JaCoCo coverage gate passing: at least
+  80% line and 65% branch coverage on the release scope. Review the HTML report
+  when touching graph compilation, runtime lifecycle, edges, routing, slab
+  ownership, native loading, or metrics.
 
 Benchmark numbers in documentation should identify the host, JVM, native
 library path, CPU topology, command line, warmup/measurement configuration, and
