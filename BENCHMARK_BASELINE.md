@@ -156,7 +156,7 @@ Representative command:
 
 ```bash
 java -jar build/libs/lattice-1.0-SNAPSHOT-jmh.jar \
-  "com.lattice.benchmark.OptimalPathBenchmark.(latticeInlineFusedCompleted|disruptorManualFusedCompleted)$" \
+  "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.(latticeInlineFusedCompleted|disruptorManualFusedCompleted)$" \
   -f 3 -wi 5 -i 8 -w 5s -r 5s -bm thrpt -tu s \
   -jvmArgsAppend "-Xms2g -Xmx2g -XX:+AlwaysPreTouch -XX:+UnlockDiagnosticVMOptions -XX:+UseParallelGC" \
   -rf json -rff benchmarks/baseline/optimal-path-completed-2026-05-02.json

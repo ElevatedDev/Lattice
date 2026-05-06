@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 4 threads, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.PlacementBenchmark.mpscPlacement
+# Benchmark: io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement
 # Parameters: (firstTouchPlacement = false, memory = onHeap, pinning = false, placement = containerCpuset)
 
 # Run progress: 0.00% complete, ETA 00:02:40
@@ -23,7 +23,7 @@ Iteration   4: 8182864.065 ops/s
 Iteration   5: 8039074.557 ops/s
 
 
-Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
+Result "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement":
   8393754.399 ±(99.9%) 2048205.676 ops/s [Average]
   (min, avg, max) = (8039074.557, 8393754.399, 9327094.377), stdev = 531912.510
   CI (99.9%): [6345548.723, 10441960.075] (assumes normal distribution)
@@ -39,7 +39,7 @@ Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
 # Timeout: 10 min per iteration
 # Threads: 4 threads, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.PlacementBenchmark.mpscPlacement
+# Benchmark: io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement
 # Parameters: (firstTouchPlacement = true, memory = onHeap, pinning = false, placement = containerCpuset)
 
 # Run progress: 25.00% complete, ETA 00:02:08
@@ -54,7 +54,7 @@ Iteration   4: 13613440.922 ops/s
 Iteration   5: 13113949.576 ops/s
 
 
-Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
+Result "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.mpscPlacement":
   12492455.647 ±(99.9%) 4792238.104 ops/s [Average]
   (min, avg, max) = (10628995.366, 12492455.647, 13613440.922), stdev = 1244529.017
   CI (99.9%): [7700217.543, 17284693.751] (assumes normal distribution)
@@ -70,7 +70,7 @@ Result "com.lattice.benchmark.PlacementBenchmark.mpscPlacement":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.PlacementBenchmark.spscPlacement
+# Benchmark: io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement
 # Parameters: (firstTouchPlacement = false, memory = onHeap, pinning = false, placement = containerCpuset)
 
 # Run progress: 50.00% complete, ETA 00:01:25
@@ -85,7 +85,7 @@ Iteration   4: 2353704.075 ops/s
 Iteration   5: 2892485.487 ops/s
 
 
-Result "com.lattice.benchmark.PlacementBenchmark.spscPlacement":
+Result "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement":
   2467179.836 ±(99.9%) 2954876.417 ops/s [Average]
   (min, avg, max) = (1495330.851, 2467179.836, 3504075.011), stdev = 767372.022
   CI (99.9%): [≈ 0, 5422056.253] (assumes normal distribution)
@@ -101,7 +101,7 @@ Result "com.lattice.benchmark.PlacementBenchmark.spscPlacement":
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.PlacementBenchmark.spscPlacement
+# Benchmark: io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement
 # Parameters: (firstTouchPlacement = true, memory = onHeap, pinning = false, placement = containerCpuset)
 
 # Run progress: 75.00% complete, ETA 00:00:42
@@ -116,7 +116,7 @@ Iteration   4: 4406264.890 ops/s
 Iteration   5: 3622487.782 ops/s
 
 
-Result "com.lattice.benchmark.PlacementBenchmark.spscPlacement":
+Result "io.github.elevateddev.lattice.benchmark.PlacementBenchmark.spscPlacement":
   5494565.820 ±(99.9%) 6066618.305 ops/s [Average]
   (min, avg, max) = (3622487.782, 5494565.820, 7575848.594), stdev = 1575481.508
   CI (99.9%): [≈ 0, 11561184.125] (assumes normal distribution)

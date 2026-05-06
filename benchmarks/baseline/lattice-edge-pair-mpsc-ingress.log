@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 2 threads (1 group; 1x "mpscOffer", 1x "mpscPoll" in each group), will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EdgePairBenchmark.mpscPair
+# Benchmark: io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.mpscPair
 
 # Run progress: 0.00% complete, ETA 00:02:00
 # Fork: 1 of 1
@@ -37,17 +37,17 @@ Iteration   5: 71710792.790 ops/s
 
 
 
-Result "com.lattice.benchmark.EdgePairBenchmark.mpscPair":
+Result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.mpscPair":
   74115581.273 ±(99.9%) 11211687.440 ops/s [Average]
   (min, avg, max) = (70265904.200, 74115581.273, 76463300.999), stdev = 2911639.624
   CI (99.9%): [62903893.833, 85327268.714] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscOffer":
+Secondary result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscOffer":
   28106321.831 ±(99.9%) 3587913.459 ops/s [Average]
   (min, avg, max) = (26571906.095, 28106321.831, 29079204.062), stdev = 931769.731
   CI (99.9%): [24518408.372, 31694235.290] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscPoll":
+Secondary result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscPoll":
   46009259.442 ±(99.9%) 12346010.105 ops/s [Average]
   (min, avg, max) = (42168922.419, 46009259.442, 49891394.904), stdev = 3206219.618
   CI (99.9%): [33663249.337, 58355269.548] (assumes normal distribution)
@@ -63,7 +63,7 @@ Secondary result "com.lattice.benchmark.EdgePairBenchmark.mpscPair:mpscPoll":
 # Timeout: 10 min per iteration
 # Threads: 2 threads (1 group; 1x "spscOffer", 1x "spscPoll" in each group), will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EdgePairBenchmark.spscPair
+# Benchmark: io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.spscPair
 
 # Run progress: 33.33% complete, ETA 00:01:21
 # Fork: 1 of 1
@@ -92,17 +92,17 @@ Iteration   5: 107844614.208 ops/s
 
 
 
-Result "com.lattice.benchmark.EdgePairBenchmark.spscPair":
+Result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.spscPair":
   101094179.912 ±(99.9%) 14838658.052 ops/s [Average]
   (min, avg, max) = (98473163.604, 101094179.912, 107844614.208), stdev = 3853552.374
   CI (99.9%): [86255521.861, 115932837.964] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.EdgePairBenchmark.spscPair:spscOffer":
+Secondary result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.spscPair:spscOffer":
   48444412.613 ±(99.9%) 9475525.749 ops/s [Average]
   (min, avg, max) = (46280378.298, 48444412.613, 52660695.772), stdev = 2460763.946
   CI (99.9%): [38968886.864, 57919938.362] (assumes normal distribution)
 
-Secondary result "com.lattice.benchmark.EdgePairBenchmark.spscPair:spscPoll":
+Secondary result "io.github.elevateddev.lattice.benchmark.EdgePairBenchmark.spscPair:spscPoll":
   52649767.299 ±(99.9%) 7485395.123 ops/s [Average]
   (min, avg, max) = (50270025.821, 52649767.299, 55183918.436), stdev = 1943933.343
   CI (99.9%): [45164372.176, 60135162.422] (assumes normal distribution)
@@ -118,7 +118,7 @@ Secondary result "com.lattice.benchmark.EdgePairBenchmark.spscPair:spscPoll":
 # Timeout: 10 min per iteration
 # Threads: 4 threads, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.MpscIngressBenchmark.mpscIngress
+# Benchmark: io.github.elevateddev.lattice.benchmark.MpscIngressBenchmark.mpscIngress
 
 # Run progress: 66.67% complete, ETA 00:00:40
 # Fork: 1 of 1
@@ -134,7 +134,7 @@ mpscIngress endToEnd latency nanos p50=16815 p99=1558527 p99.9=5804031 p99.99=11
 12845977.238 ops/s
 
 
-Result "com.lattice.benchmark.MpscIngressBenchmark.mpscIngress":
+Result "io.github.elevateddev.lattice.benchmark.MpscIngressBenchmark.mpscIngress":
   14289722.033 ±(99.9%) 3851449.259 ops/s [Average]
   (min, avg, max) = (12845977.238, 14289722.033, 15498126.541), stdev = 1000209.142
   CI (99.9%): [10438272.774, 18141171.292] (assumes normal distribution)

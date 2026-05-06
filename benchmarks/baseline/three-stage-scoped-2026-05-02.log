@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused
 # Parameters: (waitProfile = YIELDING)
 
 # Run progress: 0.00% complete, ETA 00:19:30
@@ -60,7 +60,7 @@ Iteration   7: 35426339.223 ops/s
 Iteration   8: 38186963.079 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFused":
   35697152.161 ±(99.9%) 1542804.461 ops/s [Average]
   (min, avg, max) = (31729948.671, 35697152.161, 38614927.539), stdev = 2006081.758
   CI (99.9%): [34154347.700, 37239956.622] (assumes normal distribution)
@@ -76,7 +76,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeSta
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference
 
 # Run progress: 16.67% complete, ETA 00:16:19
 # Fork: 1 of 3
@@ -127,7 +127,7 @@ Iteration   7: 31722209.108 ops/s
 Iteration   8: 31157062.443 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelineManuallyFusedReference":
   31091238.503 ±(99.9%) 1087827.880 ops/s [Average]
   (min, avg, max) = (28049738.404, 31091238.503, 33020307.309), stdev = 1414483.638
   CI (99.9%): [30003410.623, 32179066.383] (assumes normal distribution)
@@ -143,7 +143,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeSta
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical
 # Parameters: (waitProfile = YIELDING)
 
 # Run progress: 33.33% complete, ETA 00:13:03
@@ -195,7 +195,7 @@ Iteration   7: 20379987.752 ops/s
 Iteration   8: 20697853.655 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeStagePipelinePhysical":
   21698058.847 ±(99.9%) 497806.038 ops/s [Average]
   (min, avg, max) = (20379987.752, 21698058.847, 22782097.845), stdev = 647288.517
   CI (99.9%): [21200252.809, 22195864.885] (assumes normal distribution)
@@ -211,7 +211,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.disruptorThreeSta
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference
 
 # Run progress: 50.00% complete, ETA 00:09:47
 # Fork: 1 of 3
@@ -262,7 +262,7 @@ Iteration   7: 213820008.495 ops/s
 Iteration   8: 214549617.458 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFusedReference":
   209168722.270 ±(99.9%) 3029940.035 ops/s [Average]
   (min, avg, max) = (201407397.768, 209168722.270, 215976270.691), stdev = 3939778.233
   CI (99.9%): [206138782.235, 212198662.305] (assumes normal distribution)
@@ -278,7 +278,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeManuallyFu
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused
 
 # Run progress: 66.67% complete, ETA 00:06:32
 # Fork: 1 of 3
@@ -329,7 +329,7 @@ Iteration   7: 129466490.146 ops/s
 Iteration   8: 128842443.184 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelineFused":
   127875285.736 ±(99.9%) 2238265.085 ops/s [Average]
   (min, avg, max) = (122780006.590, 127875285.736, 131669289.852), stdev = 2910377.090
   CI (99.9%): [125637020.652, 130113550.821] (assumes normal distribution)
@@ -345,7 +345,7 @@ Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStage
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical
+# Benchmark: io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical
 
 # Run progress: 83.33% complete, ETA 00:03:16
 # Fork: 1 of 3
@@ -396,7 +396,7 @@ Iteration   7: 29166031.907 ops/s
 Iteration   8: 29566615.701 ops/s
 
 
-Result "com.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical":
+Result "io.github.elevateddev.lattice.benchmark.ApplesToApplesDisruptorBenchmark.latticeThreeStagePipelinePhysical":
   31938528.960 ±(99.9%) 1654415.808 ops/s [Average]
   (min, avg, max) = (28649684.557, 31938528.960, 34049784.864), stdev = 2151208.048
   CI (99.9%): [30284113.152, 33592944.768] (assumes normal distribution)

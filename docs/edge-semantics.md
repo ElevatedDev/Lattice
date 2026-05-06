@@ -37,7 +37,7 @@ single-producer/single-consumer (SPSC) or multi-producer/single-consumer
 - POJO payloads are user-owned references. Lattice does not copy.
 - Slab handles (`SlabHandle<T>`) are reference-counted, single-owner payloads
   issued by a
-  [`SlabPool`](../src/main/java/com/lattice/slab/SlabPool.java).
+  [`SlabPool`](../src/main/java/io/github/elevateddev/lattice/slab/SlabPool.java).
   Acquire on the producer side, release at the terminal sink (or each branch
   of a broadcast). The compiler validates retain/release pairing for the
   topologies it accepts; it rejects unsupported reuse shapes at build time.

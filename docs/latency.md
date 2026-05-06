@@ -17,7 +17,7 @@ portable latency guarantees.
 
 | Item | Value |
 | --- | --- |
-| Benchmark | `com.lattice.benchmark.AllPathsLatencyBenchmark.*` |
+| Benchmark | `io.github.elevateddev.lattice.benchmark.AllPathsLatencyBenchmark.*` |
 | Mode | JMH sample time |
 | Warmup | 5 iterations, 3 seconds each |
 | Measurement | 5 iterations, 3 seconds each |

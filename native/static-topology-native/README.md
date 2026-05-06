@@ -6,7 +6,7 @@ through `System.loadLibrary("static_topology_native")`.
 The Java wrapper stays in:
 
 ```text
-src/main/java/com/lattice/nativeaccess
+src/main/java/io/github/elevateddev/lattice/nativeaccess
 ```
 
 The native implementation now lives in-repo:
@@ -74,6 +74,8 @@ cd native/static-topology-native
 cargo build --release
 ```
 
+The crate uses Rust edition 2024 and requires Rust/Cargo 1.85 or newer.
+
 Gradle helper from the repo root:
 
 ```bash
@@ -109,6 +111,20 @@ java -Djava.library.path=native/static-topology-native/target/release ...
 
 The Java wrapper name is already fixed to `static_topology_native`, so the
 shared library basename must stay aligned with that.
+
+Release jars are prepared to carry platform libraries under:
+
+```text
+META-INF/native/lattice/linux-x86_64/libstatic_topology_native.so
+META-INF/native/lattice/linux-aarch64/libstatic_topology_native.so
+META-INF/native/lattice/windows-x86_64/static_topology_native.dll
+META-INF/native/lattice/macos-x86_64/libstatic_topology_native.dylib
+META-INF/native/lattice/macos-aarch64/libstatic_topology_native.dylib
+```
+
+At runtime the Java loader checks an exact configured path first, then extracts
+and loads the matching bundled resource, then falls back to
+`System.loadLibrary("static_topology_native")`.
 
 For packaging or local validation where `java.library.path` is inconvenient,
 the Java loader can be pointed at an exact shared-library file:

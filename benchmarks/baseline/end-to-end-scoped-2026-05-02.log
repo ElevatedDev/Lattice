@@ -8,7 +8,7 @@
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted
 
 # Run progress: 0.00% complete, ETA 00:12:00
 # Fork: 1 of 2
@@ -41,7 +41,7 @@ Iteration   6: 3728127.233 ops/s
 Iteration   7: 3679492.176 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsumerCompleted":
   3700906.366 ±(99.9%) 93968.450 ops/s [Average]
   (min, avg, max) = (3572462.009, 3700906.366, 3841202.465), stdev = 83300.583
   CI (99.9%): [3606937.916, 3794874.816] (assumes normal distribution)
@@ -57,7 +57,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorBroadcastTwoConsume
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted
 
 # Run progress: 10.00% complete, ETA 00:10:54
 # Fork: 1 of 2
@@ -90,7 +90,7 @@ Iteration   6: 2330783.399 ops/s
 Iteration   7: 2305928.592 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphCompleted":
   2381730.294 ±(99.9%) 106808.356 ops/s [Average]
   (min, avg, max) = (2227342.254, 2381730.294, 2515335.246), stdev = 94682.826
   CI (99.9%): [2274921.937, 2488538.650] (assumes normal distribution)
@@ -106,7 +106,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorDependencyGraphComp
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted
 
 # Run progress: 20.00% complete, ETA 00:09:40
 # Fork: 1 of 2
@@ -139,7 +139,7 @@ Iteration   6: 4452606.731 ops/s
 Iteration   7: 4418317.263 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFusedCompleted":
   4399425.583 ±(99.9%) 64129.925 ops/s [Average]
   (min, avg, max) = (4262527.496, 4399425.583, 4501287.246), stdev = 56849.508
   CI (99.9%): [4335295.658, 4463555.508] (assumes normal distribution)
@@ -155,7 +155,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelineManuallyFus
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted
 
 # Run progress: 30.00% complete, ETA 00:08:28
 # Fork: 1 of 2
@@ -188,7 +188,7 @@ Iteration   6: 1720185.545 ops/s
 Iteration   7: 1690676.679 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCompleted":
   1701728.058 ±(99.9%) 97873.303 ops/s [Average]
   (min, avg, max) = (1542238.566, 1701728.058, 1819693.954), stdev = 86762.134
   CI (99.9%): [1603854.755, 1799601.361] (assumes normal distribution)
@@ -204,7 +204,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorPipelinePhysicalCom
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted
 
 # Run progress: 40.00% complete, ETA 00:07:15
 # Fork: 1 of 2
@@ -237,7 +237,7 @@ Iteration   6: 5254445.135 ops/s
 Iteration   7: 5359624.645 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted":
   5324831.602 ±(99.9%) 164126.158 ops/s [Average]
   (min, avg, max) = (5108588.541, 5324831.602, 5619927.643), stdev = 145493.564
   CI (99.9%): [5160705.444, 5488957.760] (assumes normal distribution)
@@ -253,7 +253,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.disruptorSourceSinkCompleted
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted
 
 # Run progress: 50.00% complete, ETA 00:06:02
 # Fork: 1 of 2
@@ -286,7 +286,7 @@ Iteration   6: 2182756.063 ops/s
 Iteration   7: 2107947.234 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCompleted":
   2135887.967 ±(99.9%) 43288.428 ops/s [Average]
   (min, avg, max) = (2069448.239, 2135887.967, 2213902.379), stdev = 38374.063
   CI (99.9%): [2092599.539, 2179176.394] (assumes normal distribution)
@@ -302,7 +302,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeBroadcastTwoBranchCom
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted
 
 # Run progress: 60.00% complete, ETA 00:04:50
 # Fork: 1 of 2
@@ -335,7 +335,7 @@ Iteration   6: 1364754.347 ops/s
 Iteration   7: 1352781.488 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinCompleted":
   1362877.266 ±(99.9%) 36148.673 ops/s [Average]
   (min, avg, max) = (1323631.734, 1362877.266, 1425434.774), stdev = 32044.857
   CI (99.9%): [1326728.594, 1399025.939] (assumes normal distribution)
@@ -351,7 +351,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeDependencyJoinComplet
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted
 
 # Run progress: 70.00% complete, ETA 00:03:37
 # Fork: 1 of 2
@@ -384,7 +384,7 @@ Iteration   6: 78070657.074 ops/s
 Iteration   7: 77774277.211 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCompleted":
   78108323.699 ±(99.9%) 1111855.204 ops/s [Average]
   (min, avg, max) = (76371685.715, 78108323.699, 79999127.366), stdev = 985630.678
   CI (99.9%): [76996468.494, 79220178.903] (assumes normal distribution)
@@ -400,7 +400,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelineInlineFusedCo
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted
 
 # Run progress: 80.00% complete, ETA 00:02:25
 # Fork: 1 of 2
@@ -433,7 +433,7 @@ Iteration   6: 1251783.907 ops/s
 Iteration   7: 1295661.196 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompleted":
   1229655.409 ±(99.9%) 34617.795 ops/s [Average]
   (min, avg, max) = (1170772.056, 1229655.409, 1295661.196), stdev = 30687.774
   CI (99.9%): [1195037.614, 1264273.204] (assumes normal distribution)
@@ -449,7 +449,7 @@ Result "com.lattice.benchmark.EndToEndPathBenchmark.latticePipelinePhysicalCompl
 # Timeout: 10 min per iteration
 # Threads: 1 thread, will synchronize iterations
 # Benchmark mode: Throughput, ops/time
-# Benchmark: com.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted
+# Benchmark: io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted
 
 # Run progress: 90.00% complete, ETA 00:01:12
 # Fork: 1 of 2
@@ -482,7 +482,7 @@ Iteration   6: 4155723.301 ops/s
 Iteration   7: 4062909.356 ops/s
 
 
-Result "com.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted":
+Result "io.github.elevateddev.lattice.benchmark.EndToEndPathBenchmark.latticeSourceSinkCompleted":
   3870780.859 ±(99.9%) 382046.131 ops/s [Average]
   (min, avg, max) = (3462608.583, 3870780.859, 4323040.871), stdev = 338673.944
   CI (99.9%): [3488734.729, 4252826.990] (assumes normal distribution)

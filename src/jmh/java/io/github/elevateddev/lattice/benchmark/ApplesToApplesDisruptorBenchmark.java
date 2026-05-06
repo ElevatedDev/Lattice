@@ -1,0 +1,712 @@
+package io.github.elevateddev.lattice.benchmark;
+
+import io.github.elevateddev.lattice.edge.EdgeSpec;
+import io.github.elevateddev.lattice.graph.FusionSpec;
+import io.github.elevateddev.lattice.graph.PreallocationSpec;
+import io.github.elevateddev.lattice.graph.SourceMode;
+import io.github.elevateddev.lattice.graph.StaticGraph;
+import io.github.elevateddev.lattice.routing.BroadcastSpec;
+import io.github.elevateddev.lattice.routing.JoinSpec;
+import io.github.elevateddev.lattice.stage.BatchPolicy;
+import io.github.elevateddev.lattice.stage.Emitter;
+import io.github.elevateddev.lattice.stage.PreallocatedEmitter;
+import io.github.elevateddev.lattice.stage.StageSpec;
+import io.github.elevateddev.lattice.wait.WaitSpec;
+import com.lmax.disruptor.EventFactory;
+import com.lmax.disruptor.EventHandler;
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.BusySpinWaitStrategy;
+import com.lmax.disruptor.LiteBlockingWaitStrategy;
+import com.lmax.disruptor.SleepingWaitStrategy;
+import com.lmax.disruptor.WaitStrategy;
+import com.lmax.disruptor.YieldingWaitStrategy;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.EventHandlerGroup;
+import com.lmax.disruptor.dsl.ProducerType;
+import java.time.Duration;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Group;
+import org.openjdk.jmh.annotations.GroupThreads;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+
+@BenchmarkMode(Mode.Throughput)
+@OutputTimeUnit(TimeUnit.SECONDS)
+public class ApplesToApplesDisruptorBenchmark {
+
+    private static final int RING_SIZE = 8192;
+    private static final int POOL_SIZE = 1 << 18;
+    private static final int BATCH_SIZE = 1024;
+    private static final Duration STOP_TIMEOUT = Duration.ofSeconds(10);
+    private static final WaitSpec WAIT = WaitSpec.phased(100, 1_000_000_000, Duration.ZERO);
+    private static final StageSpec STAGE = StageSpec.singleThreaded()
+        .wait(WAIT);
+    private static final EdgeSpec SPSC = EdgeSpec.spscRing(RING_SIZE)
+        .wait(WAIT)
+        .batch(BatchPolicy.maxItems(BATCH_SIZE));
+    private static final EdgeSpec SPSC_FUSIBLE = EdgeSpec.spscRing(RING_SIZE)
+        .wait(WAIT);
+    private static final EdgeSpec MPSC = EdgeSpec.mpscRing(RING_SIZE)
+        .wait(WAIT)
+        .batch(BatchPolicy.maxItems(BATCH_SIZE));
+
+    @Benchmark
+    public void latticeSpscPreallocated(final LatticeSpscPreallocatedState state) {
+        final Signal signal = state.emitter.claim();
+        signal.id = state.next++;
+        signal.value = signal.id;
+        state.emitter.emit(signal);
+    }
+
+    @Benchmark
+    public void disruptorSpscPreallocated(final DisruptorSpscState state) {
+        final long value = state.next++;
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = value;
+            event.value = value;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    @Group("latticeMpscReference")
+    @GroupThreads(4)
+    public void latticeMpscReference(final LatticeMpscState state, final ProducerPool producer) {
+        final Signal signal = producer.nextSignal();
+        state.emitter.emit(signal);
+    }
+
+    @Benchmark
+    @Group("disruptorMpscReference")
+    @GroupThreads(4)
+    public void disruptorMpscReference(final DisruptorMpscReferenceState state, final ProducerPool producer) {
+        final Signal signal = producer.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final RefEvent event = state.ringBuffer.get(sequence);
+            event.signal = signal;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    @Group("disruptorMpscCopy")
+    @GroupThreads(4)
+    public void disruptorMpscCopy(final DisruptorMpscCopyState state, final ProducerPool producer) {
+        final Signal signal = producer.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = signal.id;
+            event.value = signal.value;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void latticeThreeStagePipelinePhysical(final LatticePipelinePhysicalState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void latticeThreeStagePipelineFused(final LatticePipelineFusedState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void latticeThreeStagePipelineFusedReference(final LatticePipelineFusedState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void latticeManuallyFusedReference(final LatticeManuallyFusedReferenceState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void disruptorThreeStagePipelinePhysical(final DisruptorPipelineState state) {
+        final Signal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = signal.id;
+            event.value = signal.value;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void disruptorThreeStagePipelineManuallyFused(final DisruptorFusedPipelineState state) {
+        final Signal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = signal.id;
+            event.value = signal.value;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void disruptorThreeStagePipelineManuallyFusedReference(final DisruptorFusedReferencePipelineState state) {
+        final Signal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            state.ringBuffer.get(sequence).signal = signal;
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @Benchmark
+    public void latticeParallelDependencyJoin(final LatticeDependencyState state) {
+        state.emitter.emit(state.nextSignal());
+    }
+
+    @Benchmark
+    public void disruptorParallelDependencyGraph(final DisruptorDependencyState state) {
+        final ImmutableSignal signal = state.nextSignal();
+        final long sequence = state.ringBuffer.next();
+        try {
+            final ValueEvent event = state.ringBuffer.get(sequence);
+            event.id = signal.id();
+            event.value = signal.value();
+        } finally {
+            state.ringBuffer.publish(sequence);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeSpscPreallocatedState {
+        final AtomicLong consumed = new AtomicLong();
+        StaticGraph graph;
+        PreallocatedEmitter<Signal> emitter;
+        long next;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            graph = StaticGraph.builder("aa-lattice-spsc-preallocated")
+                .preallocatedSource("ingress", Signal.class, PreallocationSpec.pool(ignored -> new Signal())
+                    .poolSize(RING_SIZE << 1))
+                .sink("egress", Signal.class, signal -> consumed.incrementAndGet(), STAGE)
+                .edge("ingress", "egress", EdgeSpec.spscRing(RING_SIZE).wait(WAIT))
+                .build();
+            graph.start();
+            emitter = graph.preallocatedEmitter("ingress", Signal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeSpscPreallocated", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorSpscState {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+        long next;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-spsc", ProducerType.SINGLE);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> consumed.incrementAndGet());
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorSpscPreallocated", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeMpscState {
+        final AtomicLong consumed = new AtomicLong();
+        StaticGraph graph;
+        Emitter<Signal> emitter;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            graph = StaticGraph.builder("aa-lattice-mpsc-reference")
+                .source("ingress", Signal.class, SourceMode.MULTI_PRODUCER)
+                .sink("egress", Signal.class, signal -> consumed.incrementAndGet(), STAGE)
+                .edge("ingress", "egress", MPSC)
+                .build();
+            graph.start();
+            emitter = graph.emitter("ingress", Signal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeMpscReference", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorMpscReferenceState {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<RefEvent> disruptor;
+        RingBuffer<RefEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptorRef("aa-disruptor-mpsc-ref", ProducerType.MULTI);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
+                consumed.incrementAndGet();
+                event.signal = null;
+            });
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorMpscReference", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorMpscCopyState {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-mpsc-copy", ProducerType.MULTI);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> consumed.incrementAndGet());
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorMpscCopy", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticePipelinePhysicalState extends LatticePipelineState {
+        @Override
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(false);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticePipelineFusedState extends LatticePipelineState {
+        @Override
+        @Setup(Level.Trial)
+        public void setup() {
+            setup(true);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeManuallyFusedReferenceState extends PooledSignals {
+        long consumed;
+        StaticGraph graph;
+        Emitter<Signal> emitter;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            graph = StaticGraph.builder("aa-lattice-manually-fused-reference")
+                .fusion(FusionSpec.defaults().inlineSources(true))
+                .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                .stage(
+                    "tripleIncrement",
+                    Signal.class,
+                    Signal.class,
+                    ApplesToApplesDisruptorBenchmark::tripleIncrement,
+                    STAGE
+                )
+                .sink("egress", Signal.class, signal -> consumed++, STAGE)
+                .edge("ingress", "tripleIncrement", SPSC_FUSIBLE)
+                .edge("tripleIncrement", "egress", SPSC_FUSIBLE)
+                .build();
+            graph.start();
+            emitter = graph.emitter("ingress", Signal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeManuallyFusedReference", consumed);
+        }
+    }
+
+    public abstract static class LatticePipelineState extends PooledSignals {
+        long consumed;
+        StaticGraph graph;
+        Emitter<Signal> emitter;
+
+        abstract void setup();
+
+        void setup(final boolean fused) {
+            graph = StaticGraph.builder("aa-lattice-pipeline-" + (fused ? "fused" : "physical"))
+                .fusion(fused ? FusionSpec.defaults().inlineSources(true) : FusionSpec.disabled())
+                .source("ingress", Signal.class, SourceMode.SINGLE_PRODUCER)
+                .stage("normalize", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .stage("risk", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .stage("validate", Signal.class, Signal.class, ApplesToApplesDisruptorBenchmark::increment, STAGE)
+                .sink("egress", Signal.class, signal -> consumed++, STAGE)
+                .edge("ingress", "normalize", SPSC_FUSIBLE)
+                .edge("normalize", "risk", SPSC_FUSIBLE)
+                .edge("risk", "validate", SPSC_FUSIBLE)
+                .edge("validate", "egress", SPSC_FUSIBLE)
+                .build();
+            graph.start();
+            emitter = graph.emitter("ingress", Signal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeThreeStagePipeline", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorPipelineState extends PooledSignals {
+        final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-pipeline", ProducerType.SINGLE, waitProfile);
+            disruptor.handleEventsWith(incrementHandler())
+                .then(incrementHandler())
+                .then(incrementHandler())
+                .then((event, sequence, endOfBatch) -> consumed.incrementAndGet());
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorThreeStagePipelinePhysical", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorFusedPipelineState extends PooledSignals {
+        final AtomicLong consumed = new AtomicLong();
+        @Param({"YIELDING"})
+        DisruptorWaitProfile waitProfile;
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-pipeline-fused", ProducerType.SINGLE, waitProfile);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
+                event.value++;
+                event.value++;
+                event.value++;
+                consumed.incrementAndGet();
+            });
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorThreeStagePipelineManuallyFused", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorFusedReferencePipelineState extends PooledSignals {
+        final AtomicLong consumed = new AtomicLong();
+        Disruptor<RefEvent> disruptor;
+        RingBuffer<RefEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptorRef("aa-disruptor-pipeline-fused-ref", ProducerType.SINGLE);
+            disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
+                final Signal signal = event.signal;
+                signal.value++;
+                signal.value++;
+                signal.value++;
+                consumed.incrementAndGet();
+                event.signal = null;
+            });
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorThreeStagePipelineManuallyFusedReference", consumed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class LatticeDependencyState extends PooledImmutableSignals {
+        final AtomicLong committed = new AtomicLong();
+        StaticGraph graph;
+        Emitter<ImmutableSignal> emitter;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            graph = StaticGraph.builder("aa-lattice-dependency-join")
+                .source("ingress", ImmutableSignal.class, SourceMode.SINGLE_PRODUCER)
+                .stage("validate", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
+                .broadcast("fanout", ImmutableSignal.class, BroadcastSpec.copy(signal -> signal), STAGE)
+                .stage("journal", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
+                .stage("risk", ImmutableSignal.class, ImmutableSignal.class, ApplesToApplesDisruptorBenchmark::pass, STAGE)
+                .join("join", ImmutableSignal.class, JoinSpec.<ImmutableSignal>allOf(group ->
+                    (ImmutableSignal) group.valuesBySource().get("journal"))
+                    .stampLong(item -> ((ImmutableSignal) item).id())
+                    .capacity(RING_SIZE), STAGE)
+                .sink("commit", ImmutableSignal.class, signal -> committed.incrementAndGet(), STAGE)
+                .edge("ingress", "validate", SPSC)
+                .edge("validate", "fanout", SPSC)
+                .edge("fanout", "journal", SPSC)
+                .edge("fanout", "risk", SPSC)
+                .edge("journal", "join", SPSC)
+                .edge("risk", "join", SPSC)
+                .edge("join", "commit", SPSC)
+                .build();
+            graph.start();
+            emitter = graph.emitter("ingress", ImmutableSignal.class);
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            emitter.close();
+            graph.stop(STOP_TIMEOUT);
+            requireConsumed("latticeParallelDependencyJoin", committed);
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class DisruptorDependencyState extends PooledImmutableSignals {
+        final AtomicLong committed = new AtomicLong();
+        Disruptor<ValueEvent> disruptor;
+        RingBuffer<ValueEvent> ringBuffer;
+
+        @Setup(Level.Trial)
+        public void setup() {
+            disruptor = disruptor("aa-disruptor-dependency", ProducerType.SINGLE);
+            final EventHandlerGroup<ValueEvent> validate = disruptor.handleEventsWith(noopHandler());
+            validate.then(noopHandler(), noopHandler())
+                .then((event, sequence, endOfBatch) -> committed.incrementAndGet());
+            ringBuffer = disruptor.start();
+        }
+
+        @TearDown(Level.Trial)
+        public void tearDown() {
+            disruptor.shutdown();
+            requireConsumed("disruptorParallelDependencyGraph", committed);
+        }
+    }
+
+    @State(Scope.Thread)
+    public static class ProducerPool extends PooledSignals {
+    }
+
+    public static class PooledSignals {
+        private final Signal[] signals = new Signal[POOL_SIZE];
+        private int cursor;
+
+        public PooledSignals() {
+            for (int i = 0; i < signals.length; i++) {
+                final Signal signal = new Signal();
+                signal.id = i;
+                signal.value = i;
+                signals[i] = signal;
+            }
+        }
+
+        Signal nextSignal() {
+            final Signal signal = signals[cursor++ & (signals.length - 1)];
+            signal.value = signal.id;
+            return signal;
+        }
+    }
+
+    public static class PooledImmutableSignals {
+        private final ImmutableSignal[] signals = new ImmutableSignal[POOL_SIZE];
+        private int cursor;
+
+        public PooledImmutableSignals() {
+            for (int i = 0; i < signals.length; i++) {
+                signals[i] = new ImmutableSignal(i, i);
+            }
+        }
+
+        ImmutableSignal nextSignal() {
+            return signals[cursor++ & (signals.length - 1)];
+        }
+    }
+
+    public static final class Signal {
+        long id;
+        long value;
+    }
+
+    public record ImmutableSignal(long id, long value) {
+    }
+
+    public static final class ValueEvent {
+        long id;
+        long value;
+    }
+
+    public static final class RefEvent {
+        Signal signal;
+    }
+
+    public enum DisruptorWaitProfile {
+        YIELDING {
+            @Override
+            WaitStrategy create() {
+                return new YieldingWaitStrategy();
+            }
+        },
+        BUSY_SPIN {
+            @Override
+            WaitStrategy create() {
+                return new BusySpinWaitStrategy();
+            }
+        },
+        SLEEPING {
+            @Override
+            WaitStrategy create() {
+                return new SleepingWaitStrategy();
+            }
+        },
+        BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new BlockingWaitStrategy();
+            }
+        },
+        LITE_BLOCKING {
+            @Override
+            WaitStrategy create() {
+                return new LiteBlockingWaitStrategy();
+            }
+        };
+
+        abstract WaitStrategy create();
+    }
+
+    private static Disruptor<ValueEvent> disruptor(final String threadName, final ProducerType producerType) {
+        return disruptor(threadName, producerType, DisruptorWaitProfile.YIELDING);
+    }
+
+    private static Disruptor<ValueEvent> disruptor(
+        final String threadName,
+        final ProducerType producerType,
+        final DisruptorWaitProfile waitProfile
+    ) {
+        final EventFactory<ValueEvent> factory = ValueEvent::new;
+        return new Disruptor<>(
+            factory,
+            RING_SIZE,
+            namedThreadFactory(threadName),
+            producerType,
+            waitProfile.create()
+        );
+    }
+
+    private static Disruptor<RefEvent> disruptorRef(final String threadName, final ProducerType producerType) {
+        final EventFactory<RefEvent> factory = RefEvent::new;
+        return new Disruptor<>(
+            factory,
+            RING_SIZE,
+            namedThreadFactory(threadName),
+            producerType,
+            new YieldingWaitStrategy()
+        );
+    }
+
+    private static void requireConsumed(final String benchmark, final AtomicLong consumed) {
+        if (consumed.get() == 0L) {
+            throw new IllegalStateException(benchmark + " did not consume any events");
+        }
+    }
+
+    private static void requireConsumed(final String benchmark, final long consumed) {
+        if (consumed == 0L) {
+            throw new IllegalStateException(benchmark + " did not consume any events");
+        }
+    }
+
+    private static ThreadFactory namedThreadFactory(final String name) {
+        return runnable -> {
+            final Thread thread = Thread.ofPlatform().unstarted(runnable);
+            thread.setName(name);
+            thread.setDaemon(true);
+            return thread;
+        };
+    }
+
+    private static void increment(final Signal signal, final io.github.elevateddev.lattice.stage.Output<Signal> out, final Object ctx) {
+        signal.value++;
+        out.push(signal);
+    }
+
+    private static void tripleIncrement(
+        final Signal signal,
+        final io.github.elevateddev.lattice.stage.Output<Signal> out,
+        final Object ctx
+    ) {
+        signal.value++;
+        signal.value++;
+        signal.value++;
+        out.push(signal);
+    }
+
+    private static void pass(
+        final ImmutableSignal signal,
+        final io.github.elevateddev.lattice.stage.Output<ImmutableSignal> out,
+        final Object ctx
+    ) {
+        out.push(signal);
+    }
+
+    private static EventHandler<ValueEvent> incrementHandler() {
+        return (event, sequence, endOfBatch) -> event.value++;
+    }
+
+    private static EventHandler<ValueEvent> noopHandler() {
+        return (event, sequence, endOfBatch) -> {
+        };
+    }
+
+}

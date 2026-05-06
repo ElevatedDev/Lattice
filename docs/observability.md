@@ -71,13 +71,13 @@ Capture those events with normal JVM recording options, for example:
 
 The emitted event types include:
 
-- `com.lattice.GraphStarted`, `com.lattice.GraphStopped`
-- `com.lattice.StageException`, `com.lattice.EdgeBackpressure`,
-  `com.lattice.EdgeStall`
-- `com.lattice.WorkerBlocked`, `com.lattice.WorkerParked`,
-  `com.lattice.BatchProcessed`
-- `com.lattice.WorkerPlacement`, `com.lattice.AffinityMismatch`,
-  `com.lattice.NumaMismatch`
+- `io.github.elevateddev.lattice.GraphStarted`, `io.github.elevateddev.lattice.GraphStopped`
+- `io.github.elevateddev.lattice.StageException`, `io.github.elevateddev.lattice.EdgeBackpressure`,
+  `io.github.elevateddev.lattice.EdgeStall`
+- `io.github.elevateddev.lattice.WorkerBlocked`, `io.github.elevateddev.lattice.WorkerParked`,
+  `io.github.elevateddev.lattice.BatchProcessed`
+- `io.github.elevateddev.lattice.WorkerPlacement`, `io.github.elevateddev.lattice.AffinityMismatch`,
+  `io.github.elevateddev.lattice.NumaMismatch`
 
 Events are designed to be cheap and non-allocating. JFR remains the right
 profiling channel; per-event histograms are not.

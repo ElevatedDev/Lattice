@@ -2,6 +2,7 @@
 .gradle-user/
 .codex
 build/
+node_modules/
 results/
 jcstress-results-*.bin.gz
 !gradle/wrapper/gradle-wrapper.jar

@@ -39,58 +39,58 @@ enum CpuListSelector {
     Group { used: usize, group: usize },
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn native_capabilities_0() -> JLong {
     platform::native_capabilities() as JLong
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn max_cpu_count_0() -> JInt {
     platform::max_cpu_count()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn configured_cpu_count_0() -> JInt {
     platform::configured_cpu_count()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn online_cpu_count_0() -> JInt {
     platform::online_cpu_count()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn current_cpu_0() -> JInt {
     platform::current_cpu()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn current_numa_node_0() -> JInt {
     platform::current_numa_node()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn numa_node_of_cpu_0(cpu: JInt) -> JInt {
     platform::numa_node_of_cpu(cpu)
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn is_cpu_allowed_0(cpu: JInt) -> JInt {
     platform::is_cpu_allowed(cpu)
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn pin_current_thread_to_cpu_0(cpu: JInt) -> JInt {
     platform::pin_current_thread_to_cpu(cpu)
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn pin_current_thread_to_numa_node_0(numa_node: JInt) -> JInt {
     platform::pin_current_thread_to_numa_node(numa_node)
 }
 
 #[allow(clippy::too_many_arguments)]
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn pin_current_thread_to_cpu_mask_0(
     word0: JLong,
     word1: JLong,
@@ -115,12 +115,12 @@ pub fn pin_current_thread_to_cpu_mask_0(
     ])
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn set_local_allocation_policy_0() -> JInt {
     platform::set_local_allocation_policy()
 }
 
-#[jni_method("com.lattice.nativeaccess.NativeTopologyNatives")]
+#[jni_method("io.github.elevateddev.lattice.nativeaccess.NativeTopologyNatives")]
 pub fn first_touch_memory_0(address: JLong, bytes: JLong) -> JInt {
     platform::first_touch_memory(address, bytes)
 }
@@ -704,7 +704,7 @@ mod platform {
     }
 
     #[link(name = "kernel32")]
-    extern "system" {
+    unsafe extern "system" {
         fn GetActiveProcessorCount(group_number: Ushort) -> Dword;
         fn GetActiveProcessorGroupCount() -> Ushort;
         fn GetCurrentProcessorNumberEx(processor_number: *mut ProcessorNumber);
@@ -980,7 +980,7 @@ mod platform {
     const EINVAL: JInt = 22;
     const ENOSYS: JInt = 38;
 
-    extern "C" {
+    unsafe extern "C" {
         fn __error() -> *mut c_int;
         fn getpagesize() -> c_int;
         fn sysctlbyname(

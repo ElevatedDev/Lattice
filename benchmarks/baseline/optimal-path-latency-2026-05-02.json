@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.disruptorManualFusedCompleted",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 2,
@@ -12267,7 +12267,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticeFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeFusedCompleted",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 2,
@@ -25065,7 +25065,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticeInlineFusedCompleted",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 2,
@@ -28942,7 +28942,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticePhysicalCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticePhysicalCompleted",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 2,
@@ -44918,7 +44918,7 @@
     },
     {
         "jmhVersion" : "1.36",
-        "benchmark" : "com.lattice.benchmark.OptimalPathBenchmark.latticePinnedFusedCompleted",
+        "benchmark" : "io.github.elevateddev.lattice.benchmark.OptimalPathBenchmark.latticePinnedFusedCompleted",
         "mode" : "sample",
         "threads" : 1,
         "forks" : 2,
