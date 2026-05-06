@@ -61,7 +61,7 @@ jobs:
         run: cargo build --release --locked
 
       - name: Upload native backend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform }}
           path: |
@@ -153,7 +153,7 @@ jobs:
             build/reports/bom.*
 
       - name: Upload Java artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lattice-java-release
           path: |
