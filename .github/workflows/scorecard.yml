@@ -10,18 +10,19 @@ on:
     - cron: '19 4 * * 2'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  checks: read
-  id-token: write
-  issues: read
-  pull-requests: read
-  security-events: write
+permissions: read-all
 
 jobs:
   scorecard:
     name: Scorecard
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read
+      id-token: write
+      issues: read
+      pull-requests: read
+      security-events: write
 
     steps:
       - name: Checkout
