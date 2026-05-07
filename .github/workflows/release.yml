@@ -164,13 +164,28 @@ jobs:
             release-native-artifacts/**/native-test.log
             build/release-evidence/**
 
+      - name: Validate Maven Central signing key
+        if: github.event_name == 'workflow_dispatch' && inputs.publishToCentral
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_KEY}" ]]; then
+            echo "::error::SIGNING_KEY is empty."
+            exit 1
+          fi
+          if [[ "${SIGNING_KEY}" != *"BEGIN PGP PRIVATE KEY BLOCK"* ]]; then
+            echo "::error::SIGNING_KEY must be an ASCII-armored private key from gpg --armor --export-secret-keys."
+            exit 1
+          fi
+
       - name: Upload to Maven Central Portal
         if: github.event_name == 'workflow_dispatch' && inputs.publishToCentral
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: >
           ./gradlew publishToMavenCentral

@@ -18,6 +18,10 @@ def releasePomUrl = 'https://github.com/ElevatedDev/Lattice'
 def releaseLicenseName = providers.gradleProperty('releaseLicenseName')
 def releaseLicenseUrl = providers.gradleProperty('releaseLicenseUrl')
 def releaseLicenseDistribution = providers.gradleProperty('releaseLicenseDistribution').orElse('repo')
+def mavenCentralPublishTasks = ['publishToMavenCentral', 'publishAndReleaseToMavenCentral'] as Set
+def isMavenCentralPublish = gradle.startParameter.taskNames.any { requestedTask ->
+    mavenCentralPublishTasks.contains(requestedTask.tokenize(':').last())
+}
 def nativeBundleInputDir = providers.gradleProperty('lattice.native.bundle.dir')
     .orElse(providers.environmentVariable('LATTICE_NATIVE_BUNDLE_DIR'))
 def requireBundledNative = providers.gradleProperty('lattice.requireBundledNative')
@@ -247,7 +251,9 @@ tasks.named('jar', Jar) {
 
 mavenPublishing {
     publishToMavenCentral()
-    signAllPublications()
+    if (isMavenCentralPublish) {
+        signAllPublications()
+    }
 }
 
 publishing {
