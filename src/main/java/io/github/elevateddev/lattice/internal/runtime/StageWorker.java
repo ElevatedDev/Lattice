@@ -251,9 +251,7 @@ final class StageWorker implements Runnable {
 
     void start() {
         workerState(WorkerState.STARTING);
-        thread = Thread.ofPlatform()
-            .name("lattice-" + graphName + "-" + stageName)
-            .unstarted(this);
+        thread = new Thread(this, "lattice-" + graphName + "-" + stageName);
 
         thread.start();
     }
@@ -372,8 +370,17 @@ final class StageWorker implements Runnable {
         if (current == null) {
             return true;
         }
-        current.join(timeout);
+        join(current, timeout);
         return !current.isAlive();
+    }
+
+    private static void join(final Thread thread, final Duration timeout) throws InterruptedException {
+        if (timeout.isNegative()) {
+            throw new IllegalArgumentException("timeout is negative");
+        }
+        final long millis = timeout.toMillis();
+        final int nanos = timeout.minusMillis(millis).getNano();
+        thread.join(millis, nanos);
     }
 
     void join() throws InterruptedException {

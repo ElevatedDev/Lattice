@@ -387,7 +387,7 @@ public class OptimalPathBenchmark {
 
     private static ThreadFactory namedThreadFactory(final String name) {
         return runnable -> {
-            final Thread thread = Thread.ofPlatform().unstarted(runnable);
+            final Thread thread = new Thread(runnable);
             thread.setName(name);
             thread.setDaemon(true);
             return thread;

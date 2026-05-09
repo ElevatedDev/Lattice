@@ -63,12 +63,12 @@ class HotPathGuardrailTest {
             edge.poll();
         }
 
-        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
         for (int i = 0; i < 250_000; i++) {
             edge.offer(payload);
             edge.poll();
         }
-        final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+        final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
         assertTrue(allocated <= 1024, "steady-state SPSC hot path allocated " + allocated + " bytes");
     }
 
@@ -151,9 +151,9 @@ class HotPathGuardrailTest {
             emitRange(graph, 0, GRAPH_WARMUP_EMITS, false);
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS - 1L);
 
-            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
             emitRange(graph, GRAPH_WARMUP_EMITS, GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS, false);
-            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
 
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS - 1L);
             assertTrue(allocated <= GRAPH_EMIT_ALLOCATION_LIMIT,
@@ -175,9 +175,9 @@ class HotPathGuardrailTest {
             preallocatedEmitRange(graph, 0, GRAPH_WARMUP_EMITS);
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS - 1L);
 
-            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
             preallocatedEmitRange(graph, GRAPH_WARMUP_EMITS, GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS);
-            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
 
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS - 1L);
             assertTrue(allocated <= GRAPH_EMIT_ALLOCATION_LIMIT,
@@ -248,13 +248,13 @@ class HotPathGuardrailTest {
         final Object payload,
         final MemoryMode memoryMode
     ) {
-        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
         for (int i = 0; i < 250_000; i++) {
             if (!edge.offer(payload) || edge.poll() != payload) {
                 throw new AssertionError("MPSC steady-state failed for " + memoryMode.kind());
             }
         }
-        return bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+        return bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
     }
 
     private static void assertPipelineEmitSteadyStateDoesNotAllocate(
@@ -266,9 +266,9 @@ class HotPathGuardrailTest {
             emitRange(graph, 0, GRAPH_WARMUP_EMITS, path.inlineExpected());
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS - 1L);
 
-            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+            final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
             emitRange(graph, GRAPH_WARMUP_EMITS, GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS, path.inlineExpected());
-            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+            final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
 
             awaitConsumed(graph.consumed(), GRAPH_WARMUP_EMITS + GRAPH_MEASURED_EMITS - 1L);
             assertTrue(allocated <= GRAPH_EMIT_ALLOCATION_LIMIT,

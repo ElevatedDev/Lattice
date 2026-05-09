@@ -5,7 +5,7 @@ minutes.
 
 ## Requirements
 
-- JDK 21 (matching the project's Gradle toolchain).
+- JDK 21 for the default Gradle toolchain. The published artifact targets Java 17.
 - The checked-in Gradle wrapper (`./gradlew` / `gradlew.bat`).
 - Optional: Rust 1.85+ + Cargo, only if you want the [native placement
   backend](../README.md#native-placement-backend)
