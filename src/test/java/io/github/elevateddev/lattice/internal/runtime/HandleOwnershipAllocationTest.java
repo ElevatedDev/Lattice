@@ -19,11 +19,11 @@ class HandleOwnershipAllocationTest {
             scopeAndPrepare(payload);
         }
 
-        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().threadId());
+        final long before = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
         for (int i = 0; i < 250_000; i++) {
             scopeAndPrepare(payload);
         }
-        final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().threadId()) - before;
+        final long allocated = bean.getThreadAllocatedBytes(Thread.currentThread().getId()) - before;
         assertTrue(allocated <= 1024, "steady-state ownership scope allocated " + allocated + " bytes");
     }
 

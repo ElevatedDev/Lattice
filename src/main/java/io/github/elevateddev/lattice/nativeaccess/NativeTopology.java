@@ -4,7 +4,7 @@ import java.util.BitSet;
 import java.util.Objects;
 
 /**
- * Java 21 wrapper for worker-bootstrap native operations: CPU affinity, NUMA
+ * Java wrapper for worker-bootstrap native operations: CPU affinity, NUMA
  * diagnostics, local allocation policy, and first-touch memory placement.
  */
 public final class NativeTopology {

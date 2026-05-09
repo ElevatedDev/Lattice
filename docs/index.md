@@ -1,6 +1,6 @@
 # Lattice Documentation
 
-Lattice is a Java 21 runtime for bounded, low-latency, in-process processing
+Lattice is a Java 17+ runtime for bounded, low-latency, in-process processing
 graphs with static topology, explicit backpressure, and inspectable runtime
 state.
 

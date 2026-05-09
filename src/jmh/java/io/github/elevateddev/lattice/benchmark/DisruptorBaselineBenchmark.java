@@ -175,7 +175,7 @@ public class DisruptorBaselineBenchmark {
         public void setup() {
             final EventFactory<ValueEvent> factory = ValueEvent::new;
             final ThreadFactory threadFactory = runnable -> {
-                final Thread thread = Thread.ofPlatform().unstarted(runnable);
+                final Thread thread = new Thread(runnable);
                 thread.setName("disruptor-multicast-baseline");
                 thread.setDaemon(true);
                 return thread;
@@ -304,7 +304,7 @@ public class DisruptorBaselineBenchmark {
 
     private static ThreadFactory namedThreadFactory(final String name) {
         return runnable -> {
-            final Thread thread = Thread.ofPlatform().unstarted(runnable);
+            final Thread thread = new Thread(runnable);
             thread.setName(name);
             thread.setDaemon(true);
             return thread;

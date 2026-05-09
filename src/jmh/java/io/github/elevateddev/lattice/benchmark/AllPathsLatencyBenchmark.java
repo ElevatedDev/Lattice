@@ -712,7 +712,7 @@ public class AllPathsLatencyBenchmark {
         final AtomicInteger nextCpu = new AtomicInteger();
         return runnable -> {
             final int cpu = cpus[Math.floorMod(nextCpu.getAndIncrement(), cpus.length)];
-            final Thread thread = Thread.ofPlatform().unstarted(() -> {
+            final Thread thread = new Thread(() -> {
                 NativeTopology.pinCurrentThreadToCpu(cpu);
                 if (NativeTopology.capabilities().localMemoryPolicy()) {
                     NativeTopology.setLocalAllocationPolicy();
@@ -727,7 +727,7 @@ public class AllPathsLatencyBenchmark {
 
     private static ThreadFactory namedThreadFactory(final String name) {
         return runnable -> {
-            final Thread thread = Thread.ofPlatform().unstarted(runnable);
+            final Thread thread = new Thread(runnable);
             thread.setName(name);
             thread.setDaemon(true);
             return thread;

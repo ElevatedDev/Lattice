@@ -4,13 +4,15 @@
 
 | JDK | Status | Notes |
 | --- | --- | --- |
-| 21 | **Supported** | Build baseline. JPMS module name `io.github.elevateddev.lattice`. |
-| 22 | Best-effort | Compiles and tests cleanly on `--release 21`. |
+| 17 | **Supported** | Runtime and artifact baseline. JPMS module name `io.github.elevateddev.lattice`. |
+| 18-20 | Best-effort | Java 17 classfile target; no known runtime blockers. |
+| 21 | **Supported** | Default Gradle toolchain. |
+| 22 | Best-effort | Compiles and tests cleanly on `--release 17`. |
 | 23 | Best-effort | Same. |
 | 24 | Best-effort | Same. |
-| 25 (LTS) | Planned for 1.1 | Validation pending. |
-| 26 | Tracking | GA on 2026-03-17; validation pending, no known blockers. |
-| <= 20 | **Unsupported** | Lattice uses Java 21 language and APIs. |
+| 25 (LTS) | Best-effort | Validation includes Java 17, 21, and 25 release-target builds. |
+| 26 | Tracking | GA on 2026-03-17; validation includes Java 17, 21, and 25 release-target builds. |
+| <= 16 | **Unsupported** | Lattice targets Java 17 classfiles. |
 
 The release jar contains:
 

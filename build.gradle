@@ -47,11 +47,17 @@ def coverageClassExcludes = [
     'io/github/elevateddev/lattice/internal/jfr/**',
     'module-info.class'
 ]
+def latticeJavaRelease = providers.gradleProperty('lattice.javaRelease')
+    .orElse('17')
+    .map { value -> Integer.parseInt(value) }
+def latticeJavaToolchain = providers.gradleProperty('lattice.javaToolchain')
+    .orElse('21')
+    .map { value -> Integer.parseInt(value) }
 
 java {
     modularity.inferModulePath = true
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(latticeJavaToolchain.get())
     }
     withSourcesJar()
     withJavadocJar()
@@ -166,7 +172,7 @@ jacocoTestCoverageVerification {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 21
+    options.release = latticeJavaRelease
 }
 
 tasks.named('compileJava', JavaCompile) {
