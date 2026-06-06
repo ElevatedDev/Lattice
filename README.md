@@ -1,4 +1,4 @@
-# Lattice
+# Lattice - Java bounded, low-latency, in-process processing
 
 ![Lattice](docs/assets/logo.svg)
 
